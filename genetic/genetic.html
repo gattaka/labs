@@ -1,4 +1,5 @@
-<table>
+[N1]Zadání (Backpack problem)[/N1]
+[HTML]<table>
 	<tbody>
 		<tr>
 			<td>Items <10-100></td>
@@ -8,7 +9,7 @@
 			<td></td>
 		</tr>
 		<tr>
-			<td><input id="itemsInput" style="width: 100px;" value="10"/></td>
+			<td><input id="itemsInput" style="width: 100px;" value="20"/></td>
 			<td><input id="maxWeightInput" style="width: 110px;" value="10"/></td>
 			<td><input id="maxPriceInput" style="width: 110px;" value="30"/></td>		
 			<td><input id="backpackWeightInput" style="width: 180px;" value="30"/></td>
@@ -17,8 +18,9 @@
 	</tbody>
 </table>
 Seed <weight, price><br/>
-<textarea id="seed" style="width: 706px;" rows="5"></textarea>
-<table>
+<textarea id="seed" style="width: 706px;" rows="5">9,5,4,1,6,1,4,0,6,0,6,16,6,27,0,25,8,7,5,26,7,27,1,18,1,25,7,0,7,11,8,22,9,28,7,13,8,11,1,6</textarea>[/HTML]
+[N1]Parametry[/N1]
+[HTML]<table>
 	<tbody>
 		<tr>
 			<td>Generations <10-1000></td>
@@ -53,11 +55,14 @@ Seed <weight, price><br/>
 			<td></td>
 		</tr>
 	</tbody>
-</table><table>
+</table>[/HTML]
+[N1]Simulace[/N1]
+[HTML]<table>
 	<tbody>
 		<tr>
 			<td># Generation</td>
 			<td>Best price</td>
+			<td>Weight</td>
 			<td>Creature</td>
 		</tr>
 		<tr>
@@ -65,7 +70,9 @@ Seed <weight, price><br/>
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly/></td>
 			<td><input id="resultPrice" style="width: 120px; 
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly/></td>
-			<td><input id="resultConfiguration" style="width: 448px; 
+			<td><input id="resultWeight" style="width: 120px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly/></td>
+			<td width="100%"><input id="resultConfiguration" style="width: 100%; 
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly/></td>
 		</tr>
 		<tr>
@@ -73,12 +80,19 @@ Seed <weight, price><br/>
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly/></td>
 			<td><input id="resultPriceAll" style="width: 120px; 
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly/></td>
-			<td><input id="resultConfigurationAll" style="width: 448px;
+			<td><input id="resultWeightAll" style="width: 120px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly/></td>
+			<td width="100%"><input id="resultConfigurationAll" style="width: 100%;
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly/></td>
 		</tr>
 	</tbody>
 </table>
-<div style="margin-top: 10px;"><canvas id="myCanvas" width="714" height="600"></canvas></div>
+<div style="margin-top: 10px;">
+	<canvas id="creaturesCanvas" width="714" height="300"></canvas>
+</div>
+<div style="margin-top: 10px;">
+	<canvas id="generationsCanvas" width="714" height="200"></canvas>
+</div>[/HTML]
 <script>
 let $ = {};
 $.genetics = (function() {
@@ -136,15 +150,23 @@ $.genetics = (function() {
 	let eliteCount;
 	let idiotsCount;
 	let mutationsCount;
-
-	let bestGeneration;
-	let bestCreature;
 	
-	let canvas = document.getElementById("myCanvas");
-	let ctx = canvas.getContext("2d");
+	let creaturesCanvas = document.getElementById("creaturesCanvas");
+	let creaturesCtx = creaturesCanvas.getContext("2d");
+	let creaturesCanvasWidth = creaturesCanvas.width;
+	let creaturesCanvasHeight = creaturesCanvas.height;
 
-	let width = canvas.width;
-	let height = canvas.height;
+	let allTimeBestGeneration;
+	let allTimeBestFitness;
+	let allTimeBestCreature;
+	
+	let generationBestPrices;
+	let allTimeBestPrices;
+	
+	let generationsCanvas = document.getElementById("generationsCanvas");
+	let generationsCtx = generationsCanvas.getContext("2d");
+	let generationsCanvasWidth = generationsCanvas.width;
+	let generationsCanvasHeight = generationsCanvas.height;
 
 	let innerIntervalCallback;
 	
@@ -166,21 +188,21 @@ $.genetics = (function() {
 			// nemá cenu dál maskovat, pokud už creature 
 			// nemá další vyšší 1, než má maska
 			if (mask > creature)
-				return p;
+				return [w, p];
 			if ((creature & mask) > 0) {				
 				w += items[i][0];
 				if (w > backpackWeight) 
-					return -1;
+					return [w, -1];
 				p += items[i][1];
 			}
 			mask = mask << 1;
 		}
-		return p;
+		return [w, p];
 	};
 
 	let fight = function(creatureA, creatureB) {
-		let fa = fitness(creatureA);
-		let fb = fitness(creatureB);
+		let fa = fitness(creatureA)[1];
+		let fb = fitness(creatureB)[1];
 		if (fa > fb)
 			return -1;
 		if (fa < fb)
@@ -197,19 +219,132 @@ $.genetics = (function() {
 			creatures[creatures.length] = Math.floor(c);		
 	};
 
+	let paintGenerations = function() {
+		let ctx = generationsCtx;
+		let canvasWidth = generationsCanvasWidth;
+		let canvasHeight = generationsCanvasHeight;		
+		ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.font = "15px Monospace";
+		
+		let xOffset = 40;
+		let yOffset = 35;
+		let pointSize = 3;
+
+		// o kolik procent je protažená Y osa?
+		let yUnitProjection = 0.1;
+		let xUnitProjection = 0.01;
+		
+		let yScale = allTimeBestFitness[1] + allTimeBestFitness[1] * yUnitProjection;
+		let yUnit = (canvasHeight - yOffset) / yScale;
+		let xScale = generationBestPrices.length + generationBestPrices.length * xUnitProjection;
+		let xUnit = (canvasWidth - xOffset) / xScale;
+
+		// x sekundární osa grafu		
+		let secXAxisCount = 5;	
+		let secXAxisPriceUnit = yScale / secXAxisCount;	
+		let secXAxisRoundedPriceUnit = Math.floor(secXAxisPriceUnit / 10) * 10;
+		secXAxisCount = Math.ceil(yScale / secXAxisRoundedPriceUnit);
+		
+		ctx.strokeStyle = "lightgrey";
+		ctx.fillStyle = "grey";
+		for (let i = 1; i < secXAxisCount; i++) {					
+			let y = canvasHeight - yOffset - secXAxisRoundedPriceUnit * i * yUnit;
+			// kontrolu, zda nebude osa a text už moc nahoře (a byl by tedy ořízlý)
+			if (y < 5)
+				break;
+
+			ctx.beginPath();
+			ctx.moveTo(xOffset, y);
+			ctx.lineTo(canvasWidth, y);
+			ctx.stroke();		
+			ctx.textAlign = "right";
+			ctx.fillText(i * secXAxisRoundedPriceUnit, xOffset - 10, y + 5);	
+		}
+		
+		// x osa grafu		
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.beginPath();
+		ctx.moveTo(0, canvasHeight - yOffset);
+		ctx.lineTo(canvasWidth, canvasHeight - yOffset);
+		ctx.stroke();
+		
+		// y sekundární osa grafu		
+		// zpočátku je položek generací velmi málo, takže jde měřítko osy 
+		// postupně měnit v krocích 1-10
+		let secYAxisCount = generationBestPrices.length < 10 ? 
+			generationBestPrices.length : 10;	
+		let secYAxisGenerationUnit = xScale / secYAxisCount;			
+		let secYAxisRoundedGenerationUnit = secYAxisGenerationUnit > 10 ? 
+			Math.floor(secYAxisGenerationUnit / 10) * 10 : Math.floor(secYAxisGenerationUnit);
+		secYAxisCount = Math.ceil(xScale / secYAxisRoundedGenerationUnit);
+		
+		// generace postupně přibývají, ale na počátku je 0, která by způsobila
+		// dělení nulou apod. -> zacyklení
+		if (secYAxisRoundedGenerationUnit >= 1 && secYAxisCount > 1) {
+			ctx.strokeStyle = "lightgrey";
+			ctx.fillStyle = "grey";
+			for (let i = 1; i < secYAxisCount; i++) {					
+				let x = xOffset + secYAxisRoundedGenerationUnit * i * xUnit;
+				// kontrolu, zda nebude osa a text už moc daleko (a byl by tedy ořízlý)
+				if (x > canvasWidth - 10)
+					break;
+
+				ctx.beginPath();
+				ctx.moveTo(x, 0);
+				ctx.lineTo(x, canvasHeight - yOffset);
+				ctx.stroke();		
+				ctx.textAlign = "center";
+				ctx.fillText(i * secYAxisRoundedGenerationUnit, x, canvasHeight - yOffset + 15);	
+			}
+		}
+		
+		// y osa grafu		
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.beginPath();
+		ctx.moveTo(xOffset, 0);
+		ctx.lineTo(xOffset, canvasWidth, canvasHeight);
+		ctx.stroke();
+						
+		ctx.textAlign = "center";
+		ctx.fillText("Generation", (canvasWidth - xOffset) / 2 + xOffset, canvasHeight);	
+		
+		for (let g = 0; g < generationBestPrices.length; g++) {			
+			let genBestPrice = generationBestPrices[g];
+			let allTimeBestPrice = g > (allTimeBestPrices.length - 1) ? 
+				allTimeBestPrices[allTimeBestPrices.length - 1] : allTimeBestPrices[g];			
+			
+			ctx.fillStyle = "orange";
+			ctx.fillRect(xOffset + g * xUnit - pointSize / 2, 
+				canvasHeight - yOffset - genBestPrice * yUnit - pointSize / 2, pointSize, pointSize);
+			
+			ctx.fillStyle = "red";
+			ctx.fillRect(xOffset + g * xUnit - pointSize / 2, 
+				canvasHeight - yOffset - allTimeBestPrice * yUnit - pointSize / 2, pointSize, pointSize);
+		}
+	};
+
 	let paintCreatures = function() {	
-		let canvasArea = width * height;
+		let canvasArea = creaturesCanvasWidth * creaturesCanvasHeight;
 		let areaMultiplier = creatures.length;
-		let heightCreature = Math.floor(Math.sqrt(height * height / areaMultiplier)); 
-		let widthCreature = Math.floor(heightCreature * width / height);
-		let creaturesPerRow = Math.floor(width / widthCreature);
+		let heightCreature = Math.sqrt(creaturesCanvasHeight * creaturesCanvasHeight / areaMultiplier); 
+		let widthCreature = heightCreature * creaturesCanvasWidth / creaturesCanvasHeight;
+		let creaturesPerRow = Math.floor(creaturesCanvasWidth / widthCreature);
+
+		// corrections
+		let rows = Math.ceil(creatures.length / creaturesPerRow);
+		if (rows * heightCreature > creaturesCanvasHeight)
+			heightCreature = Math.floor(creaturesCanvasHeight / rows);
 
 		// měřítkem pro barvu je fitness nejlepšího jedince
-		let step = 1 / fitness(creatures[0]);
+		let step = 1 / fitness(creatures[0])[1];
 
 		let row = 0;
 		for (let c = 0; c < creatures.length; c++) {
-			let koef = fitness(creatures[c]);
+			let koef = fitness(creatures[c])[1];
 			if (koef == -1) 
 				koef = 0;
 			let fillColor = hslToRGB(
@@ -222,12 +357,12 @@ $.genetics = (function() {
 				step * koef,
 				0.6
 			);
-			ctx.fillStyle = fillColor;
-			ctx.strokeStyle = strokeColor;
+			creaturesCtx.fillStyle = fillColor;
+			creaturesCtx.strokeStyle = strokeColor;
 			let x = (c % creaturesPerRow) * widthCreature;
 			let y = Math.floor(c / creaturesPerRow) * heightCreature;
-			ctx.fillRect(x, y, widthCreature, heightCreature);
-			ctx.strokeRect(x, y, widthCreature, heightCreature);
+			creaturesCtx.fillRect(x, y, widthCreature, heightCreature);
+			creaturesCtx.strokeRect(x, y, widthCreature, heightCreature);
 		}
 	};
 
@@ -263,20 +398,28 @@ $.genetics = (function() {
 			// seřadit
 			creatures.sort(fight);
 
+			let bestFitness = fitness(creatures[0]);			
 			document.getElementById("resultGeneration").value = generation + 1;
-			document.getElementById("resultPrice").value = fitness(creatures[0]);
+			document.getElementById("resultPrice").value = bestFitness[1];
+			document.getElementById("resultWeight").value = bestFitness[0];
 			document.getElementById("resultConfiguration").value = printBinary(creatures[0]);
+			generationBestPrices[generationBestPrices.length] = bestFitness[1];
 
-			if (bestGeneration == -1 || fitness(creatures[0]) >= fitness(bestCreature)) {
-				bestCreature = creatures[0];
-				bestGeneration = generation + 1;
-				document.getElementById("resultGenerationAll").value = bestGeneration;
-				document.getElementById("resultPriceAll").value = fitness(bestCreature);
-				document.getElementById("resultConfigurationAll").value = printBinary(bestCreature);
+			if (allTimeBestGeneration == -1 || bestFitness[1] >= allTimeBestFitness[1]) {
+				allTimeBestCreature = creatures[0];
+				allTimeBestGeneration = generation + 1;
+				allTimeBestFitness = bestFitness;
+				allTimeBestPrices[allTimeBestPrices.length] = allTimeBestFitness[1];
+				document.getElementById("resultGenerationAll").value = allTimeBestGeneration;
+				document.getElementById("resultPriceAll").value = allTimeBestFitness[1];
+				document.getElementById("resultWeightAll").value = allTimeBestFitness[0];
+				document.getElementById("resultConfigurationAll").value = 
+					printBinary(allTimeBestCreature);
 			}
 
 			// vykreslit
 			paintCreatures();
+			paintGenerations();
 			
 			// namnožit novou generaci
 			let parents = [];
@@ -298,7 +441,8 @@ $.genetics = (function() {
 	};
 
 	let run = function() {
-		ctx.clearRect(0, 0, width, height);
+		creaturesCtx.clearRect(0, 0, creaturesCanvasWidth, creaturesCanvasHeight);
+		//generationsCtx.clearRect(0, 0, generationsCanvasWidth, generationsCanvasHeight);
 		initPopulation();
 		runGeneration(0);
 	};	
@@ -342,7 +486,12 @@ $.genetics = (function() {
 				backpackWeight = maxBackpackWeightParam;
 				delay = delayParam;
 
-				bestGeneration = -1;
+				allTimeBestGeneration = -1;
+				allTimeBestFitness;
+				allTimeBestCreature;
+				
+				generationBestPrices = [];
+				allTimeBestPrices = [];
 			
 				let seedValue = document.getElementById("seed").value;
 				let regex = /^([0-9]+,[0-9]+,)+[0-9]+,[0-9]+$/g;
@@ -358,11 +507,7 @@ $.genetics = (function() {
 
 				fullMask = (1 << items.length) - 1;
 				lowerHalfMask = (1 << Math.floor(items.length / 2)) - 1;
-				higherHalfMask = fullMask - lowerHalfMask;
-				
-				console.log("fullMask: " + printBinary(fullMask));
-				console.log("lowerHalfMask: " + printBinary(lowerHalfMask));
-				console.log("higherHalfMask: " + printBinary(higherHalfMask));
+				higherHalfMask = fullMask - lowerHalfMask;			
 
 				run();			
 			}
@@ -391,5 +536,4 @@ $.genetics = (function() {
 })();
 
 $.genetics.seed();
-$.genetics.start();
-</script>
+$.genetics.start();</script>
