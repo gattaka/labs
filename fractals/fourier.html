@@ -1,0 +1,411 @@
+[N1]Motivace[/N1]
+Chtěl jsem si vyzkoušet grafickou reprezentaci skládání harmonických složek signálu přes Fourierovu transformaci.
+
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Period (x90°)</td>
+			<td>Angle step (°)</td>
+			<td>Refresh (ms)</td>
+			<td>Harmonics <1-50></td>
+			<td>Function</td>
+			<td>
+				<input id="showDrawLinesInput" type="checkbox" onclick="$.fourierNamespace.changeShowDrawLines(this.checked)">Show drawlines?</input>
+			</td>
+		</tr>
+		<tr>
+			<td><input id="periodInput" 
+				onchange="$.fourierNamespace.changePeriod(this.value)" style="width: 80px;"></td>
+			<td><input id="angleStepInput"
+				onchange="$.fourierNamespace.changeAngleStep(this.value)" style="width: 80px;"></td>
+			<td><input id="intervalInput"
+				onchange="$.fourierNamespace.changeInterval(this.value)" style="width: 80px;"></td>
+			<td><input id="harmonicsCountInput"
+				onchange="$.fourierNamespace.changeNumberOfHarmonics(this.value)"
+				style="width: 100px;"></td>
+			<td>	
+				<input id="changeSignalInput" type="radio" name="func" value="square" onchange="$.fourierNamespace.changeSignalSquare()"> Square <input type="radio" name="func" value="saw" onchange="$.fourierNamespace.changeSignalSaw()"> Saw <input type="radio" name="func" value="triangle" onchange="$.fourierNamespace.changeSignalTriangle()"> Triangle			
+			</td>
+			<td>
+				<input id="showAllHarmonicsInput" type="checkbox" onclick="$.fourierNamespace.changeShowAllHarmonics(this.checked)">Show harmonics?</input>
+			</td>
+		</tr>
+	</tbody>
+</table>
+<div>
+	<canvas id="myCanvas" width="700" height="250"></canvas>
+</div>[/HTML]
+<script>
+let $ = {};
+$.fourierNamespace = (function() {
+
+	/**
+	 * https://stackoverflow.com/questions/2353211/hsl-to-rgb-color-conversion
+	 * https://stackoverflow.com/questions/17433015/change-the-hue-of-a-rgb-color-in-javascript
+	 * Converts an HSL color value to RGB. Conversion formula
+	 * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+	 * Assumes h, s, and l are contained in the set [0, 1] and
+	 * returns r, g, and b in the set [0, 255].
+	 *
+	 * @param   {number}  h       The hue
+	 * @param   {number}  s       The saturation
+	 * @param   {number}  l       The lightness
+	 * @return  {Array}           The RGB representation
+	 */
+	var hslToRGB = function(h, s, l) {
+	    let r, g, b;
+
+	    if (s == 0) {
+	        r = g = b = l; // achromatic
+	    } else {
+	        let hue2rgb = function hue2rgb(p, q, t){
+	            if(t < 0) t += 1;
+	            if(t > 1) t -= 1;
+	            if(t < 1/6) return p + (q - p) * 6 * t;
+	            if(t < 1/2) return q;
+	            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+	            return p;
+	        }
+
+	        let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+	        let p = 2 * l - q;
+	        r = hue2rgb(p, q, h + 1/3);
+	        g = hue2rgb(p, q, h);
+	        b = hue2rgb(p, q, h - 1/3);
+	    }
+
+	    return "#" + ((1 << 24) + (Math.round(r * 255) << 16) + ( Math.round(g * 255) << 8) + Math.round(b * 255)).toString(16).slice(1);
+	};
+
+	// konfigurace
+	let period = 4;
+	let showAllHarmonics = true;
+	let showDrawLines = false;
+	let anglePerInterval = 2;
+	let interval = 20; 
+	let numberOfHarmonics = 10;
+	
+	let periodUnit = 90;	
+	let harmonics = [];
+	let hueStep = 0;
+ 
+	// konfigurace grafiky
+	let border = 20;
+	let axisLength = 200;
+	let xCenter = border + 100;
+	let yCenter = border + 100;
+	let radius = 60;
+	let graphX = xCenter + axisLength / 2 + 20;
+	let graphAxisOverlap = 10;
+	let graphWidth = 500;
+
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+
+	ctx.font = "15px Monospace";
+
+	let innerIntervalCallback;
+	
+	let init = function() {
+		ctx.clearRect(0, 0, 800, 300);
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+
+		// x osa kružnice
+		ctx.beginPath();
+		ctx.moveTo(xCenter - axisLength / 2, yCenter);
+		ctx.lineTo(xCenter + axisLength / 2, yCenter);
+		ctx.stroke();
+
+		ctx.fillText("½T", xCenter - axisLength / 2, yCenter - 10);
+		ctx.fillText("T", xCenter + axisLength / 2 - 10, yCenter - 10);
+
+		// y osa kružnice 
+		ctx.beginPath();
+		ctx.moveTo(xCenter, yCenter - axisLength / 2);
+		ctx.lineTo(xCenter, yCenter + axisLength / 2);
+		ctx.stroke();
+
+		ctx.fillText("¾T", xCenter + 10, yCenter - axisLength / 2 + 10);
+		ctx.fillText("¼T", xCenter + 10, yCenter + axisLength / 2);
+
+		// kružnice
+		ctx.strokeStyle = "black";
+		ctx.beginPath();
+		ctx.arc(xCenter, yCenter, radius, 0, 2 * Math.PI);
+		ctx.stroke();
+
+		// středová osa grafu 
+		ctx.strokeStyle = "grey";
+		ctx.beginPath();
+		ctx.moveTo(graphX, yCenter);
+		ctx.lineTo(graphX + graphWidth, yCenter);
+		ctx.stroke();
+
+		// x osa grafu
+		ctx.beginPath();
+		ctx.moveTo(graphX - graphAxisOverlap, yCenter + axisLength / 2);
+		ctx.lineTo(graphX - graphAxisOverlap + graphWidth, yCenter
+				+ axisLength / 2);
+		ctx.stroke();
+
+		// y osa grafu
+		ctx.strokeStyle = "black";
+		ctx.beginPath();
+		let printXoffset = 1; // by se při posunu nevystřihávala i osa 
+		ctx.moveTo(graphX - printXoffset, yCenter - axisLength / 2
+				+ graphAxisOverlap);
+		ctx.lineTo(graphX - printXoffset, yCenter + axisLength / 2
+				+ graphAxisOverlap);
+		ctx.stroke();
+	};
+	
+	let currentAngle = 0;		
+
+	let drawHarmonic = function(baseX, baseY, index, angle) {
+		let harmonicColor = hslToRGB(
+			hueStep * index,
+			0.5,
+			0.5
+		);
+		ctx.strokeStyle = harmonicColor;
+		ctx.fillStyle = harmonicColor;
+
+		let harmonic = harmonics[index];
+		let radians = harmonic[0] * angle * Math.PI / 180;
+		let x = Math.cos(radians) * radius * harmonic[1];
+		let y = Math.sin(radians) * radius * harmonic[1];
+
+		let absoluteX = baseX + x;
+		let absoluteY = baseY + y;
+
+		if (baseX < graphX && absoluteX < graphX) {
+			ctx.beginPath();
+			ctx.moveTo(baseX, baseY);
+			ctx.lineTo(absoluteX, absoluteY);
+			ctx.stroke();
+		}
+		
+		if (index == harmonics.length - 1 || showAllHarmonics) {
+			if (showDrawLines && absoluteX < graphX) {
+				// vodící čára
+				let oldLineWidth = ctx.lineWidth;
+				ctx.lineWidth = 1;
+				ctx.beginPath();
+				ctx.moveTo(absoluteX, absoluteY);
+				ctx.lineTo(graphX , absoluteY);
+				ctx.stroke();
+				ctx.lineWidth = oldLineWidth;
+			}
+			// bod na grafu
+			ctx.strokeRect(graphX, absoluteY, 1, 1);
+		} 
+		
+		if (index < harmonics.length - 1) {
+			// rekurze na další harmonickou
+			drawHarmonic(absoluteX, absoluteY, index + 1, angle);
+		}
+	};
+
+	let draw = function(angle) {
+		// zkopíruj si vykreslené body grafu
+		imageData = ctx.getImageData(graphX, yCenter - axisLength / 2,
+				graphWidth, axisLength);
+
+		// vymaž a znovu vykresli osy
+		init();
+
+		let angleStatus = "T=" + (period * periodUnit) + "°, " + "φ=" + angle + "°";
+		ctx.fillText(angleStatus , 0, 30);
+
+		let periodLength = period * periodUnit;
+		let resolution = periodLength / 4;
+		let angleOffset = angle % resolution;
+		let angleValueOffset = Math.floor(angle / resolution);
+		let periodParts = periodLength / resolution;
+
+		for (var i = 0; i <= periodParts; i++) {
+			let x = graphX + angleOffset + i * resolution; 
+			ctx.strokeStyle = "grey";
+			ctx.beginPath();
+			ctx.moveTo(x, yCenter - axisLength / 2);
+			ctx.lineTo(x, yCenter + axisLength / 2 + graphAxisOverlap);
+			ctx.stroke();
+			ctx.fillStyle = "grey";
+			let value = (angleValueOffset - i) * resolution;
+			value = value < 0 ? value + periodLength : value;
+			ctx.fillText(value, x, yCenter + axisLength / 2 + 30);
+		}
+
+		// vlož zkopírované vykreslené body grafu a posuň je
+		ctx.putImageData(imageData, graphX + anglePerInterval, yCenter
+				- axisLength / 2);
+
+		// smaž přesah (vykreslené body grafu mimo maximum jeho x osy)
+		ctx.clearRect(graphX + graphWidth, yCenter - axisLength / 2,
+				anglePerInterval, axisLength);
+
+		// kresli aktuální data
+		let oldLineWidth = ctx.lineWidth;
+		ctx.lineWidth = 2;
+		drawHarmonic(xCenter, yCenter, 0, angle);
+		ctx.lineWidth = oldLineWidth;
+	};
+
+	let squareSignalFunction = function(index) {		
+		if (index % 2 == 0)
+			return [ 0, 0 ];
+		let periodRad = Math.PI / 2 * period;
+		let ampleCoef = 4 / (index * Math.PI);
+		let angleCoef = Math.PI * index / (periodRad / 2);
+		return [angleCoef, ampleCoef];
+	};
+
+	let sawSignalFunction = function(index) {		
+		let periodRad = Math.PI / 2 * period;
+		let ampleCoef = -3 / (index * Math.PI);
+		let angleCoef = Math.PI * index / (periodRad / 2);
+		return [angleCoef, ampleCoef];
+	};
+
+	let triangleSignalFunction = function(index) {
+		if (index % 2 == 0)
+			return [ 0, 0 ];		
+		let periodRad = Math.PI / 2 * period;
+		let ampleCoef = 10 * (Math.pow(-1, ((index-1)/2)))  / (index * index * Math.PI * Math.PI);
+		let angleCoef = Math.PI * index / (periodRad / 2);
+		return [angleCoef, ampleCoef];
+	};
+
+	let signalFunction = squareSignalFunction;
+	
+	let createHarmonics = function() {
+		harmonics = [];
+		for (i=0; i < numberOfHarmonics; i++) 
+			harmonics[i] = signalFunction(i + 1);
+		hueStep = 1 / harmonics.length;
+	};
+
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			currentAngle = (currentAngle + anglePerInterval) % (period * periodUnit);
+			draw(currentAngle);
+		}, interval);
+	};
+
+	return {
+
+		changeAngleStep: function(value) {
+			if (isNaN(value))
+				return;
+			let newValue = Number(value);
+			if (newValue < 1)
+				return;
+			console.log("anglePerInterval changed from '" + anglePerInterval + "' to '" + newValue + "'");
+			anglePerInterval = newValue;
+		},
+
+		changePeriod: function(value) {
+			if (isNaN(value))
+				return;
+			let newValue = Number(value);
+			if (newValue < 1)
+				return;
+			console.log("period changed from '" + period + "' to '" + newValue + "'");
+			period = newValue;
+			init();
+			createHarmonics();
+		},
+		
+		changeInterval: function(value) {
+			innnerChangeInterval(value);
+		},
+		
+		changeNumberOfHarmonics: function(value) {
+			if (isNaN(value))
+				return;
+			let newValue = Number(value);
+			if (newValue < 1)
+				return;
+			console.log("interval changed from '" + numberOfHarmonics + "' to '" + newValue + "'");
+			numberOfHarmonics = newValue;
+			createHarmonics();
+		},
+
+		changeSignalSquare: function(value) {
+			signalFunction = squareSignalFunction;
+			init();
+			createHarmonics();
+		},
+
+		changeSignalSaw: function(value) {
+			signalFunction = sawSignalFunction;
+			init();
+			createHarmonics();
+		},
+
+		changeSignalTriangle: function(value) {
+			signalFunction = triangleSignalFunction;
+			init();
+			createHarmonics();
+		},
+		
+		changeShowDrawLines: function(value) {
+			console.log("showDrawLines changed from '" + showDrawLines + "' to '" + value + "'");
+			showDrawLines = value;
+		},
+		
+		changeShowAllHarmonics: function(value) {
+			console.log("showAllHarmonics changed from '" + showAllHarmonics + "' to '" + value + "'");
+			showAllHarmonics = value;
+		},
+
+		start: function() {
+
+			document.getElementById("changeSignalInput").checked = "checked";
+			document.getElementById("periodInput").value = period;
+			document.getElementById("angleStepInput").value = anglePerInterval;
+			document.getElementById("intervalInput").value = interval;
+			document.getElementById("harmonicsCountInput").value = numberOfHarmonics;
+			document.getElementById("showDrawLinesInput").checked = showDrawLines;
+			document.getElementById("showAllHarmonicsInput").checked = showAllHarmonics;
+			
+			createHarmonics();
+			init();
+			
+			innnerChangeInterval(interval);		
+		}
+	};
+
+})();
+
+$.fourierNamespace.start();</script>
+
+[N1]Výpočty[/N1]
+Jednotlivé signály a jejich harmonické se dají vypočítat po Fourierově analýze takto:
+
+[HTABLE]Signál	Výpočet
+Obdélník	[TEX]$$ f(x)=\sum_{n=1,3,5,...}^{\infty} \frac{4}{n\pi}\sin(\frac{n\pi x}{L}) $$[/TEX]	
+Pila	[TEX]$$ f(x)=\sum_{n=1}^{\infty} \frac{-3}{n\pi}\sin(\frac{n\pi x}{L}) $$[/TEX]
+Trojúhelník	[TEX]$$ f(x)=\sum_{n=1,3,5,...}^{\infty} \frac{10 \cdot -1 ^ \frac{n-1}{2}}{n^2\pi^2}\sin(\frac{n\pi x}{L}) $$[/TEX][/HTABLE]
+
+[SOURCES]https://cs.wikibooks.org/wiki/Praktick%C3%A1_elektronika/Spektrum_sign%C3%A1lu#Obd%C3%A9ln%C3%ADkov%C3%BD_sign%C3%A1l
+http://mathworld.wolfram.com/FourierSeriesSquareWave.html
+http://mathworld.wolfram.com/FourierSeriesSawtoothWave.html
+https://cs.wikipedia.org/wiki/Joseph_Fourier
+https://cs.wikipedia.org/wiki/Fourierova_transformace
+https://www.youtube.com/watch?v=ds0cmAV-Yek
+http://mathworld.wolfram.com/topics/FourierSeries.html
+https://en.wikipedia.org/wiki/Fourier_series[/SOURCES]
