@@ -25,16 +25,16 @@ Seed <weight, price><br/>
 		<tr>
 			<td>Generations <10-1000></td>
 			<td>Creatures <100-1000></td>
-			<td>Elite <1-Creatures/2></td>
-			<td>Idiots <1-Creatures/2></td>
+			<td>Elite parents <1-Creatures/2></td>
+			<td>Idiot parents <1-Creatures/2></td>
 			<td>Mutations <1-20></td>
 			<td></td>
 		</tr>
 		<tr>
 			<td><input id="generationsInput" style="width: 130px;" value="10"/></td>
 			<td><input id="creaturesInput" style="width: 130px;" value="100"/></td>
-			<td><input id="eliteInput" style="width: 120px;" value="5"/></td>
-			<td><input id="idiotsInput" style="width: 120px;" value="1"/></td>
+			<td><input id="eliteInput" style="width: 160px;" value="5"/></td>
+			<td><input id="idiotsInput" style="width: 160px;" value="1"/></td>
 			<td><input id="mutationsInput" style="width: 100px;" value="1"/></td>
 			<td></td>
 		</tr>
@@ -88,10 +88,10 @@ Seed <weight, price><br/>
 	</tbody>
 </table>
 <div style="margin-top: 10px;">
-	<canvas id="creaturesCanvas" width="714" height="300"></canvas>
+	<canvas id="creaturesCanvas" width="714" height="200"></canvas>
 </div>
 <div style="margin-top: 10px;">
-	<canvas id="generationsCanvas" width="714" height="200"></canvas>
+	<canvas id="generationsCanvas" width="714" height="300"></canvas>
 </div>[/HTML]
 <script>
 let $ = {};
@@ -234,7 +234,7 @@ $.genetics = (function() {
 
 		// o kolik procent je protažená Y osa?
 		let yUnitProjection = 0.1;
-		let xUnitProjection = 0.01;
+		let xUnitProjection = 0.01;		
 		
 		let yScale = allTimeBestFitness[1] + allTimeBestFitness[1] * yUnitProjection;
 		let yUnit = (canvasHeight - yOffset) / yScale;
@@ -243,10 +243,29 @@ $.genetics = (function() {
 
 		// x sekundární osa grafu		
 		let secXAxisCount = 5;	
-		let secXAxisPriceUnit = yScale / secXAxisCount;	
-		let secXAxisRoundedPriceUnit = Math.floor(secXAxisPriceUnit / 10) * 10;
+		let secXAxisPriceUnit = yScale / secXAxisCount;			
+		let secXAxisRoundedPriceUnit = secXAxisPriceUnit > 10 ? 
+			Math.floor(secXAxisPriceUnit / 10) * 10 : 
+			Math.floor(secXAxisPriceUnit);		
 		secXAxisCount = Math.ceil(yScale / secXAxisRoundedPriceUnit);
-		
+		if (secXAxisCount < 1 || secXAxisCount == Infinity)
+			secXAxisCount = 1;
+			
+		if (yScale == Infinity)
+			console.log("yScale");		
+		if (yUnit == Infinity)
+			console.log("yUnit");
+		if (xScale == Infinity)
+			console.log("xScale");
+		if (xUnit == Infinity)
+			console.log("xUnit");
+		if (secXAxisCount == Infinity)
+			console.log("secXAxisCount");
+		if (secXAxisPriceUnit == Infinity)
+			console.log("secXAxisPriceUnit");
+		if (secXAxisRoundedPriceUnit == Infinity)
+			console.log("secXAxisRoundedPriceUnit");
+			
 		ctx.strokeStyle = "lightgrey";
 		ctx.fillStyle = "grey";
 		for (let i = 1; i < secXAxisCount; i++) {					
@@ -262,7 +281,7 @@ $.genetics = (function() {
 			ctx.textAlign = "right";
 			ctx.fillText(i * secXAxisRoundedPriceUnit, xOffset - 10, y + 5);	
 		}
-		
+			
 		// x osa grafu		
 		ctx.strokeStyle = "grey";
 		ctx.fillStyle = "grey";
@@ -274,31 +293,29 @@ $.genetics = (function() {
 		// y sekundární osa grafu		
 		// zpočátku je položek generací velmi málo, takže jde měřítko osy 
 		// postupně měnit v krocích 1-10
-		let secYAxisCount = generationBestPrices.length < 10 ? 
-			generationBestPrices.length : 10;	
+		let secYAxisCount = generationBestPrices.length < 10 ? generationBestPrices.length : 10;	
 		let secYAxisGenerationUnit = xScale / secYAxisCount;			
 		let secYAxisRoundedGenerationUnit = secYAxisGenerationUnit > 10 ? 
-			Math.floor(secYAxisGenerationUnit / 10) * 10 : Math.floor(secYAxisGenerationUnit);
+			Math.floor(secYAxisGenerationUnit / 10) * 10 : 
+			Math.floor(secYAxisGenerationUnit);
 		secYAxisCount = Math.ceil(xScale / secYAxisRoundedGenerationUnit);
-		
-		// generace postupně přibývají, ale na počátku je 0, která by způsobila
-		// dělení nulou apod. -> zacyklení
-		if (secYAxisRoundedGenerationUnit >= 1 && secYAxisCount > 1) {
-			ctx.strokeStyle = "lightgrey";
-			ctx.fillStyle = "grey";
-			for (let i = 1; i < secYAxisCount; i++) {					
-				let x = xOffset + secYAxisRoundedGenerationUnit * i * xUnit;
-				// kontrolu, zda nebude osa a text už moc daleko (a byl by tedy ořízlý)
-				if (x > canvasWidth - 10)
-					break;
+		if (secYAxisCount < 1 || secYAxisCount == Infinity)
+			secYAxisCount = 1;
 
-				ctx.beginPath();
-				ctx.moveTo(x, 0);
-				ctx.lineTo(x, canvasHeight - yOffset);
-				ctx.stroke();		
-				ctx.textAlign = "center";
-				ctx.fillText(i * secYAxisRoundedGenerationUnit, x, canvasHeight - yOffset + 15);	
-			}
+		ctx.strokeStyle = "lightgrey";
+		ctx.fillStyle = "grey";
+		for (let i = 1; i < secYAxisCount; i++) {					
+			let x = xOffset + secYAxisRoundedGenerationUnit * i * xUnit;
+			// kontrolu, zda nebude osa a text už moc daleko (a byl by tedy ořízlý)
+			if (x > canvasWidth - 10)
+				break;
+
+			ctx.beginPath();
+			ctx.moveTo(x, 0);
+			ctx.lineTo(x, canvasHeight - yOffset);
+			ctx.stroke();		
+			ctx.textAlign = "center";
+			ctx.fillText(i * secYAxisRoundedGenerationUnit, x, canvasHeight - yOffset + 15);	
 		}
 		
 		// y osa grafu		
@@ -319,11 +336,13 @@ $.genetics = (function() {
 			
 			ctx.fillStyle = "orange";
 			ctx.fillRect(xOffset + g * xUnit - pointSize / 2, 
-				canvasHeight - yOffset - genBestPrice * yUnit - pointSize / 2, pointSize, pointSize);
+				canvasHeight - yOffset - genBestPrice * yUnit - pointSize / 2, 
+				pointSize, pointSize);
 			
 			ctx.fillStyle = "red";
 			ctx.fillRect(xOffset + g * xUnit - pointSize / 2, 
-				canvasHeight - yOffset - allTimeBestPrice * yUnit - pointSize / 2, pointSize, pointSize);
+				canvasHeight - yOffset - allTimeBestPrice * yUnit - pointSize / 2, 
+				pointSize, pointSize);
 		}
 	};
 
@@ -439,14 +458,7 @@ $.genetics = (function() {
 			return;	
 		} 
 	};
-
-	let run = function() {
-		creaturesCtx.clearRect(0, 0, creaturesCanvasWidth, creaturesCanvasHeight);
-		//generationsCtx.clearRect(0, 0, generationsCanvasWidth, generationsCanvasHeight);
-		initPopulation();
-		runGeneration(0);
-	};	
-
+	
 	let validate = function(msg, field, min, max) {
 		let value = document.getElementById(field).value;
 		if (isNaN(value)) {
@@ -487,8 +499,8 @@ $.genetics = (function() {
 				delay = delayParam;
 
 				allTimeBestGeneration = -1;
-				allTimeBestFitness;
-				allTimeBestCreature;
+				allTimeBestFitness = [];
+				allTimeBestCreature = -1;
 				
 				generationBestPrices = [];
 				allTimeBestPrices = [];
@@ -509,7 +521,9 @@ $.genetics = (function() {
 				lowerHalfMask = (1 << Math.floor(items.length / 2)) - 1;
 				higherHalfMask = fullMask - lowerHalfMask;			
 
-				run();			
+				creaturesCtx.clearRect(0, 0, creaturesCanvasWidth, creaturesCanvasHeight);
+				initPopulation();
+				runGeneration(0);		
 			}
 		},
 
@@ -537,3 +551,5 @@ $.genetics = (function() {
 
 $.genetics.seed();
 $.genetics.start();</script>
+[SOURCES]https://www.gattserver.cz/articles/574-geneticky-algoritmus
+https://en.wikipedia.org/wiki/Knapsack_problem[/SOURCES]
