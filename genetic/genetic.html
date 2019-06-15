@@ -8,7 +8,7 @@
 			<td></td>
 		</tr>
 		<tr>
-			<td><input id="itemsInput" style="width: 100px;" value="20"/></td>
+			<td><input id="itemsInput" style="width: 100px;" value="10"/></td>
 			<td><input id="maxWeightInput" style="width: 110px;" value="10"/></td>
 			<td><input id="maxPriceInput" style="width: 110px;" value="30"/></td>		
 			<td><input id="backpackWeightInput" style="width: 180px;" value="30"/></td>
@@ -17,7 +17,7 @@
 	</tbody>
 </table>
 Seed <weight, price><br/>
-<textarea id="seed" style="width: 706px;" rows="5">9,5,4,1,6,1,4,0,6,0,6,16,6,27,0,25,8,7,5,26,7,27,1,18,1,25,7,0,7,11,8,22,9,28,7,13,8,11,1,6</textarea>
+<textarea id="seed" style="width: 706px;" rows="5"></textarea>
 <table>
 	<tbody>
 		<tr>
@@ -81,16 +81,6 @@ Seed <weight, price><br/>
 <div style="margin-top: 10px;"><canvas id="myCanvas" width="714" height="600"></canvas></div>
 <script>
 let $ = {};
-	let printBinary = function(creature, places) {
-		let result = "";
-		// let max = Math.pow(1, items.length);
-		let mask = 1;
-		for (let i = 0; i < places; i++) {
-			result = (((creature & mask) > 0) ? 1 : 0) + result;		
-			mask = mask << 1;
-		}
-		return result;
-	};
 $.genetics = (function() {
 	/**
 	 * https://stackoverflow.com/questions/2353211/hsl-to-rgb-color-conversion
@@ -138,6 +128,11 @@ $.genetics = (function() {
 	
 	let creatures;
 	let items;
+		
+	let fullMask;
+	let lowerHalfMask;
+	let higherHalfMask;
+	
 	let eliteCount;
 	let idiotsCount;
 	let mutationsCount;
@@ -152,17 +147,33 @@ $.genetics = (function() {
 	let height = canvas.height;
 
 	let innerIntervalCallback;
+	
+	let printBinary = function(creature) {
+		let result = "";
+		let mask = 1;
+		for (let i = 0; i < items.length; i++) {
+			result = (((creature & mask) > 0) ? 1 : 0) + result;		
+			mask = mask << 1;
+		}
+		return result;
+	};
 
 	let fitness = function(creature) {
 		let w = 0;
 		let p = 0;
-		for (let i = 0; i < creature.length; i++) {
-			if (creature[i] == 0) 
-				continue;
-			w += items[i][0];
-			if (w > backpackWeight) 
-				return -1;
-			p += items[i][1];
+		let mask = 1;
+		for (let i = 0; i < items.length; i++) {
+			// nemá cenu dál maskovat, pokud už creature 
+			// nemá další vyšší 1, než má maska
+			if (mask > creature)
+				return p;
+			if ((creature & mask) > 0) {				
+				w += items[i][0];
+				if (w > backpackWeight) 
+					return -1;
+				p += items[i][1];
+			}
+			mask = mask << 1;
 		}
 		return p;
 	};
@@ -178,12 +189,12 @@ $.genetics = (function() {
 	};
 
 	let initPopulation = function() {
+		// rovnoměrně roprostřít
+		let max = 1 << items.length;
+		let step = max / creaturesCount;
 		creatures = [];
-		for (let c = 0; c < creaturesCount; c++) {
-			creatures[c] = [];
-			for (let i = 0; i < items.length; i++)
-				creatures[c][i] = Math.random() < 0.5 ? 0 : 1;
-		}
+		for (let c = 0; c < max; c += step)
+			creatures[creatures.length] = Math.floor(c);		
 	};
 
 	let paintCreatures = function() {	
@@ -220,18 +231,14 @@ $.genetics = (function() {
 		}
 	};
 
-	let mate = function(creatureA, creatureB) {
-		let childAB = [];
-		let halfIndex = Math.floor(creatureA.length / 2);
-		for (let i = 0; i < creatureA.length; i++) {
-			childAB[i] = i < halfIndex ? creatureA[i] : creatureB[i];
-		}
-		return childAB;
+	let mate = function(creatureA, creatureB) {		
+		return (creatureA & higherHalfMask) + (creatureB & lowerHalfMask);	
 	};
 
-	let mutate = function(creature) {
-		let index = Math.floor(Math.random() * creature.length);
-		creature[index] = creature[index] == 0 ? 1 : 0;
+	let mutate = function(creature) {		
+		let index = Math.floor(Math.random() * items.length);
+		let mask = 1 << index;
+		creature += (creature & mask > 0) ? - mask : mask;
 		return creature;
 	};
 
@@ -242,7 +249,7 @@ $.genetics = (function() {
 				for (let b = 0; b < parents.length; b++) {
 					let newCreature = mate(parents[a], parents[b]);
 					for (let c = 0; c < mutationsCount; c++)
-						newCreature  = mutate(newCreature);
+						newCreature = mutate(newCreature);
 					newCreatures[newCreatures.length] = newCreature;
 					if (newCreatures.length == creatures.length)
 						return newCreatures;
@@ -258,14 +265,14 @@ $.genetics = (function() {
 
 			document.getElementById("resultGeneration").value = generation + 1;
 			document.getElementById("resultPrice").value = fitness(creatures[0]);
-			document.getElementById("resultConfiguration").value = creatures[0];
+			document.getElementById("resultConfiguration").value = printBinary(creatures[0]);
 
 			if (bestGeneration == -1 || fitness(creatures[0]) >= fitness(bestCreature)) {
 				bestCreature = creatures[0];
 				bestGeneration = generation + 1;
 				document.getElementById("resultGenerationAll").value = bestGeneration;
 				document.getElementById("resultPriceAll").value = fitness(bestCreature);
-				document.getElementById("resultConfigurationAll").value = bestCreature;
+				document.getElementById("resultConfigurationAll").value = printBinary(bestCreature);
 			}
 
 			// vykreslit
@@ -274,13 +281,11 @@ $.genetics = (function() {
 			// namnožit novou generaci
 			let parents = [];
 			// elity
-			for (let c = 0; c < eliteCount; c++) {
-				parents[parents.length] = creatures[c];
-			}
+			for (let c = 0; c < eliteCount; c++) 
+				parents[parents.length] = creatures[c];			
 			// idioti
-			for (let c = 0; c < idiotsCount; c++) {
-				parents[parents.length] = creatures[creatures.length - 1 - c];
-			}
+			for (let c = 0; c < idiotsCount; c++)
+				parents[parents.length] = creatures[creatures.length - 1 - c];			
 			creatures = createNewGeneration(parents);
 
 			setTimeout(function() {
@@ -348,9 +353,16 @@ $.genetics = (function() {
 
 				let numbers = seedValue.split(",");
 				items = [];
-				for (let i = 0; i < numbers.length; i+=2) {
-					items[items.length] = [Number(numbers[i]), Number(numbers[i+1])];
-				}
+				for (let i = 0; i < numbers.length; i+=2) 
+					items[items.length] = [Number(numbers[i]), Number(numbers[i+1])];				
+
+				fullMask = (1 << items.length) - 1;
+				lowerHalfMask = (1 << Math.floor(items.length / 2)) - 1;
+				higherHalfMask = fullMask - lowerHalfMask;
+				
+				console.log("fullMask: " + printBinary(fullMask));
+				console.log("lowerHalfMask: " + printBinary(lowerHalfMask));
+				console.log("higherHalfMask: " + printBinary(higherHalfMask));
 
 				run();			
 			}
