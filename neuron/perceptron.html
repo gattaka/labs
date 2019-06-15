@@ -1,0 +1,183 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Function</td>
+		</tr>
+		<tr>
+			<td>	
+				<input type="radio" name="func" value="linear" 
+					onchange="$.perceptron.changeFceLinear()" checked> Linear 
+				<input type="radio" name="func" value="sine" 
+					onchange="$.perceptron.changeFceSine()"> Sine 
+				<input type="radio" name="func" value="angle" 
+					onchange="$.perceptron.changeFceAngle()"> Angle			
+			</td>
+		</tr>
+	</tbody>
+</table>
+<div>
+	<canvas id="myCanvas" width="700" height="250"></canvas>
+</div>
+<div id="status"></div>[/HTML]
+<script>
+let $ = {};
+$.perceptron = (function() {
+
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+
+	let sensitivity;
+	let dendriteCount;
+	let weights;	
+	
+	let interval = 1;
+	let innerIntervalCallback;
+	
+	let pointSize = 4;
+	
+	let triesCount;
+	let successCount;
+		
+	let linearFce = function(x) {				
+		return x * height / width;
+	};	
+	
+	let sineFce = function(x) {				
+		return Math.sin(Math.PI * x / width) * height;
+	};	
+			
+	let angleFce = function(x) {				
+		let widthHalf = width / 2;
+		let heightHalf = height / 2;
+		if (x < widthHalf)
+			return heightHalf;		
+		return heightHalf * x / widthHalf; 
+	};
+	
+	let separatorFunc = linearFce;
+	
+	let transform = function(output) {
+		return Math.sign(output);
+	};
+	
+	let guess = function(inputs) {
+		let sum = 0;
+		for (let i = 0; i < dendriteCount; i++) 
+			sum += weights[i] * inputs[i];	
+		return transform(sum);
+	};
+	
+	let train = function(inputs, error) {
+		for (let i = 0; i < dendriteCount; i++) 
+			weights[i] += inputs[i] * error * sensitivity;	
+	};
+	
+	let separator = function(x, y) {
+		let fceY = separatorFunc(x);
+		return fceY > y ? -1 : 1;
+	};
+	
+	let test = function() {
+	
+		// náhodně vyber místo
+		let x = Math.random() * width;
+		let y = Math.random() * height;
+		ctx.fillStyle = "black";
+		ctx.fillRect(x, y, pointSize, pointSize);
+		
+		// známá hodnota
+		let target = separator(x, y);
+		
+		// perceptron
+		let inputs = [x,y];
+		let guessed = guess(inputs);		
+		triesCount++;
+	
+		// učení
+		let error = target - guessed;
+		if (error == 0) {
+			successCount++;			
+			ctx.fillStyle = guessed > 0 ? "#e5ff0f" : "orange";
+		} else {
+			ctx.fillStyle = "black";
+			train(inputs, error);			
+		}		
+		
+		let status = "Try = " + triesCount + "<br/>"
+			+ "Success rate = " + Math.floor((successCount / triesCount) * 100) + " %";
+		for (let i = 0; i < dendriteCount; i++) 
+				status += "<br/>w<sub>" + i + "</sub> = " + weights[i];
+			document.getElementById("status").innerHTML = status;
+		
+		ctx.fillRect(x, y, pointSize, pointSize);		
+	};
+
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			test();
+		}, interval);
+	};
+
+	let init = function() {
+		triesCount = 0;			
+		successCount = 0;
+	
+		sensitivity = 0.2;
+		dendriteCount = 2;				
+		weights = [];
+		for (let i = 0; i < dendriteCount; i++) 
+			weights[i] = Math.random >= 0.5 ? 1 : -1;	
+
+		// plocha1 je 	
+		ctx.clearRect(0, 0, 800, 300);			
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.strokeRect(0, 0, width, height);
+				
+		for (let x=0; x < width; x++) 
+			ctx.fillRect(x, separatorFunc(x), 1, 1);
+
+		innnerChangeInterval(interval);	
+	};
+
+	return {
+	
+		start: function() {			
+			init();			
+		},
+		
+		changeFceLinear: function() {
+			separatorFunc = linearFce;	
+			init();
+		},
+		
+		changeFceSine: function() {
+			separatorFunc = sineFce;	
+			init();
+		},
+		
+		changeFceAngle: function() {
+			separatorFunc = angleFce;	
+			init();
+		}
+		
+	};
+
+})();
+
+$.perceptron.start();
+</script>
