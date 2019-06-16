@@ -1,0 +1,212 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>MinStarSpeedRate <2-50></td>
+			<td>MaxStarSpeedRate <2-50></td>
+			<td>Speed (ms) <1-50></td>
+			<td></td>
+		</tr>
+		<tr>		
+			<td><input id="minStarSpeedRateInput" style="width: 160px;" value="2"></td>			
+			<td><input id="maxStarSpeedRateInput" style="width: 160px;" value="10"></td>	
+			<td><input id="speedInput" style="width: 160px;" value="5"></td>				
+			<td><button type="button" onclick="$.mapgen.start()">Run!</button></td>
+		</tr>
+	</tbody>
+</table>
+<div style="margin: 10px 0;">
+	<canvas id="myCanvas" width="1800" height="800" ondblclick="$.mapgen.fullscreen()"></canvas>
+</div>
+<div id="status"></div>[/HTML]
+<script>let $ = {};
+$.mapgen = (function() {
+
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+	let width;
+	let height;
+	let halfWidth;
+	let halfHeight;
+
+	// generuje náhodná čísla v obou směrech n,
+	// tedy pokud dám 10, tak vygeneruje v rozsahu
+	// -10 až +10, bere totiž 2n a vždy odčítá půlku
+	let randomPositiveNegative = function(n) {
+		return Math.random() * n * 2 - n;
+	};
+	
+	let randomPositive = function(n) {
+		return Math.random() * n;
+	};
+
+	let drawOutline = function(outline, radiusOffset, color) {
+		ctx.fillStyle = color;
+		ctx.beginPath();
+		for (let i = 0; i <= outline.data.length; i++) {			
+			let index = (i + 1) % outline.data.length;
+			let angle = i * outline.anglePerStep;			
+			let rad = outline.data[index] + radiusOffset;
+			let radianRad = Math.PI * angle / 180;
+			let x = outline.x + Math.cos(radianRad) * rad;
+			let y = outline.y + Math.sin(radianRad) * rad;
+			if (i == 0)
+				ctx.moveTo(x, y);
+			else
+				ctx.lineTo(x, y);
+		}
+		ctx.fill();
+	};
+
+	let generateOutline = function(x, y, minRad, maxRad, maxStep, steps) {		
+		let anglePerStep = 360 / steps;
+		let radius = minRad + (maxRad - minRad) / 2;
+		let outline = {
+			anglePerStep: anglePerStep,
+			data: [],
+			x: x,
+			y: y
+		};
+		for (let i = 0; i < steps; i++) {
+			let step = randomPositiveNegative(maxStep)
+			radius = Math.max(minRad, Math.min(maxRad, radius + step));
+			outline.data.push(radius);			
+		}
+		return outline;
+	};
+	
+	let createOrReturn = function(tree, index) {			
+		if (!tree.sub[index]) {
+			let level = tree.level + 1;
+			let x = tree.x;
+			let y = tree.y;
+			let w = tree.w;
+			let h = tree.h;
+			if (level % 2 == 0) {
+				w = w / 2;
+				x += index == 0 ? - w : w;
+			} else {
+				h = h / 2;
+				y += index == 0 ? - h : h;			
+			}
+			tree.sub[index] = {
+				sub: [],
+				level: level,
+				x: x,
+				y: y,
+				w: w,
+				h: h
+			};
+		}
+		return tree.sub[index];
+	};
+
+	// přepínač indexu 0->1 a 1->0
+	let switchIndex = function(index) {
+		return index == 1 ? 0 : 1;
+	};
+
+	let findFreeLeafByRandom = function(tree, leafLevel) {
+		if (tree.level == leafLevel) {
+			if (!tree.data) return tree;
+			// else undefined
+		} else {
+			let guessIndex = Math.floor(Math.random() * 2);
+			let guessResult = findFreeLeafByRandom(createOrReturn(tree, guessIndex), leafLevel);
+			if (guessResult) {
+				// našel se volný list
+				return guessResult;
+			} else {
+				// zkus druhý index a vrať cokoliv najdeš (pokud se našel volný list, 
+				// tak mám výsledek a dávám ho nahoru, pokud jsem nenašel volný list, 
+				// pak s tím nic nemůžu dělat a stejně se musí vrátit režie nahoru
+				return findFreeLeafByRandom(createOrReturn(tree, switchIndex(guessIndex)), leafLevel);
+			}
+		}		
+	}
+
+	let draw = function() {				
+		ctx.fillStyle = "#2E86C1";
+		ctx.fillRect(0, 0, width, height);
+		
+		let unit = 0.5;
+		
+		let islesCount = 15;
+		let islesPlacingResolution = 40;
+						
+		let isles = [];
+		
+		// binární strom, dělící prostor mapy
+		// log2(n), kde n je počet listů udává,
+		// kolik musí mít strom pater
+		let layers = Math.ceil(Math.log(islesPlacingResolution) / Math.log(2));
+		let tree = {
+			sub: [],
+			level: 0,
+			x: halfWidth,
+			y: halfHeight,
+			w: halfWidth,
+			h: halfHeight
+		};		
+				
+		let mapBorder = 100;
+				
+		for (let i = 0; i < islesCount; i++) {
+			let u = unit;
+			let node = findFreeLeafByRandom(tree, layers);
+			if (!node) {
+				console.log("obsaženy všechny listy!");
+				return;
+			}				
+			let offset = 90 * u;
+			let x = Math.min(width - mapBorder, Math.max(mapBorder, node.x + randomPositiveNegative(offset)));
+			let y = Math.min(height - mapBorder, Math.max(mapBorder, node.y + randomPositiveNegative(offset)));			
+			console.log("Isle #" + (i + 1) + " x: " + x + " y: " + y);			
+			let size = u * (10 + randomPositive(100));
+			let sizeCoef = size / (10 * u);
+			let sizeOffset = (20 * u) * sizeCoef;
+			let isle = generateOutline(x, y, size, size + sizeOffset, 10 * u, Math.floor(10 * sizeCoef));
+			node.data = isle;
+			isles.push(isle);
+		}
+		
+		isles.forEach(function(isle){ 
+			drawOutline(isle, 80 * unit, "#3498DB");
+		});		
+		isles.forEach(function(isle){ 
+			drawOutline(isle, 50 * unit, "#5DADE2");
+		});
+		isles.forEach(function(isle){ 
+			drawOutline(isle, 30 * unit, "#85C1E9");
+		});
+		isles.forEach(function(isle){ 
+			drawOutline(isle, 15 * unit, "#AED6F1");
+		});
+		isles.forEach(function(isle){ 
+			drawOutline(isle, 5 * unit, "#D6EAF8");
+		});		
+		isles.forEach(function(isle){ 
+			drawOutline(isle, 0, "#F9E79F");
+		});
+		
+	};
+
+	let init = function() {	
+		width = canvas.width;
+		height = canvas.height;
+		halfWidth = width / 2; 
+		halfHeight = height / 2;
+
+		draw();
+	};
+
+	return {
+
+		start: function() {	
+			init();			
+		},
+	};
+
+})();
+
+$.mapgen.start();</script>
