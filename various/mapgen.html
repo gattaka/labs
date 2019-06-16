@@ -15,6 +15,7 @@
 		</tr>
 	</tbody>
 </table>
+<button onclick="$.mapgen.saveImage()">Save as Image</button>        
 <div style="margin: 10px 0;">
 	<canvas id="myCanvas" width="6000" height="3500" ondblclick="$.mapgen.fullscreen()"></canvas>
 </div>
@@ -38,6 +39,12 @@ $.mapgen = (function() {
 	
 	let randomPositive = function(n) {
 		return Math.random() * n;
+	};
+	
+	let randomReversedProportional = function(n, factor) {
+		for (let i = 0; i < factor; i++)
+			n = Math.random() * n;
+		return n;
 	};
 
 	let drawOutline = function(outline, radiusOffset, color) {
@@ -142,15 +149,22 @@ $.mapgen = (function() {
 				return findFreeLeafByRandom(createOrReturn(tree, switchIndex(guessIndex)), leafLevel);
 			}
 		}		
-	}
+	}	
 
-	let draw = function() {				
-		ctx.fillStyle = "#2E86C1";
+	let draw = function() {		
+	
+		let old = true;
+		
+		let newColors = ["#4c80bf", "#5691da", "#71a7e1", "#8dbbe7", "#b1d1ef", "#d8e8f8", "#f3ea9e"];
+		let oldColors = ["#c8ad82", "#544f39", "#45402d", "#171200", "#2f2818", "#907b46", "#a07c48"];
+		let colors = old ? oldColors : newColors;
+	
+		ctx.fillStyle = colors[0];
 		ctx.fillRect(0, 0, width, height);
 		
 		let unit = 0.5;
 		
-		let islesCount = 1;
+		let islesCount = 20;
 		let islesPlacingResolution = 50;
 						
 		let isles = [];
@@ -185,33 +199,85 @@ $.mapgen = (function() {
 			let x = Math.min(width - mapBorder, Math.max(mapBorder, Math.random() * width));
 			let y = Math.min(height - mapBorder, Math.max(mapBorder, Math.random() * height));			
 			console.log("Isle #" + (i + 1) + " x: " + x + " y: " + y);			
-			let size = u * (10 + randomPositive(200));
+			let size = u * (10 + randomReversedProportional(300, 2));
 			let sizeCoef = size / (10 * u);
 			let sizeOffset = (40 * u) * sizeCoef;
 			let isle = generateOutline(x, y, size, size + sizeOffset, 20 * u,  Math.floor(10 * sizeCoef));
 			// node.data = isle;
 			isles.push(isle);
-		}
-		
+		}			
+
 		isles.forEach(function(isle){ 
-			drawOutline(isle, 120 * unit, "#3498DB");
+			drawOutline(isle, 160 * unit, colors[1]);
 		});		
 		isles.forEach(function(isle){ 
-			drawOutline(isle, 80 * unit, "#5DADE2");
+			drawOutline(isle, 100 * unit, colors[2]);
+		});		
+		
+		// generování růžic
+		ctx.strokeStyle = colors[2];
+		ctx.lineWidth = 4;
+		
+		let borderLineWidth = 30 * unit;
+		let borderWidth = 100 * unit + borderLineWidth;
+		
+		let step = Math.PI * 2 / 32;
+		let roseLineLength = Math.max(width, height);		
+		let subRadius = Math.min(halfWidth - borderWidth, halfHeight - borderWidth);	
+	
+		let drawRose = function(startX, startY, main) {
+			for (let i = 0; i < 32; i++) {
+				ctx.beginPath();				
+				ctx.setLineDash(i % 2 == 0 ? [] : [10, 10]);				
+				ctx.moveTo(startX, startY);
+				let x = startX + Math.cos(step * i) * roseLineLength;
+				let y = startY + Math.sin(step * i) * roseLineLength;
+				ctx.lineTo(x, y);
+				ctx.stroke();
+				if (main && i % 2 == 0) {
+					let x = halfWidth + Math.cos(step * i) * subRadius;
+					let y = halfHeight + Math.sin(step * i) * subRadius;
+					drawRose(x, y, false);
+				}
+			}	
+		};
+		drawRose(halfWidth, halfHeight, true);		
+				
+		isles.forEach(function(isle){ 
+			drawOutline(isle, 60 * unit, colors[3]);
 		});
 		isles.forEach(function(isle){ 
-			drawOutline(isle, 50 * unit, "#85C1E9");
+			drawOutline(isle, 25 * unit, colors[4]);
 		});
 		isles.forEach(function(isle){ 
-			drawOutline(isle, 20 * unit, "#AED6F1");
-		});
-		isles.forEach(function(isle){ 
-			drawOutline(isle, 10 * unit, "#D6EAF8");
+			drawOutline(isle, 10 * unit, colors[5]);
 		});		
 		isles.forEach(function(isle){ 
-			drawOutline(isle, 0, "#F9E79F");
+			drawOutline(isle, 0, colors[6]);
 		});
 		
+		// okraje		
+		ctx.fillStyle = colors[0];		
+		ctx.fillRect(0, 0, width, borderWidth);
+		ctx.fillRect(0, 0, borderWidth, height);
+		ctx.fillRect(0, height - borderWidth, width, borderWidth);
+		ctx.fillRect(width - borderWidth, 0, borderWidth, height);
+		
+		ctx.strokeStyle = colors[2];
+		ctx.lineWidth = 4;
+		ctx.setLineDash([]);
+		ctx.strokeRect(borderWidth, borderWidth, width - borderWidth * 2 , height - borderWidth * 2);
+
+		ctx.strokeRect(borderWidth - borderLineWidth, borderWidth - borderLineWidth, 
+			width - (borderWidth - borderLineWidth) * 2 , 
+			height - (borderWidth - borderLineWidth) * 2);
+		
+		ctx.lineWidth = borderLineWidth;
+		ctx.setLineDash([100 * unit, 100 * unit]);
+		ctx.strokeRect(borderWidth - borderLineWidth / 2, borderWidth - borderLineWidth / 2, 
+			width - (borderWidth - borderLineWidth / 2) * 2 , 
+			height - (borderWidth - borderLineWidth / 2) * 2);
+
 	};
 
 	let init = function() {	
@@ -228,6 +294,13 @@ $.mapgen = (function() {
 		start: function() {	
 			init();			
 		},
+		
+		saveImage: function() {
+			// https://stackoverflow.com/questions/10673122/how-to-save-canvas-as-an-image-with-canvas-todataurl
+			// here is the most important part because if you dont replace you will get a DOM 18 exception.
+			var image = canvas.toDataURL("image/png").replace("image/png", "image/octet-stream");  
+			window.location.href = image;			
+		}
 	};
 
 })();
