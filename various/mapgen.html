@@ -1,25 +1,6 @@
-[N1]Demo[/N1]
-[HTML]<table>
-	<tbody>
-		<tr>
-			<td>MinStarSpeedRate <2-50></td>
-			<td>MaxStarSpeedRate <2-50></td>
-			<td>Speed (ms) <1-50></td>
-			<td></td>
-		</tr>
-		<tr>		
-			<td><input id="minStarSpeedRateInput" style="width: 160px;" value="2"></td>			
-			<td><input id="maxStarSpeedRateInput" style="width: 160px;" value="10"></td>	
-			<td><input id="speedInput" style="width: 160px;" value="5"></td>				
-			<td><button type="button" onclick="$.mapgen.start()">Run!</button></td>
-		</tr>
-	</tbody>
-</table>
-<button onclick="$.mapgen.saveImage()">Save as Image</button>        
 <div style="margin: 10px 0;">
 	<canvas id="myCanvas" width="6000" height="3500" ondblclick="$.mapgen.fullscreen()"></canvas>
 </div>
-<div id="status"></div>[/HTML]
 <script>let $ = {};
 $.mapgen = (function() {
 
@@ -198,7 +179,7 @@ $.mapgen = (function() {
 			*/
 			let x = Math.min(width - mapBorder, Math.max(mapBorder, Math.random() * width));
 			let y = Math.min(height - mapBorder, Math.max(mapBorder, Math.random() * height));			
-			console.log("Isle #" + (i + 1) + " x: " + x + " y: " + y);			
+			//console.log("Isle #" + (i + 1) + " x: " + x + " y: " + y);			
 			let size = u * (10 + randomReversedProportional(300, 2));
 			let sizeCoef = size / (10 * u);
 			let sizeOffset = (40 * u) * sizeCoef;
