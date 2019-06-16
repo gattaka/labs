@@ -1,0 +1,304 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>MinStarSizeRate <2-50></td>
+			<td>MaxStarSizeRate <2-50></td>
+			<td>MaxStarSize <0.1-50></td>
+			<td>Stars <1-5000></td>
+		</tr>
+		<tr>			
+			<td><input id="minStarSizeRateInput" style="width: 160px;" value="2"></td>			
+			<td><input id="maxStarSizeRateInput" style="width: 160px;" value="20"></td>
+			<td><input id="maxStarSizeInput" style="width: 160px;" value="4"></td>			
+			<td><input id="starsInput" style="width: 80px;" value="2000">	
+		</tr>
+		<tr>
+			<td>MinStarSpeedRate <2-50></td>
+			<td>MaxStarSpeedRate <2-50></td>
+			<td>Speed (ms) <1-50></td>
+			<td></td>
+		</tr>
+		<tr>		
+			<td><input id="minStarSpeedRateInput" style="width: 160px;" value="2"></td>			
+			<td><input id="maxStarSpeedRateInput" style="width: 160px;" value="10"></td>	
+			<td><input id="speedInput" style="width: 160px;" value="5"></td>				
+			<td><button type="button" onclick="$.stars.start()">Run!</button></td>
+		</tr>
+		<tr>
+			<td><input id="centerRespawnInput" type="checkbox" onclick="$.stars.centerRespawn(this.checked)" checked>Center respawn?</input></td>
+			<td><input id="falconInput" type="checkbox" onclick="$.stars.falcon(this.checked)" >Millennium Falcon?</input></td>
+			<td></td>
+			<td></td>
+		</tr>
+	</tbody>
+</table>
+<div style="margin: 10px 0;">
+	<canvas id="myCanvas" width="700" height="600" ondblclick="$.stars.fullscreen()"></canvas>
+</div>
+<div id="status"></div>[/HTML]
+<script>let $ = {};
+$.stars = (function() {
+	/**
+	 * https://stackoverflow.com/questions/2353211/hsl-to-rgb-color-conversion
+	 * https://stackoverflow.com/questions/17433015/change-the-hue-of-a-rgb-color-in-javascript
+	 * Converts an HSL color value to RGB. Conversion formula
+	 * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+	 * Assumes h, s, and l are contained in the set [0, 1] and
+	 * returns r, g, and b in the set [0, 255].
+	 *
+	 * @param   {number}  h       The hue
+	 * @param   {number}  s       The saturation
+	 * @param   {number}  l       The lightness
+	 * @return  {Array}           The RGB representation
+	 */
+	let hslToRGB = function(h, s, l) {
+	    let r, g, b;
+
+	    if (s == 0) {
+	        r = g = b = l; // achromatic
+	    } else {
+	        let hue2rgb = function hue2rgb(p, q, t){
+	            if(t < 0) t += 1;
+	            if(t > 1) t -= 1;
+	            if(t < 1/6) return p + (q - p) * 6 * t;
+	            if(t < 1/2) return q;
+	            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+	            return p;
+	        }
+
+	        let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+	        let p = 2 * l - q;
+	        r = hue2rgb(p, q, h + 1/3);
+	        g = hue2rgb(p, q, h);
+	        b = hue2rgb(p, q, h - 1/3);
+	    }
+
+	    return "#" + ((1 << 24) + (Math.round(r * 255) << 16) + ( Math.round(g * 255) << 8) + Math.round(b * 255)).toString(16).slice(1);
+	};
+	
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+	let width;
+	let height;
+	let halfWidth;
+	let halfHeight;
+	let radius;
+	
+	let centerRespawn = true;
+	let falcon = false;
+	let falconMaxLineEnlargement = 15;
+	let falconLineEnlargementStep = 0.00005;
+	let falconLineEnlargement;
+
+	let maxStarSize;
+	let minStarSizeRate;
+	let maxStarSizeRate;
+	let minStarSpeedRate;
+	let maxStarSpeedRate;
+
+	let stars;
+	
+	let interval = 20;
+	let innerIntervalCallback;	
+		
+	let createStar = function() {
+		let x = Math.random() * width;
+		let y = Math.random() * height;
+		let xDistance = x - halfWidth;
+		let yDistance = y - halfHeight;
+		let distance = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
+		let speedRate = Math.max(minStarSpeedRate, Math.random() * maxStarSpeedRate);
+		let sizeRate = Math.max(minStarSizeRate, Math.random() * maxStarSizeRate);
+		return {
+			x: x,
+			y: y,
+			size: 0,
+			distance: distance,
+			time: 0,
+			xRate: xDistance / distance,
+			yRate: yDistance / distance,
+			speedRate: speedRate,
+			sizeRate: sizeRate
+		};
+	}
+	
+	let timeToDistanceDelta = function(time, speedRate) {
+		return Math.pow(speedRate, time * 0.01);
+	};
+	
+	let timeToSizeDelta = function(time, sizeRate) {
+		return Math.pow(sizeRate, time * 0.007) * 0.01;
+	};
+	
+	let draw = function() {				
+		ctx.fillStyle = "black";
+		ctx.fillRect(0, 0, width, height);
+		
+		ctx.fillStyle = "white"; //hslToRGB(1, 0, Math.min(1, 3 * star.distance / radius));				
+		ctx.strokeStyle = "white";
+
+		for (let i = 0; i < stars.length; i++) {			
+			let star = stars[i];							
+				
+			star.time++;
+			let sizeDelta = timeToSizeDelta(star.time, star.sizeRate);
+			let distanceDelta = timeToDistanceDelta(star.time, star.speedRate);
+			
+			if (falcon && star.time > 1) {		
+				if (falconLineEnlargement < falconMaxLineEnlargement)
+					falconLineEnlargement += falconLineEnlargementStep;
+				let distance = distanceDelta * falconLineEnlargement;				
+				let pastX = star.x + star.xRate * distance;
+				let pastY = star.y + star.yRate * distance;				
+				//console.log("pastX: " + pastX + " star.x: " + star.x + " pastY: " + pastY + " star.y: " + star.y); 				
+				ctx.lineWidth = star.size;
+				ctx.beginPath();
+				ctx.moveTo(star.x, star.y);
+				ctx.lineTo(pastX, pastY);
+				ctx.stroke();
+			} else {
+				ctx.fillRect(star.x, star.y, star.size, star.size);	
+			}
+						
+			if (star.size + sizeDelta < maxStarSize)
+				star.size += sizeDelta;										
+			star.distance += distanceDelta;
+			star.x += star.xRate * distanceDelta;
+			star.y += star.yRate * distanceDelta;	
+			let overflowOffset = Math.random() * radius;			
+			if (star.distance > radius + overflowOffset) {
+				if (centerRespawn) {
+					star.x = halfWidth;
+					star.y = halfHeight;					
+					star.distance = 0;		
+					star.time = 0;
+					star.size = 0;
+				} else {
+					stars[i] = createStar();			
+				}
+			}
+		}
+	};
+
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);
+	};
+
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+
+	let init = function() {	
+		
+		let maxStarSizeParam = validate("Invalid maxStarSize", "maxStarSizeInput", 0.1, 50);
+		let minStarSizeRateParam = validate("Invalid minStarSizeRate", 
+			"minStarSizeRateInput", 2, 50);
+		let maxStarSizeRateParam = validate("Invalid maxStarSizeRate", 
+			"maxStarSizeRateInput", 2, 50);
+		let minStarSpeedRateParam = validate("Invalid minStarSpeedRate", 
+			"minStarSpeedRateInput", 2, 50);
+		let maxStarSpeedRateParam = validate("Invalid maxStarSpeedRate", 
+			"maxStarSpeedRateInput", 2, 50);
+		let speedParam = validate("Invalid speed", "speedInput", 1, 50);	
+		let starsParam = validate("Invalid stars", "starsInput", 1, 5000);	
+
+		if (maxStarSizeParam && minStarSizeRateParam 
+			&& maxStarSizeRateParam && minStarSpeedRateParam && maxStarSpeedRateParam 
+			&& speedParam && starsParam) {	
+			
+			maxStarSize = maxStarSizeParam;
+			minStarSizeRate = minStarSizeRateParam;
+			maxStarSizeRate = maxStarSizeRateParam;
+			minStarSpeedRate = minStarSpeedRateParam;
+			maxStarSpeedRate = maxStarSpeedRateParam;
+
+			width = canvas.width;
+			height = canvas.height;
+			halfWidth = width / 2; 
+			halfHeight = height / 2;
+			radius = Math.sqrt(halfWidth * halfWidth + halfHeight * halfHeight); 
+			
+			stars = [];			
+			for (let i = 0; i < starsParam; i++)
+				stars[i] = createStar();
+			innnerChangeInterval(speedParam);	
+		}
+	};
+
+	return {
+
+		start: function() {	
+			init();			
+		},
+
+		centerRespawn: function(value) {
+			centerRespawn = value;
+		},
+		
+		falcon: function(value) {
+			falcon = value;
+			falconLineEnlargement = 1;
+		},
+
+		fullscreen: function() {
+			if (canvas.width > 700) {
+				canvas.width = 700;
+				canvas.height = 600;
+				canvas.style.position = "relative";
+				if (document.exitFullscreen) {
+					document.exitFullscreen();
+				} else if (document.mozCancelFullScreen) { /* Firefox */
+					document.mozCancelFullScreen();
+				} else if (document.webkitExitFullscreen) { /* Chrome, Safari and Opera */
+					document.webkitExitFullscreen();
+				} else if (document.msExitFullscreen) { /* IE/Edge */
+					document.msExitFullscreen();
+				}
+			} else {
+				canvas.width = screen.width;
+				canvas.height = screen.height;
+				canvas.style.position = "absolute";
+				canvas.style.left = "0";
+				canvas.style.top = "0";
+				canvas.style.zIndex = "999";
+				if (canvas.requestFullscreen) {
+					canvas.requestFullscreen();
+				} else if (canvas.mozRequestFullScreen) { /* Firefox */
+					canvas.mozRequestFullScreen();
+				} else if (canvas.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+					canvas.webkitRequestFullscreen();
+				} else if (elem.msRequestFullscreen) { /* IE/Edge */
+					canvas.msRequestFullscreen();
+				}
+			}
+			init();
+		}
+	};
+
+})();
+
+$.stars.start();</script>
