@@ -44,7 +44,10 @@ $.plotter = (function() {
 		ctx.clearRect(0, 0, width, height);
 		ctx.strokeStyle = "grey";
 		ctx.fillStyle = "grey";
-		ctx.font = "15px Monospace";		
+		let fontSize = 13;
+		let fontOffset = 8;
+		let axesDrawTolerance = fontSize + fontOffset;
+		ctx.font = fontSize + "px Monospace";		
 		
 		ctx.strokeRect(0, 0, width, height);
 
@@ -67,8 +70,10 @@ $.plotter = (function() {
 		let cyZero = height + Math.min(startY, endY) * cyUnit;
 		let cxZero = - Math.min(startX, endX) * cxUnit;
 		
+		// X OSA
+		
 		// x sekundární osa grafu		
-		let secXAxisCount = 6;	
+		let secXAxisCount = 8;	
 		let secXAxisUnit = yLength / secXAxisCount;			
 		let secXAxisRoundedUnit = secXAxisUnit > 10 ? 
 			Math.ceil(secXAxisUnit / 10) * 10 : 
@@ -86,7 +91,7 @@ $.plotter = (function() {
 			let axisNumber = secXAxisRoundedUnit * i + secXAxisOffset;
 			let cy = cyZero - axisNumber * cyUnit;
 			// kontrolu, zda nebude osa a text už moc nahoře (a byl by tedy ořízlý)
-			if (cy < 0 || cy > height)
+			if (cy < -axesDrawTolerance || cy > height + axesDrawTolerance)
 				continue;			
 	
 			ctx.beginPath();
@@ -94,8 +99,8 @@ $.plotter = (function() {
 			ctx.lineTo(width, cy);
 			ctx.stroke();
 
-			let textY = cy - 8;					
-			ctx.fillText(axisNumber, cxZero + 8, textY);				
+			let textY = cy - fontOffset;					
+			ctx.fillText(axisNumber, cxZero + fontOffset, textY);				
 		}
 				
 		// x osa grafu		
@@ -107,12 +112,15 @@ $.plotter = (function() {
 		ctx.lineTo(width, cyZero);
 		ctx.stroke();
 				
+		// Y OSA
+				
 		// y sekundární osa grafu		
-		let secYAxisCount = 6;	
+		let secYAxisCount = 8;	
 		let secYAxisUnit = xLength / secYAxisCount;			
 		let secYAxisRoundedUnit = secYAxisUnit > 10 ? 
-			Math.floor(secYAxisUnit / 10) * 10 : 
-			Math.max(1, Math.floor(secYAxisUnit));		
+			Math.ceil(secYAxisUnit / 10) * 10 : 
+			Math.ceil(secYAxisUnit);		
+		secYAxisCount = Math.ceil(xLength / secYAxisRoundedUnit);
 		if (secYAxisCount < 1 || secYAxisCount == Infinity)
 			secYAxisCount = 1;
 		let secYAxisOffset = Math.floor(fromX / secYAxisRoundedUnit) * secYAxisRoundedUnit;
@@ -123,17 +131,17 @@ $.plotter = (function() {
 		for (let i = 0; i <= secYAxisCount; i++) {	
 			let axisNumber = secYAxisRoundedUnit * i + secYAxisOffset;		
 			let cx = cxZero + axisNumber * cxUnit;			
-			if (cx < 0 || cx > width)
+			if (cx < -axesDrawTolerance || cx > width + axesDrawTolerance)
 				continue;
 		
-			let textX = cx + 8;
+			let textX = cx + fontOffset;
 
 			ctx.beginPath();
 			ctx.moveTo(cx, 0);
 			ctx.lineTo(cx, height);
 			ctx.stroke();		
 			ctx.textAlign = "left";
-			ctx.fillText(axisNumber, textX, cyZero > height - 8 ? height - 8 : cyZero - 8);	
+			ctx.fillText(axisNumber, textX, cyZero - fontOffset);	
 		}
 					
 		// y osa grafu		
@@ -144,12 +152,9 @@ $.plotter = (function() {
 		ctx.moveTo(cxZero, 0);
 		ctx.lineTo(cxZero, height);
 		ctx.stroke();
-		
-		/*
-		ctx.textAlign = "center";
-		ctx.fillText("Generation", (canvasWidth - xOffset) / 2 + xOffset, canvasHeight);	
-		*/
-		
+
+		// PLOT
+
 		for (let x = fromX; x <= toX; x += stepX) {
 			let cx = x * cxUnit + cxZero;
 			let cy = cyZero - func(x) * cyUnit;
@@ -159,7 +164,8 @@ $.plotter = (function() {
 	};
 
 	canvas.addEventListener("wheel", function(e) {
-		let delta = e.deltaY > 0 ? 2 : 0.5;		
+		let multiplier = 1.1
+		let delta = e.deltaY > 0 ? multiplier : 1 / multiplier;		
 		startX *= delta;
 		endX *= delta;
 		startY *= delta;
@@ -174,6 +180,10 @@ $.plotter = (function() {
 	}, false);
  
 	canvas.addEventListener("mouseup", function (e) {
+		dragged = false;
+	}, false);
+	
+	canvas.addEventListener("mouseleave", function (e) {
 		dragged = false;
 	}, false);
 	
