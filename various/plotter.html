@@ -8,11 +8,11 @@ $.plotter = (function() {
 	let width = canvas.width;
 	let height = canvas.height;
 	
-	let startX = 0;
-	let endX = 5;
+	let startX = -10;
+	let endX = 10;
 	
-	let startY = -5;
-	let endY = 25;
+	let startY = -170;
+	let endY = 45;
 	
 	let func = function(x) {
 		return x * x;
@@ -46,85 +46,99 @@ $.plotter = (function() {
 			return;
 		}
 		
-/*
+		let fromY = Math.min(startY, endY);
+		let toY = Math.max(startY, endY);
+		
+		// poloha hlavních osy 
+		let cyZero = height + Math.min(startY, endY) * cyUnit;
+		let cxZero = - Math.min(startX, endX) * cxUnit;
+		
 		// x sekundární osa grafu		
-		let secXAxisCount = 5;	
-		let secXAxisPriceUnit = yScale / secXAxisCount;			
-		let secXAxisRoundedPriceUnit = secXAxisPriceUnit > 10 ? 
-			Math.floor(secXAxisPriceUnit / 10) * 10 : 
-			Math.floor(secXAxisPriceUnit);		
-		secXAxisCount = Math.ceil(yScale / secXAxisRoundedPriceUnit);
+		let secXAxisCount = 6;	
+		let secXAxisUnit = yLength / secXAxisCount;			
+		let secXAxisRoundedUnit = secXAxisUnit > 10 ? 
+			Math.floor(secXAxisUnit / 10) * 10 : 
+			Math.floor(secXAxisUnit);		
+		secXAxisCount = Math.ceil(yLength / secXAxisRoundedUnit);
 		if (secXAxisCount < 1 || secXAxisCount == Infinity)
 			secXAxisCount = 1;
 		
+		ctx.setLineDash([5, 5]);
 		ctx.strokeStyle = "lightgrey";
 		ctx.fillStyle = "grey";
 		for (let i = 1; i < secXAxisCount; i++) {					
-			let y = canvasHeight - yOffset - secXAxisRoundedPriceUnit * i * yUnit;
+			let cy = cyZero - (secXAxisRoundedUnit * i + fromY) * cyUnit;
 			// kontrolu, zda nebude osa a text už moc nahoře (a byl by tedy ořízlý)
-			if (y < 5)
-				break;
-
+			if (cy < 0 || cy > height)
+				continue;			
+	
 			ctx.beginPath();
-			ctx.moveTo(xOffset, y);
-			ctx.lineTo(canvasWidth, y);
-			ctx.stroke();		
-			ctx.textAlign = "right";
-			ctx.fillText(i * secXAxisRoundedPriceUnit, xOffset - 10, y + 5);	
-		}
-			*/
-				
-		let cyZero = height + Math.min(startY, endY) * cyUnit;
-		if (cyZero <= height && cyZero >= 0) {
-			// x osa grafu		
-			ctx.strokeStyle = "grey";
-			ctx.fillStyle = "grey";
-			ctx.beginPath();
-			ctx.moveTo(0, cyZero);
-			ctx.lineTo(width, cyZero);
+			ctx.moveTo(0, cy);
+			ctx.lineTo(width, cy);
 			ctx.stroke();
-		}
-		
-		/*
-		// y sekundární osa grafu		
-		// zpočátku je položek generací velmi málo, takže jde měřítko osy 
-		// postupně měnit v krocích 1-10
-		let secYAxisCount = generationBestPrices.length < 10 ? generationBestPrices.length : 10;	
-		let secYAxisGenerationUnit = xScale / secYAxisCount;			
-		let secYAxisRoundedGenerationUnit = secYAxisGenerationUnit > 10 ? 
-			Math.floor(secYAxisGenerationUnit / 10) * 10 : 
-			Math.floor(secYAxisGenerationUnit);
-		secYAxisCount = Math.ceil(xScale / secYAxisRoundedGenerationUnit);
-		if (secYAxisCount < 1 || secYAxisCount == Infinity)
-			secYAxisCount = 1;
 
+			let text = i * secXAxisRoundedUnit + fromY;
+			let textY = cy - 8;
+			
+			if (cxZero > width - 20) {
+				ctx.textAlign = "right";
+				ctx.fillText(text, width - 8, textY);	
+			} else if (cxZero < 0) {
+				ctx.textAlign = "left";
+				ctx.fillText(text, 8, textY);	
+			} else {
+				ctx.textAlign = "left";
+				ctx.fillText(text, 8, textY);	
+			}
+		}
+				
+		// x osa grafu		
+		ctx.setLineDash([]);
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.beginPath();
+		ctx.moveTo(0, cyZero);
+		ctx.lineTo(width, cyZero);
+		ctx.stroke();
+				
+		// y sekundární osa grafu		
+		let secYAxisCount = 6;	
+		let secYAxisUnit = xLength / secYAxisCount;			
+		let secYAxisRoundedUnit = secYAxisUnit > 10 ? 
+			Math.floor(secYAxisUnit / 10) * 10 : 
+			Math.floor(secYAxisUnit);		
+		secYAxisCount = Math.ceil(xLength / secYAxisRoundedUnit);
+		if (secYAxisCount < 1 || secYAxisCount == Infinity)
+			secyAxisCount = 1;
+		
+		ctx.setLineDash([5, 5]);
 		ctx.strokeStyle = "lightgrey";
 		ctx.fillStyle = "grey";
 		for (let i = 1; i < secYAxisCount; i++) {					
-			let x = xOffset + secYAxisRoundedGenerationUnit * i * xUnit;
-			// kontrolu, zda nebude osa a text už moc daleko (a byl by tedy ořízlý)
-			if (x > canvasWidth - 10)
-				break;
+			let cx = cxZero + (secYAxisRoundedUnit * i + fromX) * cxUnit;
+			// kontrolu, zda nebude osa a text už moc vpravo (a byl by tedy ořízlý)
+			if (cx > width - 20)
+				continue;
+		
+			let text = i * secYAxisRoundedUnit + fromX;
+			let textX = cx + 10;
 
 			ctx.beginPath();
-			ctx.moveTo(x, 0);
-			ctx.lineTo(x, canvasHeight - yOffset);
+			ctx.moveTo(cx, 0);
+			ctx.lineTo(cx, height);
 			ctx.stroke();		
 			ctx.textAlign = "center";
-			ctx.fillText(i * secYAxisRoundedGenerationUnit, x, canvasHeight - yOffset + 15);	
+			ctx.fillText(text, textX, cyZero > height - 10 ? height - 10 : cyZero - 10);	
 		}
-		*/
-		
-		let cxZero = - Math.min(startX, endX) * cxUnit;
-		if (cxZero <= width && cxZero >= 0) {
-			// y osa grafu		
-			ctx.strokeStyle = "grey";
-			ctx.fillStyle = "grey";
-			ctx.beginPath();
-			ctx.moveTo(cxZero, 0);
-			ctx.lineTo(cxZero, height);
-			ctx.stroke();
-		}
+					
+		// y osa grafu		
+		ctx.setLineDash([]);
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.beginPath();
+		ctx.moveTo(cxZero, 0);
+		ctx.lineTo(cxZero, height);
+		ctx.stroke();
 		
 		/*
 		ctx.textAlign = "center";
