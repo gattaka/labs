@@ -1,0 +1,150 @@
+<canvas id="can" width="500" height="300"></canvas>
+
+<script>let $ = {};
+$.plotter = (function() {
+	
+	let canvas = document.getElementById("can");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	
+	let startX = 0;
+	let endX = 5;
+	
+	let startY = -5;
+	let endY = 25;
+	
+	let func = function(x) {
+		return x * x;
+	};
+
+	let paint = function() {		
+		ctx.clearRect(0, 0, width, height);
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.font = "15px Monospace";		
+		
+		ctx.strokeRect(0, 0, width, height);
+			
+		// na kolik procent je protažená Y osa?
+		let xUnitProjection = 1.01;		
+		let yUnitProjection = 1.01;
+				
+		let xLength = Math.abs(startX - endX) * xUnitProjection;
+		let yLength = Math.abs(startY - endY) * yUnitProjection;				
+		
+		let pointSize = 3;
+		
+		let cyUnit = height / yLength;
+		let cxUnit = width / xLength;
+		
+		let fromX = Math.min(startX, endX);
+		let toX = Math.max(startX, endX);
+		let stepX = xLength / width;		
+		if (stepX <= 0 || fromX > toX) {
+			console.log("Plotter error, infinite cycle detected!");
+			return;
+		}
+		
+/*
+		// x sekundární osa grafu		
+		let secXAxisCount = 5;	
+		let secXAxisPriceUnit = yScale / secXAxisCount;			
+		let secXAxisRoundedPriceUnit = secXAxisPriceUnit > 10 ? 
+			Math.floor(secXAxisPriceUnit / 10) * 10 : 
+			Math.floor(secXAxisPriceUnit);		
+		secXAxisCount = Math.ceil(yScale / secXAxisRoundedPriceUnit);
+		if (secXAxisCount < 1 || secXAxisCount == Infinity)
+			secXAxisCount = 1;
+		
+		ctx.strokeStyle = "lightgrey";
+		ctx.fillStyle = "grey";
+		for (let i = 1; i < secXAxisCount; i++) {					
+			let y = canvasHeight - yOffset - secXAxisRoundedPriceUnit * i * yUnit;
+			// kontrolu, zda nebude osa a text už moc nahoře (a byl by tedy ořízlý)
+			if (y < 5)
+				break;
+
+			ctx.beginPath();
+			ctx.moveTo(xOffset, y);
+			ctx.lineTo(canvasWidth, y);
+			ctx.stroke();		
+			ctx.textAlign = "right";
+			ctx.fillText(i * secXAxisRoundedPriceUnit, xOffset - 10, y + 5);	
+		}
+			*/
+				
+		let cyZero = height + Math.min(startY, endY) * cyUnit;
+		if (cyZero <= height && cyZero >= 0) {
+			// x osa grafu		
+			ctx.strokeStyle = "grey";
+			ctx.fillStyle = "grey";
+			ctx.beginPath();
+			ctx.moveTo(0, cyZero);
+			ctx.lineTo(width, cyZero);
+			ctx.stroke();
+		}
+		
+		/*
+		// y sekundární osa grafu		
+		// zpočátku je položek generací velmi málo, takže jde měřítko osy 
+		// postupně měnit v krocích 1-10
+		let secYAxisCount = generationBestPrices.length < 10 ? generationBestPrices.length : 10;	
+		let secYAxisGenerationUnit = xScale / secYAxisCount;			
+		let secYAxisRoundedGenerationUnit = secYAxisGenerationUnit > 10 ? 
+			Math.floor(secYAxisGenerationUnit / 10) * 10 : 
+			Math.floor(secYAxisGenerationUnit);
+		secYAxisCount = Math.ceil(xScale / secYAxisRoundedGenerationUnit);
+		if (secYAxisCount < 1 || secYAxisCount == Infinity)
+			secYAxisCount = 1;
+
+		ctx.strokeStyle = "lightgrey";
+		ctx.fillStyle = "grey";
+		for (let i = 1; i < secYAxisCount; i++) {					
+			let x = xOffset + secYAxisRoundedGenerationUnit * i * xUnit;
+			// kontrolu, zda nebude osa a text už moc daleko (a byl by tedy ořízlý)
+			if (x > canvasWidth - 10)
+				break;
+
+			ctx.beginPath();
+			ctx.moveTo(x, 0);
+			ctx.lineTo(x, canvasHeight - yOffset);
+			ctx.stroke();		
+			ctx.textAlign = "center";
+			ctx.fillText(i * secYAxisRoundedGenerationUnit, x, canvasHeight - yOffset + 15);	
+		}
+		*/
+		
+		let cxZero = - Math.min(startX, endX) * cxUnit;
+		if (cxZero <= width && cxZero >= 0) {
+			// y osa grafu		
+			ctx.strokeStyle = "grey";
+			ctx.fillStyle = "grey";
+			ctx.beginPath();
+			ctx.moveTo(cxZero, 0);
+			ctx.lineTo(cxZero, height);
+			ctx.stroke();
+		}
+		
+		/*
+		ctx.textAlign = "center";
+		ctx.fillText("Generation", (canvasWidth - xOffset) / 2 + xOffset, canvasHeight);	
+		*/
+		
+		for (let x = fromX; x <= toX; x += stepX) {
+			let cx = x * cxUnit + cxZero;
+			let cy = cyZero - func(x) * cyUnit;
+			ctx.fillStyle = "blue";
+			ctx.fillRect(cx - pointSize / 2, cy - pointSize / 2, pointSize, pointSize);
+		}
+	};
+
+
+	return {
+		start: function() {
+			paint();
+		}
+	};
+})();
+
+$.plotter.start();</script>
