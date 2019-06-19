@@ -1,0 +1,167 @@
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>MinRadius <1-500></td>
+			<td>MaxRadius <1-500></td>
+			<td>MaxStep <1-100></td>
+			<td>Steps <4-1000></td>
+			<td></td>
+		</tr>
+		<tr>			
+			<td><input id="minRadiusInput" style="width: 160px;" value="150"></td>			
+			<td><input id="maxRadiusInput" style="width: 160px;" value="250"></td>
+			<td><input id="maxStepInput" style="width: 160px;" value="5"></td>			
+			<td><input id="stepsInput" style="width: 80px;" value="200">	
+			<td><button type="button" onclick="$.islegen.start()">Run!</button></td>
+		</tr>
+	</tbody>
+</table>
+<div style="margin: 10px 0;">
+	<canvas id="myCanvas" width="700" height="700"></canvas>
+</div>[/HTML]
+<script>let $ = {};
+$.islegen = (function() {
+
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+	let width;
+	let height;
+	let halfWidth;
+	let halfHeight;
+	
+	let minRadius;
+	let maxRadius;
+	let maxStep;
+	let steps;
+
+	// generuje náhodná čísla v obou směrech n,
+	// tedy pokud dám 10, tak vygeneruje v rozsahu
+	// -10 až +10, bere totiž 2n a vždy odčítá půlku
+	let randomPositiveNegative = function(n) {
+		return Math.random() * n * 2 - n;
+	};
+	
+	let randomPositive = function(n) {
+		return Math.random() * n;
+	};
+	
+	let drawOutline = function(outline, radiusOffset, color) {
+		ctx.fillStyle = color;
+		ctx.beginPath();
+		for (let i = 0; i <= outline.data.length; i++) {			
+			let index = (i + 1) % outline.data.length;
+			let angle = i * outline.anglePerStep;			
+			let rad = outline.data[index] + radiusOffset;
+			let radianRad = Math.PI * angle / 180;
+			let x = outline.x + Math.cos(radianRad) * rad;
+			let y = outline.y + Math.sin(radianRad) * rad;
+			if (i == 0)
+				ctx.moveTo(x, y);
+			else
+				ctx.lineTo(x, y);
+		}
+		ctx.fill();
+	};
+
+	let generateOutline = function(x, y, minRad, maxRad, maxStep, steps) {		
+		let anglePerStep = 360 / steps;
+		let radius = minRad + (maxRad - minRad) / 2;
+		let outline = {
+			anglePerStep: anglePerStep,
+			data: [],
+			x: x,
+			y: y
+		};
+		for (let i = 0; i < steps; i++) {
+			let step = randomPositiveNegative(maxStep)
+			let newRadius = Math.max(minRad, Math.min(maxRad, radius + step));
+			let radiusDifference = newRadius - radius;
+			// aby nebyl na konci ostrova skok, protože se musí uzavřít křivka
+			// je potřeba kontrolovat skokovost vůči radiusu prvního bodu, na
+			// který se právě bude navazovat -- lze to vyjádřit jako kontrolu 
+			// toho, že má posledních x kroků na to, aby stihl vrátit offset
+			let startEndRadiusDiff = newRadius - outline.data[0];
+			if (i != 0 && Math.abs(startEndRadiusDiff) > (maxStep * (steps - i))) {
+				// hrozí, že na konci křivky bude skok, je potřeba radius zredukovat
+				// buď se změna ubírala špatným směrem nebo byla malá, je nutné brát
+				// znaménko z startEndRadiusDiff, protože kdyby byla jenom malá a 
+				// bralo by se z radiusDifference mohl by se nechtěně naopak rozdíl
+				// prohloubit, protože by se otočil směr (přitom byl správný)
+				radius = radius - Math.sign(startEndRadiusDiff) * maxStep;
+			} else {
+				// v pořádku, radius se stihne za zbývající počet kroků vrátit 
+				// do přijatelné vzdálenosti
+				radius = newRadius;
+			}
+			
+			outline.data.push(radius);			
+		}
+		return outline;
+	};
+		
+	let draw = function() {		
+		let colors = ["#4c80bf", "#5691da", "#71a7e1", "#8dbbe7", "#b1d1ef", "#d8e8f8", "#f3ea9e"];	
+		let colorId = 0;	
+		
+		ctx.fillStyle = colors[colorId++];
+		ctx.fillRect(0, 0, width, height);	
+		let x = halfWidth;
+		let y = halfHeight;
+		
+		let isle = generateOutline(x, y, minRadius, maxRadius, maxStep, steps);
+
+		drawOutline(isle, 80, colors[colorId++]);
+		drawOutline(isle, 60, colors[colorId++]);
+		drawOutline(isle, 40, colors[colorId++]);
+		drawOutline(isle, 20, colors[colorId++]);
+		drawOutline(isle, 10, colors[colorId++]);
+		drawOutline(isle, 0, colors[colorId++]);
+	};
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+
+	let init = function() {	
+		width = canvas.width;
+		height = canvas.height;
+		halfWidth = width / 2; 
+		halfHeight = height / 2;
+	
+		let minRadiusParam = validate("Invalid minRadius", "minRadiusInput", 1, 500);	
+		let maxRadiusParam = validate("Invalid maxRadius", "maxRadiusInput", 1, 500);	
+		let maxStepParam = validate("Invalid maxStep", "maxStepInput", 1, 100);	
+		let stepsParam = validate("Invalid maxStep", "stepsInput", 4, 1000);	
+
+		if (minRadiusParam && maxRadiusParam && maxStepParam && stepsParam) {	
+			
+			minRadius = minRadiusParam;
+			maxRadius = maxRadiusParam;
+			maxStep = maxStepParam;
+			steps = stepsParam;
+		
+			draw();
+		}
+	};
+
+	return {
+
+		start: function() {	
+			init();			
+		},
+		
+	};
+
+})();
+
+$.islegen.start();</script>

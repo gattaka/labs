@@ -164,7 +164,7 @@ $.plotter = (function() {
 	};
 
 	canvas.addEventListener("wheel", function(e) {
-		let multiplier = 1.1
+		let multiplier = 1.1;
 		let delta = e.deltaY > 0 ? multiplier : 1 / multiplier;		
 		startX *= delta;
 		endX *= delta;
