@@ -1,5 +1,5 @@
 <div style="margin: 10px 0;">
-	<canvas id="myCanvas" width="6000" height="3500" ondblclick="$.mapgen.fullscreen()"></canvas>
+	<canvas id="myCanvas" width="6000" height="3500"></canvas>
 </div>
 <script>let $ = {};
 $.mapgen = (function() {
@@ -81,56 +81,6 @@ $.mapgen = (function() {
 		}
 		return outline;
 	};
-	
-	let createOrReturn = function(tree, index) {			
-		if (!tree.sub[index]) {
-			let level = tree.level + 1;
-			let x = tree.x;
-			let y = tree.y;
-			let w = tree.w;
-			let h = tree.h;
-			if (level % 2 == 0) {
-				w = w / 2;
-				x += index == 0 ? - w : w;
-			} else {
-				h = h / 2;
-				y += index == 0 ? - h : h;			
-			}
-			tree.sub[index] = {
-				sub: [],
-				level: level,
-				x: x,
-				y: y,
-				w: w,
-				h: h
-			};
-		}
-		return tree.sub[index];
-	};
-
-	// přepínač indexu 0->1 a 1->0
-	let switchIndex = function(index) {
-		return index == 1 ? 0 : 1;
-	};
-
-	let findFreeLeafByRandom = function(tree, leafLevel) {
-		if (tree.level == leafLevel) {
-			if (!tree.data) return tree;
-			// else undefined
-		} else {
-			let guessIndex = Math.floor(Math.random() * 2);
-			let guessResult = findFreeLeafByRandom(createOrReturn(tree, guessIndex), leafLevel);
-			if (guessResult) {
-				// našel se volný list
-				return guessResult;
-			} else {
-				// zkus druhý index a vrať cokoliv najdeš (pokud se našel volný list, 
-				// tak mám výsledek a dávám ho nahoru, pokud jsem nenašel volný list, 
-				// pak s tím nic nemůžu dělat a stejně se musí vrátit režie nahoru
-				return findFreeLeafByRandom(createOrReturn(tree, switchIndex(guessIndex)), leafLevel);
-			}
-		}		
-	}	
 
 	let draw = function() {		
 	
@@ -145,38 +95,13 @@ $.mapgen = (function() {
 		
 		let unit = 0.5;
 		
-		let islesCount = 20;
-		let islesPlacingResolution = 50;
-						
-		let isles = [];
-		
-		// binární strom, dělící prostor mapy
-		// log2(n), kde n je počet listů udává,
-		// kolik musí mít strom pater
-		let layers = Math.ceil(Math.log(islesPlacingResolution) / Math.log(2));
-		let tree = {
-			sub: [],
-			level: 0,
-			x: halfWidth,
-			y: halfHeight,
-			w: halfWidth,
-			h: halfHeight
-		};		
+		let islesCount = 20;						
+		let isles = [];	
 				
 		let mapBorder = 100;
 				
 		for (let i = 0; i < islesCount; i++) {
 			let u = unit;
-			/*
-			let node = findFreeLeafByRandom(tree, layers);
-			if (!node) {
-				console.log("obsaženy všechny listy!");
-				return;
-			}				
-			let offset = 90 * u;			
-			let x = Math.min(width - mapBorder, Math.max(mapBorder, node.x + randomPositiveNegative(offset)));
-			let y = Math.min(height - mapBorder, Math.max(mapBorder, node.y + randomPositiveNegative(offset)));			
-			*/
 			let x = Math.min(width - mapBorder, Math.max(mapBorder, Math.random() * width));
 			let y = Math.min(height - mapBorder, Math.max(mapBorder, Math.random() * height));			
 			//console.log("Isle #" + (i + 1) + " x: " + x + " y: " + y);			
@@ -184,7 +109,6 @@ $.mapgen = (function() {
 			let sizeCoef = size / (10 * u);
 			let sizeOffset = (40 * u) * sizeCoef;
 			let isle = generateOutline(x, y, size, size + sizeOffset, 20 * u,  Math.floor(10 * sizeCoef));
-			// node.data = isle;
 			isles.push(isle);
 		}			
 

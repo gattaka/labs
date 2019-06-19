@@ -1,0 +1,186 @@
+<div style="margin: 10px 0;">
+	<canvas id="segmentCanvas" width="700" height="400"></canvas>
+</div>
+<div style="margin: 10px 0;">
+	<canvas id="treeCanvas" width="700" height="400"></canvas>
+</div>
+<script>let $ = {};
+$.binarytree = (function() {
+
+	/**
+	 * https://stackoverflow.com/questions/2353211/hsl-to-rgb-color-conversion
+	 * https://stackoverflow.com/questions/17433015/change-the-hue-of-a-rgb-color-in-javascript
+	 * Converts an HSL color value to RGB. Conversion formula
+	 * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
+	 * Assumes h, s, and l are contained in the set [0, 1] and
+	 * returns r, g, and b in the set [0, 255].
+	 *
+	 * @param   {number}  h       The hue
+	 * @param   {number}  s       The saturation
+	 * @param   {number}  l       The lightness
+	 * @return  {Array}           The RGB representation
+	 */
+	let hslToRGB = function(h, s, l) {
+	    let r, g, b;
+
+	    if (s == 0) {
+	        r = g = b = l; // achromatic
+	    } else {
+	        let hue2rgb = function hue2rgb(p, q, t){
+	            if(t < 0) t += 1;
+	            if(t > 1) t -= 1;
+	            if(t < 1/6) return p + (q - p) * 6 * t;
+	            if(t < 1/2) return q;
+	            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+	            return p;
+	        }
+
+	        let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+	        let p = 2 * l - q;
+	        r = hue2rgb(p, q, h + 1/3);
+	        g = hue2rgb(p, q, h);
+	        b = hue2rgb(p, q, h - 1/3);
+	    }
+
+	    return "#" + ((1 << 24) + (Math.round(r * 255) << 16) + ( Math.round(g * 255) << 8) + Math.round(b * 255)).toString(16).slice(1);
+	};
+
+	let canvas = document.getElementById("segmentCanvas");
+	let ctx = canvas.getContext("2d");
+	let width;
+	let height;
+	let halfWidth;
+	let halfHeight;
+	
+	let treeCanvas = document.getElementById("treeCanvas");
+	let treeCtx = treeCanvas.getContext("2d");
+	let treePointSize = 5;
+	let treeLevelOffset = 10;
+	
+	let basetree;
+	
+	let hitTolerance = 1;
+	
+	let getColorByLevel = function(level) {
+		return hslToRGB((1 / 20) * level , 1, 0.5);
+	};
+	
+	let fillSegment = function(tree) {		
+		let color = getColorByLevel(tree.level);
+		ctx.fillStyle = color;
+		ctx.strokeStyle = "black";
+		let x = tree.x - tree.w / 2;
+		let y = tree.y - tree.h / 2;		
+		ctx.fillRect(x, y, tree.w, tree.h);
+		ctx.strokeRect(x, y, tree.w, tree.h);		
+	};
+	
+	let printTree = function(tree, x, wstep) {		
+		let ty = tree.level * treeLevelOffset;
+		let tx = x - 5;		
+		treeCtx.strokeStyle = "black";		
+		if (tree.sub[0]) {
+			treeCtx.beginPath();
+			treeCtx.moveTo(tx, ty);
+			treeCtx.lineTo(x - wstep, ty + treeLevelOffset);
+			treeCtx.stroke();
+			printTree(tree.sub[0], x - wstep, wstep / 2);		
+		}
+		if (tree.sub[1]) {
+			treeCtx.beginPath();
+			treeCtx.moveTo(tx, ty);
+			treeCtx.lineTo(x + wstep, ty + treeLevelOffset);
+			treeCtx.stroke();
+			printTree(tree.sub[1], x + wstep, wstep / 2);		
+		}
+		let color = getColorByLevel(tree.level);
+		treeCtx.fillStyle = color;		
+		treeCtx.fillRect(tx - treePointSize / 2, ty, treePointSize, treePointSize);
+	};
+	
+	let createOrReturn = function(tree, index) {			
+		if (!tree.sub[index]) {
+			let level = tree.level;
+			let x = tree.x;
+			let y = tree.y;
+			let w = tree.w;
+			let h = tree.h;					
+			if (level % 2 == 0) {
+				w = w / 2;
+				x += index == 0 ? - w / 2 : w / 2;
+			} else {
+				h = h / 2;
+				y += index == 0 ? - h / 2 : h / 2;	
+			}
+			sub = {
+				sub: [],
+				level: level + 1,
+				x: x,
+				y: y,
+				w: w,
+				h: h
+			};
+			fillSegment(sub);
+			tree.sub[index] = sub; 
+		}
+		return tree.sub[index];
+	};
+
+	// přepínač indexu 0->1 a 1->0
+	let switchIndex = function(index) {
+		return index == 1 ? 0 : 1;
+	};
+
+	let getNodeByCoord = function(tree, x, y) {
+		if (Math.abs(tree.x - x) < hitTolerance && Math.abs(tree.y - y) < hitTolerance) {
+			return tree;			
+		} else {
+			if (tree.level % 2 == 0) {
+				return getNodeByCoord(createOrReturn(tree, x < tree.x ? 0 : 1), x, y);
+			} else {
+				return getNodeByCoord(createOrReturn(tree, y < tree.y ? 0 : 1), x, y);
+			}
+		}		
+	}
+
+	let init = function() {	
+		width = canvas.width;
+		height = canvas.height;
+		halfWidth = width / 2; 
+		halfHeight = height / 2;
+
+		// binární strom, dělící prostor mapy
+		// log2(n), kde n je počet listů udává,
+		// kolik musí mít strom pater
+		// let layers = Math.ceil(Math.log(islesPlacingResolution) / Math.log(2));
+		basetree = {
+			sub: [],
+			level: 0,
+			x: halfWidth,
+			y: halfHeight,
+			w: width,
+			h: height
+		};	
+		fillSegment(basetree);					
+	};
+
+	canvas.addEventListener("click", function (e) {		
+		let bound = canvas.getBoundingClientRect();
+		let x = e.clientX - bound.x;
+		let y = e.clientY - bound.y;
+		let node = getNodeByCoord(basetree, x, y);	
+		
+		printTree(basetree, treeCanvas.width / 2, treeCanvas.width / 4);
+	}, false);
+
+	return {
+
+		start: function() {	
+			init();			
+		},
+		
+	};
+
+})();
+
+$.binarytree.start();</script>
