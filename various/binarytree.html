@@ -2,7 +2,7 @@
 	<canvas id="segmentCanvas" width="700" height="400"></canvas>
 </div>
 <div style="margin: 10px 0;">
-	<canvas id="treeCanvas" width="700" height="400"></canvas>
+	<canvas id="treeCanvas" width="700" height="400" style="cursor: pointer"></canvas>
 </div>
 <script>let $ = {};
 $.binarytree = (function() {
@@ -56,6 +56,12 @@ $.binarytree = (function() {
 	let treeCtx = treeCanvas.getContext("2d");
 	let treePointSize = 10;
 	let treeLevelOffset = treePointSize + 5;
+	
+	let dragged;
+	let draggedStartX = 0;
+	let draggedStartY = 0;
+	let xOffset = 0;	
+	let yOffset = 0;
 	
 	let basetree;
 	
@@ -142,7 +148,7 @@ $.binarytree = (function() {
 	};	
 		
 	let printTree = function(tree, x) {		
-		let ty = (tree.level + 1) * treeLevelOffset;		
+		let ty = (tree.level + 1) * treeLevelOffset + yOffset;		
 		treeCtx.strokeStyle = "black";	
 		
 		let rightCount = 0;
@@ -173,14 +179,45 @@ $.binarytree = (function() {
 		return count;
 	};
 
+	let paint = function() {
+		treeCtx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
+		treeCtx.strokeRect(0, 0, treeCanvas.width, treeCanvas.height);
+		printTree(basetree, treeLevelOffset + xOffset);
+	};
+
 	canvas.addEventListener("click", function (e) {		
 		let bound = canvas.getBoundingClientRect();
 		let x = e.clientX - bound.x;
 		let y = e.clientY - bound.y;
 		getNodeByCoord(basetree, x, y);	
-		treeCtx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
-		treeCtx.strokeRect(0, 0, treeCanvas.width, treeCanvas.height);
-		printTree(basetree, treeLevelOffset);
+		paint();
+	}, false);
+	
+	treeCanvas.addEventListener("mousedown", function (e) {
+		dragged = true;
+		draggedStartX = e.clientX;
+		draggedStartY = e.clientY;
+	}, false);
+ 
+	treeCanvas.addEventListener("mouseup", function (e) {
+		dragged = false;
+	}, false);
+	
+	treeCanvas.addEventListener("mouseleave", function (e) {
+		dragged = false;
+	}, false);
+	
+	treeCanvas.addEventListener("mousemove", function (e) {
+		if (!dragged) 
+			return;
+		let ratio = 1;
+		let difX = (draggedStartX - e.clientX) / ratio;
+		let difY = (draggedStartY - e.clientY) / ratio;
+		xOffset -= difX;				
+		yOffset -= difY;
+		paint();
+		draggedStartX = e.clientX;
+		draggedStartY = e.clientY;		
 	}, false);
 
 	return {
