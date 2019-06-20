@@ -54,12 +54,12 @@ $.binarytree = (function() {
 	
 	let treeCanvas = document.getElementById("treeCanvas");
 	let treeCtx = treeCanvas.getContext("2d");
-	let treePointSize = 5;
-	let treeLevelOffset = 10;
+	let treePointSize = 10;
+	let treeLevelOffset = treePointSize + 5;
 	
 	let basetree;
 	
-	let hitTolerance = 1;
+	let hitTolerance = 10;
 	
 	let getColorByLevel = function(level) {
 		return hslToRGB((1 / 20) * level , 1, 0.5);
@@ -73,29 +73,6 @@ $.binarytree = (function() {
 		let y = tree.y - tree.h / 2;		
 		ctx.fillRect(x, y, tree.w, tree.h);
 		ctx.strokeRect(x, y, tree.w, tree.h);		
-	};
-	
-	let printTree = function(tree, x, wstep) {		
-		let ty = tree.level * treeLevelOffset;
-		let tx = x - 5;		
-		treeCtx.strokeStyle = "black";		
-		if (tree.sub[0]) {
-			treeCtx.beginPath();
-			treeCtx.moveTo(tx, ty);
-			treeCtx.lineTo(x - wstep, ty + treeLevelOffset);
-			treeCtx.stroke();
-			printTree(tree.sub[0], x - wstep, wstep / 2);		
-		}
-		if (tree.sub[1]) {
-			treeCtx.beginPath();
-			treeCtx.moveTo(tx, ty);
-			treeCtx.lineTo(x + wstep, ty + treeLevelOffset);
-			treeCtx.stroke();
-			printTree(tree.sub[1], x + wstep, wstep / 2);		
-		}
-		let color = getColorByLevel(tree.level);
-		treeCtx.fillStyle = color;		
-		treeCtx.fillRect(tx - treePointSize / 2, ty, treePointSize, treePointSize);
 	};
 	
 	let createOrReturn = function(tree, index) {			
@@ -162,15 +139,47 @@ $.binarytree = (function() {
 			h: height
 		};	
 		fillSegment(basetree);					
+	};	
+		
+	let printTree = function(tree, y) {		
+		let tx = tree.level * treeLevelOffset;		
+		treeCtx.strokeStyle = "black";	
+		
+		let rightCount = 0;
+		let leftCount = 0;
+		if (tree.sub[0]) 
+			rightCount = printTree(tree.sub[0], y);			
+		if (tree.sub[1]) 
+			leftCount = printTree(tree.sub[1], y + rightCount * treeLevelOffset);			
+			
+		let count = Math.max(1, leftCount + rightCount);
+		let ty = y + treeLevelOffset * (count - 1) / 2;
+		if (tree.sub[0]) {
+			treeCtx.beginPath();
+			treeCtx.moveTo(tx + treePointSize, ty + treePointSize / 2);
+			treeCtx.lineTo(tx + treeLevelOffset, y + treeLevelOffset * (rightCount - 1) / 2 + treePointSize / 2);
+			treeCtx.stroke();	
+		}
+		if (tree.sub[1]) {
+			treeCtx.beginPath();
+			treeCtx.moveTo(tx + treePointSize, ty + treePointSize / 2);
+			treeCtx.lineTo(tx + treeLevelOffset, y + treeLevelOffset * (rightCount + (leftCount - 1) / 2) + treePointSize / 2);
+			treeCtx.stroke();
+		}
+		
+		let color = getColorByLevel(tree.level);
+		treeCtx.fillStyle = color;
+		treeCtx.fillRect(tx, ty, treePointSize, treePointSize);
+		return count;
 	};
 
 	canvas.addEventListener("click", function (e) {		
 		let bound = canvas.getBoundingClientRect();
 		let x = e.clientX - bound.x;
 		let y = e.clientY - bound.y;
-		let node = getNodeByCoord(basetree, x, y);	
-		
-		printTree(basetree, treeCanvas.width / 2, treeCanvas.width / 4);
+		getNodeByCoord(basetree, x, y);	
+		treeCtx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
+		printTree(basetree, 0);
 	}, false);
 
 	return {
