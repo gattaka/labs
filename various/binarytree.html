@@ -59,7 +59,7 @@ $.binarytree = (function() {
 	
 	let basetree;
 	
-	let hitTolerance = 10;
+	let hitTolerance = 1;
 	
 	let getColorByLevel = function(level) {
 		return hslToRGB((1 / 20) * level , 1, 0.5);
@@ -141,29 +141,29 @@ $.binarytree = (function() {
 		fillSegment(basetree);					
 	};	
 		
-	let printTree = function(tree, y) {		
-		let tx = tree.level * treeLevelOffset;		
+	let printTree = function(tree, x) {		
+		let ty = (tree.level + 1) * treeLevelOffset;		
 		treeCtx.strokeStyle = "black";	
 		
 		let rightCount = 0;
 		let leftCount = 0;
 		if (tree.sub[0]) 
-			rightCount = printTree(tree.sub[0], y);			
+			rightCount = printTree(tree.sub[0], x);			
 		if (tree.sub[1]) 
-			leftCount = printTree(tree.sub[1], y + rightCount * treeLevelOffset);			
+			leftCount = printTree(tree.sub[1], x + rightCount * treeLevelOffset);			
 			
 		let count = Math.max(1, leftCount + rightCount);
-		let ty = y + treeLevelOffset * (count - 1) / 2;
+		let tx = x + treeLevelOffset * (count - 1) / 2;
 		if (tree.sub[0]) {
 			treeCtx.beginPath();
-			treeCtx.moveTo(tx + treePointSize, ty + treePointSize / 2);
-			treeCtx.lineTo(tx + treeLevelOffset, y + treeLevelOffset * (rightCount - 1) / 2 + treePointSize / 2);
+			treeCtx.moveTo(tx + treePointSize / 2, ty + treePointSize);
+			treeCtx.lineTo(x + treeLevelOffset * (rightCount - 1) / 2 + treePointSize / 2, ty + treeLevelOffset);
 			treeCtx.stroke();	
 		}
 		if (tree.sub[1]) {
 			treeCtx.beginPath();
-			treeCtx.moveTo(tx + treePointSize, ty + treePointSize / 2);
-			treeCtx.lineTo(tx + treeLevelOffset, y + treeLevelOffset * (rightCount + (leftCount - 1) / 2) + treePointSize / 2);
+			treeCtx.moveTo(tx + treePointSize / 2, ty + treePointSize);
+			treeCtx.lineTo(x + treeLevelOffset * (rightCount + (leftCount - 1) / 2) + treePointSize / 2, ty + treeLevelOffset);
 			treeCtx.stroke();
 		}
 		
@@ -179,7 +179,8 @@ $.binarytree = (function() {
 		let y = e.clientY - bound.y;
 		getNodeByCoord(basetree, x, y);	
 		treeCtx.clearRect(0, 0, treeCanvas.width, treeCanvas.height);
-		printTree(basetree, 0);
+		treeCtx.strokeRect(0, 0, treeCanvas.width, treeCanvas.height);
+		printTree(basetree, treeLevelOffset);
 	}, false);
 
 	return {
