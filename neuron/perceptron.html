@@ -21,7 +21,7 @@ Problémem je rozlišení třídy nad křivkou a pod ní. Jako převodní funkce
     	border: 1px solid black;
     	margin-left: 4px;
     	padding: 4px;
-    	background-color: #e6f90e;
+    	background-color: #a9f90e;
 	">Správně prostor B</span>
 	<span style="
     	border: 1px solid black;
@@ -91,25 +91,23 @@ $.perceptron = (function() {
 	let triesCount;
 	let successCount;
 		
-	let linearFce = function(x) {				
-		return x * height * 2 / width;
+	let linearFce = function(cx) {				
+		return cx * 2;
 	};	
 
-	let linearFce2 = function(x) {				
+	let linearFce2 = function(cx) {				
 		//return height / 4 + (x * height / 2) / width;
-		return x / 2 + height / 2;
+		return cx + 0.2;
 	};	
 	
-	let sineFce = function(x) {				
-		return Math.sin(Math.PI * x / width) * height;
+	let sineFce = function(cx) {				
+		return Math.sin(Math.PI * cx);
 	};	
 			
-	let angleFce = function(x) {				
-		let widthHalf = width / 2;
-		let heightHalf = height / 2;
-		if (x < widthHalf)
-			return heightHalf;		
-		return heightHalf * x / widthHalf; 
+	let angleFce = function(cx) {				
+		if (cx < 0)
+			return 0.5;		
+		return 0.5 + cx * 0.2; 
 	};
 	
 	let separatorFunc = linearFce2;
@@ -132,16 +130,16 @@ $.perceptron = (function() {
 		w2 += inputs[2] * error * sensitivity;		
 	};
 	
-	let separator = function(x, y) {
-		let fceY = separatorFunc(x);
-		return fceY > y ? -1 : 1;
+	let separator = function(cx, cy) {
+		let fceY = separatorFunc(cx);
+		return fceY > cy ? -1 : 1;
 	};
 	
-	let guessSeparatorFunc = function(x) {
+	let guessSeparatorFunc = function(cx) {
 		// x*w0 + y*w1 + b*wb = 0
 		// y = -(x*w0 + b*wb) / w1
 		// return (x * height / 2) / width + height / 4;
-		return -(x * w1 + bias * w0) / w2;
+		return -(cx * w1 + bias * w0) / w2;
 	};
 	
 	let toCartX = function(x) {
@@ -157,44 +155,46 @@ $.perceptron = (function() {
 	}
 	
 	let toScreenY = function(cy) {
-		return - cy * halfHeight - halfHeight;
+		return - cy * halfHeight + halfHeight;
 	}
 	
-	let test = function() {
-	
-		// náhodně vyber souřadnici mezi -1 a 1
-		//let cx = Math.random() * 2 - 1; 
-		//let cy = Math.random() * 2 - 1;		
-		let x = Math.random() * width;
-		let y = Math.random() * height;	
-		ctx.fillStyle = "black";
-		ctx.fillRect(x, y, pointSize, pointSize);		
-		
+	let test = function() {				
 		lineCtx.clearRect(0, 0, 800, 300);			
 		lineCtx.strokeStyle = "grey";
 		lineCtx.fillStyle = "grey";		
 		lineCtx.strokeRect(0, 0, width, height);
+		
 		lineCtx.beginPath();
-		lineCtx.moveTo(0, height / 2);
-		lineCtx.lineTo(width, height / 2);
+		lineCtx.moveTo(0, halfHeight);
+		lineCtx.lineTo(width, halfHeight);
+		lineCtx.stroke();
+		
+		lineCtx.beginPath();
+		lineCtx.moveTo(halfWidth, 0);
+		lineCtx.lineTo(halfWidth, height);
 		lineCtx.stroke();
 		
 		// ukaž jak si myslí perceptron, že je křivka vedená
 		// oproti zadané křivce			
-		for (let x = 0; x < width; x++) {
+		let step = 2 / width;
+		for (let cx = -1; cx < 1; cx += step) {
 			// cílová linka
 			lineCtx.fillStyle = "blue";
-			lineCtx.fillRect(x, separatorFunc(x), 1, 1);
+			lineCtx.fillRect(toScreenX(cx), toScreenY(separatorFunc(cx)), 1, 1);
 			// linka perceptronu
 			lineCtx.fillStyle = "red";
-			lineCtx.fillRect(x, guessSeparatorFunc(x), 1, 1);		
+			lineCtx.fillRect(toScreenX(cx), toScreenY(guessSeparatorFunc(cx)), 1, 1);		
 		}
+		
+		// náhodně vyber souřadnici mezi -1 a 1
+		let cx = Math.random() * 2 - 1; 
+		let cy = Math.random() * 2 - 1;	
 			
 		// známá hodnota
-		let target = separator(x, y);
+		let target = separator(cx, cy);
 		
 		// perceptron
-		let inputs = [bias, x, y];
+		let inputs = [bias, cx, cy];
 		let guessed = guess(inputs);		
 		triesCount++;
 	
@@ -202,11 +202,12 @@ $.perceptron = (function() {
 		let error = target - guessed;
 		if (error == 0) {
 			successCount++;			
-			ctx.fillStyle = guessed > 0 ? "#e5ff0f" : "orange";
+			ctx.fillStyle = guessed > 0 ? "#a9f90e" : "orange";
 		} else {
 			ctx.fillStyle = "black";
 			train(inputs, error);			
 		}		
+		ctx.fillRect(toScreenX(cx), toScreenY(cy), pointSize, pointSize);
 		
 		document.getElementById("tryNumber").value = triesCount;
 		document.getElementById("successRate").value = 
@@ -215,8 +216,6 @@ $.perceptron = (function() {
 		document.getElementById("wb").value = w2;
 		document.getElementById("w0").value = w0;
 		document.getElementById("w1").value = w1;
-
-		ctx.fillRect(x, y, pointSize, pointSize);		
 	};
 
 	let innnerChangeInterval = function(value) {
@@ -251,15 +250,27 @@ $.perceptron = (function() {
 		w2 = height;
 		bias = -1;
 		*/
-
+		
 		// cílová linka
 		ctx.clearRect(0, 0, 800, 300);			
-		ctx.strokeStyle = "grey";
-		ctx.fillStyle = "grey";
 		ctx.strokeRect(0, 0, width, height);
+
+		ctx.fillStyle = "grey";
+		ctx.strokeStyle = "grey";
+
+		ctx.beginPath();
+		ctx.moveTo(0, halfHeight);
+		ctx.lineTo(width, halfHeight);
+		ctx.stroke();
 		
-		for (let x=0; x < width; x++) 
-			ctx.fillRect(x, separatorFunc(x), 1, 1);
+		ctx.beginPath();
+		ctx.moveTo(halfWidth, 0);
+		ctx.lineTo(halfWidth, height);
+		ctx.stroke();
+		
+		let step = 2 / width;
+		for (let cx = -1; cx < 1; cx += step)			
+			ctx.fillRect(toScreenX(cx), toScreenY(separatorFunc(cx)), 1, 1);
 
 		innnerChangeInterval(interval);	
 	};
