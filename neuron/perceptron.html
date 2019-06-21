@@ -1,37 +1,87 @@
+[N1]Problém[/N1]
+Problémem je rozlišení třídy nad křivkou a pod ní. Jako převodní funkce je použita funkce [MONSPC]signum[/MONSPC], perceptron má tedy výstupní hodnotu dle znaménka 1 resp. -1. Chyba, kterou perceptronu předkládám je -2, 0 a 2.
+
 [N1]Demo[/N1]
-[HTML]<table>
-	<tbody>
-		<tr>
-			<td>Function</td>
-		</tr>
-		<tr>
-			<td>	
-				<input type="radio" name="func" value="linear" 
-					onchange="$.perceptron.changeFceLinear()" checked> Linear 
-				<input type="radio" name="func" value="sine" 
-					onchange="$.perceptron.changeFceSine()"> Sine 
-				<input type="radio" name="func" value="angle" 
-					onchange="$.perceptron.changeFceAngle()"> Angle			
-			</td>
-		</tr>
-	</tbody>
-</table>
-<div>
+[HTML]<div style="margin-bottom: 8px;">
+	<input type="radio" name="func" value="linear" 
+		onchange="$.perceptron.changeFceLinear()"  /> Linear</label>
+	<input type="radio" name="func" value="linear2" 
+		onchange="$.perceptron.changeFceLinear2()" checked /> Linear 2</label>
+	<input type="radio" name="func" value="sine" 
+		onchange="$.perceptron.changeFceSine()" /> Sine 
+	<input type="radio" name="func" value="angle" 
+		onchange="$.perceptron.changeFceAngle()" /> Angle
+	<span style="
+    	border: 1px solid black;
+    	margin-left: 4px;
+    	padding: 4px;
+    	background-color: orange;
+	">Správně prostor A</span>
+	<span style="
+    	border: 1px solid black;
+    	margin-left: 4px;
+    	padding: 4px;
+    	background-color: #e6f90e;
+	">Správně prostor B</span>
+	<span style="
+    	border: 1px solid black;
+    	margin-left: 4px;
+    	padding: 4px;
+    	background-color: #191919;
+	    color: white;
+	">Špatně</span>
+</div>
+<div style="margin: 10px 0;">
 	<canvas id="myCanvas" width="700" height="250"></canvas>
 </div>
-<div id="status"></div>[/HTML]
-<script>
-let $ = {};
+<div style="margin: 10px 0;">
+	<canvas id="lineCanvas" width="700" height="250"></canvas>
+</div>
+<div>
+	<table>
+		<tr>
+			<td>Try</td>
+			<td>Success rate</td>
+			<td>Bias θ</td>
+			<td>w<sub>θ</sub></td>
+			<td>w<sub>0</sub></td>
+			<td>w<sub>1</sub></td>
+		</tr>
+		<tr>
+			<td><input id="tryNumber" style="width: 60px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+			<td><input id="successRate" style="width: 80px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+			<td><input id="bias" style="width: 80px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+			<td><input id="wb" style="width: 150px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+			<td><input id="w0" style="width: 150px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+			<td><input id="w1" style="width: 150px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+		</tr>
+	</table>
+</div>[/HTML]
+<script>let $ = {};
 $.perceptron = (function() {
 
 	let canvas = document.getElementById("myCanvas");
-	let ctx = canvas.getContext("2d");
-	let width = canvas.width;
-	let height = canvas.height;
-
-	let sensitivity;
-	let dendriteCount;
-	let weights;	
+	let ctx = canvas.getContext("2d");	
+	let lineCanvas = document.getElementById("lineCanvas");
+	let lineCtx = lineCanvas.getContext("2d");
+	
+	let width = lineCanvas.width;
+	let height = lineCanvas.height;
+	let halfWidth = width / 2;
+	let halfHeight = height / 2;
+	
+	let sensitivity = 0.1;
+	
+	let w0;	
+	let w1;	
+	let w2;		
+	let bias;
 	
 	let interval = 1;
 	let innerIntervalCallback;
@@ -42,7 +92,12 @@ $.perceptron = (function() {
 	let successCount;
 		
 	let linearFce = function(x) {				
-		return x * height / width;
+		return x * height * 2 / width;
+	};	
+
+	let linearFce2 = function(x) {				
+		//return height / 4 + (x * height / 2) / width;
+		return x / 2 + height / 2;
 	};	
 	
 	let sineFce = function(x) {				
@@ -57,7 +112,7 @@ $.perceptron = (function() {
 		return heightHalf * x / widthHalf; 
 	};
 	
-	let separatorFunc = linearFce;
+	let separatorFunc = linearFce2;
 	
 	let transform = function(output) {
 		return Math.sign(output);
@@ -65,14 +120,16 @@ $.perceptron = (function() {
 	
 	let guess = function(inputs) {
 		let sum = 0;
-		for (let i = 0; i < dendriteCount; i++) 
-			sum += weights[i] * inputs[i];	
+		sum += w0 * inputs[0];
+		sum += w1 * inputs[1];
+		sum += w2 * inputs[2];	
 		return transform(sum);
 	};
 	
 	let train = function(inputs, error) {
-		for (let i = 0; i < dendriteCount; i++) 
-			weights[i] += inputs[i] * error * sensitivity;	
+		w0 += inputs[0] * error * sensitivity;
+		w1 += inputs[1] * error * sensitivity;
+		w2 += inputs[2] * error * sensitivity;		
 	};
 	
 	let separator = function(x, y) {
@@ -80,19 +137,64 @@ $.perceptron = (function() {
 		return fceY > y ? -1 : 1;
 	};
 	
+	let guessSeparatorFunc = function(x) {
+		// x*w0 + y*w1 + b*wb = 0
+		// y = -(x*w0 + b*wb) / w1
+		// return (x * height / 2) / width + height / 4;
+		return -(x * w1 + bias * w0) / w2;
+	};
+	
+	let toCartX = function(x) {
+		return x / halfWidth - 1;
+	}
+	
+	let toCartY = function(y) {
+		return -y / halfHeight + 1;
+	}
+	
+	let toScreenX = function(cx) {
+		return cx * halfWidth + halfWidth;
+	}
+	
+	let toScreenY = function(cy) {
+		return - cy * halfHeight - halfHeight;
+	}
+	
 	let test = function() {
 	
-		// náhodně vyber místo
+		// náhodně vyber souřadnici mezi -1 a 1
+		//let cx = Math.random() * 2 - 1; 
+		//let cy = Math.random() * 2 - 1;		
 		let x = Math.random() * width;
-		let y = Math.random() * height;
+		let y = Math.random() * height;	
 		ctx.fillStyle = "black";
-		ctx.fillRect(x, y, pointSize, pointSize);
+		ctx.fillRect(x, y, pointSize, pointSize);		
 		
+		lineCtx.clearRect(0, 0, 800, 300);			
+		lineCtx.strokeStyle = "grey";
+		lineCtx.fillStyle = "grey";		
+		lineCtx.strokeRect(0, 0, width, height);
+		lineCtx.beginPath();
+		lineCtx.moveTo(0, height / 2);
+		lineCtx.lineTo(width, height / 2);
+		lineCtx.stroke();
+		
+		// ukaž jak si myslí perceptron, že je křivka vedená
+		// oproti zadané křivce			
+		for (let x = 0; x < width; x++) {
+			// cílová linka
+			lineCtx.fillStyle = "blue";
+			lineCtx.fillRect(x, separatorFunc(x), 1, 1);
+			// linka perceptronu
+			lineCtx.fillStyle = "red";
+			lineCtx.fillRect(x, guessSeparatorFunc(x), 1, 1);		
+		}
+			
 		// známá hodnota
 		let target = separator(x, y);
 		
 		// perceptron
-		let inputs = [x,y];
+		let inputs = [bias, x, y];
 		let guessed = guess(inputs);		
 		triesCount++;
 	
@@ -106,12 +208,14 @@ $.perceptron = (function() {
 			train(inputs, error);			
 		}		
 		
-		let status = "Try = " + triesCount + "<br/>"
-			+ "Success rate = " + Math.floor((successCount / triesCount) * 100) + " %";
-		for (let i = 0; i < dendriteCount; i++) 
-				status += "<br/>w<sub>" + i + "</sub> = " + weights[i];
-			document.getElementById("status").innerHTML = status;
-		
+		document.getElementById("tryNumber").value = triesCount;
+		document.getElementById("successRate").value = 
+			Math.floor((successCount / triesCount) * 100) + " %";
+		document.getElementById("bias").value = bias;
+		document.getElementById("wb").value = w2;
+		document.getElementById("w0").value = w0;
+		document.getElementById("w1").value = w1;
+
 		ctx.fillRect(x, y, pointSize, pointSize);		
 	};
 
@@ -135,19 +239,25 @@ $.perceptron = (function() {
 	let init = function() {
 		triesCount = 0;			
 		successCount = 0;
-	
-		sensitivity = 0.2;
-		dendriteCount = 2;				
-		weights = [];
-		for (let i = 0; i < dendriteCount; i++) 
-			weights[i] = Math.random >= 0.5 ? 1 : -1;	
+			
+		w0 = Math.random >= 0.5 ? 1 : -1;
+		w1 = Math.random >= 0.5 ? 1 : -1;
+		w2 = Math.random >= 0.5 ? 1 : -1;
+		bias = 1;
+		
+		/*
+		w0 = -1;
+		w1 = 2;
+		w2 = height;
+		bias = -1;
+		*/
 
-		// plocha1 je 	
+		// cílová linka
 		ctx.clearRect(0, 0, 800, 300);			
 		ctx.strokeStyle = "grey";
 		ctx.fillStyle = "grey";
 		ctx.strokeRect(0, 0, width, height);
-				
+		
 		for (let x=0; x < width; x++) 
 			ctx.fillRect(x, separatorFunc(x), 1, 1);
 
@@ -164,7 +274,12 @@ $.perceptron = (function() {
 			separatorFunc = linearFce;	
 			init();
 		},
-		
+				
+		changeFceLinear2: function() {
+			separatorFunc = linearFce2;	
+			init();
+		},
+
 		changeFceSine: function() {
 			separatorFunc = sineFce;	
 			init();
@@ -173,11 +288,16 @@ $.perceptron = (function() {
 		changeFceAngle: function() {
 			separatorFunc = angleFce;	
 			init();
-		}
-		
+		}	
 	};
-
 })();
 
-$.perceptron.start();
-</script>
+$.perceptron.start();</script>
+
+[N1]Pozorování[/N1]
+- na jednoduché klasifikační problémy (jako je například lineráně rozdělený prostor) je perceptor dobrý
+- u komplikovanějších případů jde ale jeho účinnost dolů
+- taky má ale problém s lineárním rozdělením, které jde proti směru růstu jedné z os
+
+[SOURCES]https://cs.wikipedia.org/wiki/Perceptron
+https://www.youtube.com/watch?v=ntKn5TPHHAk[/SOURCES]

@@ -82,11 +82,11 @@ $.nnet = (function() {
 	let layerXOffset = 70;
 	let layerYOffset = 20;
 	let layerNodeRadius = 10;
+	let layerNodesOffset = layerYOffset + layerNodeRadius * 2;
 
 	let sensitivity = 0.2;
-	let bias = 0;
 	
-	let layersSizes = [5, 7, 6, 4];
+	let layersSizes = [2, 3, 2];
 	let net = [];
 	
 	let interval = 1;
@@ -95,7 +95,53 @@ $.nnet = (function() {
 	let pointSize = 4;
 	
 	let triesCount;
-	let successCount;
+	let successCount;		
+		
+	let drawLines = function() {
+		netCtx.strokeStyle = "black";	
+		for (let l = 0; l < layersSizes.length; l++) {
+			let layerSize = layersSizes[l]; 			
+			// pro každý neuron z vrstvy
+			for (let n = 0; n < layerSize; n++) {
+				let x = layerXOffset * (l + 1);
+				let y = netHalfHeight + (n - layerSize / 2) * layerNodesOffset;
+				if (l > 0) {
+					let inputSize = layersSizes[l - 1];
+					let ix = x - layerXOffset;					
+					// pro každý vstup do neuronu
+					for (let i = 0; i < inputSize; i++) {
+						let iy = netHalfHeight + (i - inputSize / 2) * layerNodesOffset;
+						netCtx.beginPath();
+						netCtx.moveTo(ix, iy);
+						netCtx.lineTo(x, y);
+						netCtx.stroke();
+					}
+				}
+			}			
+		}
+	};
+	
+	let drawNodes = function() {
+		for (let l = 0; l < layersSizes.length; l++) {
+			netCtx.strokeStyle = "black";
+			netCtx.fillStyle = hslToRGB(l / layersSizes.length, 1, 0.5);
+			let layerSize = layersSizes[l]; 			
+			let x = layerXOffset * (l + 1);
+			// pro každý neuron z vrstvy
+			for (let n = 0; n < layerSize; n++) {				
+				let y = netHalfHeight + (n - layerSize / 2) * layerNodesOffset;
+				netCtx.beginPath();
+				netCtx.arc(x, y, layerNodeRadius, 0, Math.PI * 2);
+				netCtx.stroke();
+				netCtx.fill();
+			}			
+		}
+	};
+	
+	let drawNet = function() {
+		drawLines();
+		drawNodes();
+	};
 		
 	let linearFce = function(x) {				
 		return x * height / width;
@@ -113,39 +159,57 @@ $.nnet = (function() {
 		return heightHalf * x / widthHalf; 
 	};
 	
-	let separatorFunc = linearFce;
+	let separatorFunc = linearFce;	
+		
+	let separator = function(x, y) {
+		let fceY = separatorFunc(x);
+		return fceY > y ? -1 : 1;
+	};
 	
 	let transform = function(output) {
 		return Math.sign(output);
 	};
 	
-	let guess = function(inputs) {
-		let results = [];		
-		// pro každou vrstvu
-		for (let l = 0; l < net.length; l++) {			
-			let netLayer = net[l];		
-			// pro každý neuron z vrstvy
-			for (let n = 0; n < netLayer.length; n++) {	
-				let neuron = netLayer[n];
-				let value = 0;
-				// pro každý vstup do neuronu
-				for (let i = 0; i < inputs.length; i++) 
-					value += neuron.weights[i] * inputs[i];	
-				results[n] = transform(sum - bias);
-			}
-			inputs = results;
+	let activation = function(inputsVector, layerId, nodeId) {
+		if (layerId == 0)
+			return inputsVector[nodeId];		
+		let neuron = net[layerId][nodeId];
+		let value = 0;
+		// pro každý vstup do neuronu		
+		for (let i = 0; i < neuron.weights.length; i++) 
+			value += neuron.weights[i] * activation(inputsVector, layerId - 1, i);	
+		return transform(value - neuron.bias);
+	};
+	
+	// Hodnocení sítě -- čím menší, tím lepší
+	// hledá se tedy globální minimum.
+	// Hodnotící funkce je funkcí vektoru všech vah a biasů v síti
+	// K dosažení je potřeba získat negativní gradient,
+	// tedy vektor délky vektoru všech vah a biasů
+	// https://youtu.be/IHZwWFHWa-w?t=535
+	// https://youtu.be/tIeHLnjs5U8?t=514
+	// https://youtu.be/tIeHLnjs5U8?t=574
+	let evaluate = function(inputsVector, targetVector) {
+		let sum = 0;
+		let layerId = layersSizes.length - 1;
+		let layerNodeCount = layersSizes[layerId];
+		for (let n = 0; n < layerNodeCount; n++) 
+			sum += Math.pow(activation(inputsVector, layerId, n) - targetVector[n], 2);
+		return sum;
+	};
+	
+	let train = function(inputsVector, targetVector) {		
+		// Projdi vrstvy odzadu (kromě 0, to je vstup)
+		for (let l = layersSizes.length - 1; l > 0; l--) {
+			// Projdi neurony na vrstvě
+			for (let n = 0; n < layersSizes[l]; n++) {
+				let neuron = net[l][n];
+				// Projdi jejich váhy
+				for (let w = 0; w < neuron.weights.length; w++) {
+					value += neuron.weights[i] * activation(inputsVector, layerId - 1, i);	
+				}
+			}		
 		}
-		return results;
-	};
-	
-	let train = function(inputs, error) {
-		for (let i = 0; i < dendriteCount; i++) 
-			weights[i] += inputs[i] * error * sensitivity;	
-	};
-	
-	let separator = function(x, y) {
-		let fceY = separatorFunc(x);
-		return fceY > y ? -1 : 1;
 	};
 	
 	let test = function() {
@@ -160,21 +224,19 @@ $.nnet = (function() {
 		let target = separator(x, y);
 		
 		// perceptron
-		let inputs = [x,y];
-		let guessed = guess(inputs);		
+		let targetVector = [target, -target];
+		let inputsVector = [x, y];
+		let error = evaluate(inputsVector, targetVector);
 		triesCount++;
 	
 		// učení
-		/*
-		let error = target - guessed;
-		if (error == 0) {
+		if (error < 0.2) {
 			successCount++;			
 			ctx.fillStyle = guessed > 0 ? "#e5ff0f" : "orange";
 		} else {
 			ctx.fillStyle = "black";
-			train(inputs, error);			
-		}	
-		*/		
+			train(inputsVector, targetVector);			
+		}			
 		
 		let status = "Try = " + triesCount + "<br/>"
 			+ "Success rate = " + Math.floor((successCount / triesCount) * 100) + " %";
@@ -201,44 +263,6 @@ $.nnet = (function() {
 			test();
 		}, interval);
 	};
-	
-	let drawNet = function() {
-		netCtx.strokeStyle = "black";	
-		for (let l = 0; l < layersSizes.length; l++) {
-			let layerSize = layersSizes[l]; 			
-			// pro každý neuron z vrstvy
-			for (let n = 0; n < layerSize; n++) {
-				let x = layerXOffset * (l + 1);
-				let y = netHeight / 2 + (n - layerSize / 2) * (layerYOffset + layerNodeRadius * 2);
-				if (l > 0) {
-					let inputSize = layersSizes[l - 1];
-					let ix = x - layerXOffset;					
-					// pro každý vstup do neuronu
-					for (let i = 0; i < inputSize; i++) {
-						let iy = netHeight / 2 + (i - inputSize / 2) * (layerYOffset + layerNodeRadius * 2);
-						netCtx.beginPath();
-						netCtx.moveTo(ix, iy);
-						netCtx.lineTo(x, y);
-						netCtx.stroke();
-					}
-				}
-			}			
-		}
-		for (let l = 0; l < layersSizes.length; l++) {
-			netCtx.strokeStyle = "black";
-			netCtx.fillStyle = hslToRGB(l / layersSizes.length, 1, 0.5);
-			let layerSize = layersSizes[l]; 			
-			let x = layerXOffset * (l + 1);
-			// pro každý neuron z vrstvy
-			for (let n = 0; n < layerSize; n++) {				
-				let y = netHeight / 2 + (n - layerSize / 2) * (layerYOffset + layerNodeRadius * 2);
-				netCtx.beginPath();
-				netCtx.arc(x, y, layerNodeRadius, 0, Math.PI * 2);
-				netCtx.stroke();
-				netCtx.fill();
-			}			
-		}
-	};
 
 	let init = function() {
 		triesCount = 0;			
@@ -248,7 +272,7 @@ $.nnet = (function() {
 		// pro každou vrstvu
 		for (let l = 1; l < layersSizes.length; l++) {
 			let layer = [];
-			net.push(layer);
+			net[l] = layer;
 			let inputSize = layersSizes[l - 1];
 			let layerSize = layersSizes[l]
 			// pro každý neuron z vrstvy
@@ -258,7 +282,8 @@ $.nnet = (function() {
 				for (let i = 0; i < inputSize; i++) 
 					weights.push(Math.random >= 0.5 ? 1 : -1);
 				layer[n] = {
-					weights: weights
+					weights: weights,
+					bias: Math.random >= 0.5 ? 1 : -1				
 				}
 			}
 		}
@@ -281,7 +306,7 @@ $.nnet = (function() {
 		// vykresli neuronovou síť
 		drawNet();
 
-		//innnerChangeInterval(interval);	
+		innnerChangeInterval(interval);	
 	};
 
 	return {
