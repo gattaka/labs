@@ -8,8 +8,8 @@ $.plotter = (function() {
 	
 	let canvas = document.getElementById("can");
 	let ctx = canvas.getContext("2d");
-	let width = canvas.width;
-	let height = canvas.height;	
+	let width = canvas.offsetWidth;
+	let height = canvas.offsetHeight;	
 	let dragged = false;
 	let draggedStartX;
 	let draggedStartY;
@@ -17,23 +17,24 @@ $.plotter = (function() {
 	let startX = -5;
 	let endX = 10.1;
 	
-	let startY = 20.6;
-	let endY = -5;
+	let startY = -1;
+	let endY = 2;
+	
+	let originalStartX = startX;	
+	let originalEndX = endX;
+	
+	let originalStartY = startY;
+	let originalEndY = endY;
 	
 	// na kolik procent je protažená Y osa?
-	let xUnitProjection = 1.01;		
-	let yUnitProjection = 1.01;
-			
-	let xLength;
-	let yLength;
-	let cyUnit;
-	let cxUnit;
+	let xUnitProjection = 1;		
+	let yUnitProjection = 1;
 	
-	let calibrate = function() {
-		xLength = Math.abs(startX - endX) * xUnitProjection;
-		yLength = Math.abs(startY - endY) * yUnitProjection;			
-		cyUnit = height / yLength;
-		cxUnit = width / xLength;
+	// kolik bodů má být na ose na pixel?
+	let axisSizePerPx = 1 / 50;
+	
+	let computeAxisSize = function(sideSize) {
+		return Math.ceil(sideSize * axisSizePerPx);
 	};
 	
 	let func = function(x) {
@@ -50,61 +51,8 @@ $.plotter = (function() {
 		return num;
 	};
 
-	let roundAxisUnit = function(unit) {
-		if (unit == 1)
-			return 1;
-		let str = unit.toString();	
-		let dotIndex = str.indexOf(".");
-		if (dotIndex > -1) {
-			if (str.startsWith("0")) {
-				let index = 0;
-				for (let i = str.indexOf(".") + 1; i < str.length; i++) {
-					if (str.charAt(i) != "0") {
-						index = i;
-						break;
-					}
-				}
-				let prefix = str.substring(0, index + 1);	
-				let prefixLastDigit = prefix.substring(prefix.length - 1, prefix.length);		
-				switch (prefixLastDigit) {
-					case "0":
-					case "2":
-					case "5":
-						return Number(prefix);
-					case "9":
-					case "8":
-					case "7":
-					case "6":
-						return Number(prefix.substring(0, prefix.length - 1) + "5");
-					case "4":
-					case "3":
-						return Number(prefix.substring(0, prefix.length - 1) + "2");
-					case "1":				
-						return Number(prefix);			
-				}
-			} else {
-				str = str.substring(0, dotIndex);
-				if (str == "1")
-					return 1;
-			}			
-		}			
-		let lastDigit = str.substring(str.length - 1, str.length);
-		switch (lastDigit) {
-			case "0":
-			case "2":
-			case "5":
-				return Number(str);
-			case "9":
-			case "8":
-			case "7":
-			case "6":
-				return Number(str.substring(0, str.length - 1) + "5");
-			case "4":
-			case "3":
-				return Number(str.substring(0, str.length - 1) + "2");
-			case "1":				
-				return Number(str.substring(0, str.length - 1) + "0");			
-		}		
+	let roundUnit = function(unit) {
+		return Number(unit.toPrecision(2));
 	};
 
 	let paint = function() {		
@@ -120,7 +68,10 @@ $.plotter = (function() {
 
 		let pointSize = 3;
 
-		calibrate();
+		let xLength = Math.abs(startX - endX) * xUnitProjection;
+		let yLength = Math.abs(startY - endY) * yUnitProjection;			
+		let cyUnit = height / yLength;
+		let cxUnit = width / xLength;
 
 		let fromX = Math.min(startX, endX);
 		let toX = Math.max(startX, endX);
@@ -140,10 +91,10 @@ $.plotter = (function() {
 		// X OSA
 		
 		// x sekundární osa grafu		
-		let secXAxisCount = 8;	
+		let secXAxisCount = computeAxisSize(width);	
 		let secXAxisUnit = yLength / secXAxisCount;			
-		let secXAxisRoundedUnit = roundAxisUnit(secXAxisUnit);
-		secXAxisCount = Math.ceil(yLength / secXAxisRoundedUnit);
+		let secXAxisRoundedUnit = roundUnit(secXAxisUnit);
+		secXAxisCount += 2;
 		if (secXAxisCount < 1 || secXAxisCount == Infinity)
 			secXAxisCount = 1;
 		let secXAxisOffset = Math.floor(fromY / secXAxisRoundedUnit) * secXAxisRoundedUnit;
@@ -165,7 +116,7 @@ $.plotter = (function() {
 			ctx.stroke();
 
 			let textY = cy - fontOffset;					
-			ctx.fillText(ensureAxisUnitDigits(axisNumber, secXAxisRoundedUnit), cxZero + fontOffset, textY);				
+			ctx.fillText(roundUnit(axisNumber), cxZero + fontOffset, textY);				
 		}
 				
 		// x osa grafu		
@@ -180,10 +131,10 @@ $.plotter = (function() {
 		// Y OSA
 				
 		// y sekundární osa grafu		
-		let secYAxisCount = 8;	
+		let secYAxisCount = computeAxisSize(height);	
 		let secYAxisUnit = xLength / secYAxisCount;				
-		let secYAxisRoundedUnit = roundAxisUnit(secYAxisUnit);		
-		secYAxisCount = Math.ceil(xLength / secYAxisRoundedUnit);
+		let secYAxisRoundedUnit = roundUnit(secYAxisUnit);				 
+		secYAxisCount += 2;
 		if (secYAxisCount < 1 || secYAxisCount == Infinity)
 			secYAxisCount = 1;
 		let secYAxisOffset = Math.floor(fromX / secYAxisRoundedUnit) * secYAxisRoundedUnit;
@@ -204,7 +155,7 @@ $.plotter = (function() {
 			ctx.lineTo(cx, height);
 			ctx.stroke();		
 			ctx.textAlign = "left";
-			ctx.fillText(ensureAxisUnitDigits(axisNumber, secYAxisRoundedUnit), textX, cyZero - fontOffset);	
+			ctx.fillText(roundUnit(axisNumber), textX, cyZero - fontOffset);	
 		}
 					
 		// y osa grafu		
@@ -227,12 +178,20 @@ $.plotter = (function() {
 	};
 
 	canvas.addEventListener("wheel", function(e) {
+		e.preventDefault();
 		let multiplier = 1.1;
-		let delta = e.deltaY > 0 ? multiplier : 1 / multiplier;		
-		startX *= delta;
-		endX *= delta;
-		startY *= delta;
-		endY *= delta;
+		let delta = e.deltaY > 0 ? multiplier : 1 / multiplier;	
+		let bound = canvas.getBoundingClientRect();
+		let x = e.clientX - bound.x;
+		let y = e.clientY - bound.y;
+		let sign = delta > 1 ? -1 : 1;
+		let difX = sign * (x - width / 2) / cxUnit;
+		let difY = sign * (y - height / 2) / cyUnit;		
+		startX = (startX - difX) * delta;
+		endX = (endX - difX) * delta;
+		startY = (startY - difY) * delta;
+		endY = (endY - difY) * delta;
+		
 		paint();
 	});	
 		
@@ -263,14 +222,19 @@ $.plotter = (function() {
 		draggedStartX = e.clientX;
 		draggedStartY = e.clientY;		
 	}, false);
+	
+	canvas.addEventListener("dblclick", function (e) {
+		e.preventDefault();
+		startX = originalStartX;
+		endX = originalEndX;
+		startY = originalStartY;
+		endY = originalEndY;
+		paint();
+	}, false);
 
 	return {
 		start: function() {
 			paint();
-		},
-		
-		round: function(x) {
-			return roundAxisUnit(x);
 		}
 	};
 	
