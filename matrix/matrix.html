@@ -1,0 +1,141 @@
+<html>
+<body>
+<div>
+<canvas id="can" width="500" height="300" style="cursor: pointer"></canvas>
+</div>
+<script>let $ = {};
+
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes
+// https://stackoverflow.com/questions/32647215/declaring-static-constants-in-es6-classes
+$.Matrix = class Matrix {
+
+	#rows = 0;
+	#cols = 0;
+	#data = [];
+	
+	static checkDefined(o, err) {
+		if (typeof o === 'undefined')
+			throw err;
+	}
+	
+	static checkDefinedMatrixArgs(row, col) {
+		Matrix.checkDefined(row, "Missing row argument");
+		Matrix.checkDefined(col, "Missing col argument");
+	}
+	
+	static checkMatrixInstance(m) {
+		if (!(m instanceof Matrix)) 
+			throw "Not a Matrix instance";
+	}		
+	
+	static createIdentity(dimension) {
+		Matrix.checkDefined(dimension, "Missing dimension argument");
+		let matrix = new Matrix(dimension, dimension);
+		for (let i = 0; i < dimension; i++)
+			matrix.set(i, i, 1);
+		return matrix;
+	}
+	
+	constructor(rows, cols) {
+		Matrix.checkDefined(rows, "Missing rows argument");
+		Matrix.checkDefined(cols, "Missing cols argument");
+		if (rows < 0) throw "Invalid rows number (negative number)";
+		if (cols < 0) throw "Invalid cols number (negative number)";
+		
+		this.#rows = rows;
+		this.#cols = cols;
+		// indexově jsou nejprve řádky, pak sloupce		
+		for (let r = 0; r < rows; r++) {
+			let row = [];
+			this.#data[r] = row;
+			for (let c = 0; c < cols; c++) 
+				row[c] = 0;
+		}
+	}
+	
+	checkDimensions(row, col) {
+		Matrix.checkDefinedMatrixArgs(row, col);
+		if (row > this.#rows - 1 || row < 0) throw "Invalid row number (0-" + (this.#rows - 1) + ")";
+		if (col > this.#cols - 1 || col < 0) throw "Invalid col number (0-" + (this.#cols - 1) + ")";
+	}
+	
+	print() {
+		console.table(this.#data);
+	}
+	
+	getRows() {
+		return this.#rows;
+	}
+	
+	getCols() {
+		return this.#cols;
+	}
+		
+	get(row, col) {
+		this.checkDimensions(row, col);		
+		return this.#data[row][col];
+	}
+	
+	set(row, col, value) {
+		this.checkDimensions(row, col);	
+		this.#data[row][col] = value;
+	}
+	
+	add(m) {
+		Matrix.checkMatrixInstance(m);		
+		if (m.getRows() != this.#rows)
+			throw  "A and B has different number of rows";
+		if (m.getCols() != this.#cols)
+			throw  "A and B has different number of rows";
+		let result = new Matrix(this.#rows, this.#cols);
+		for (let r = 0; r < this.#rows; r++)			
+			for (let c = 0; c < this.#cols; c++)
+				result.set(r, c, this.get(r, c) + m.get(r, c));
+		return result;				
+	}
+	
+	addScalar(n) {
+		Matrix.checkDefined(n, "Missing number argument");
+		let result = new Matrix(this.#rows, this.#cols);
+		for (let r = 0; r < this.#rows; r++)			
+			for (let c = 0; c < this.#cols; c++)
+				result.set(r, c, this.get(r, c) + n);
+		return result;				
+	}
+
+};
+$.matrix = (function() {
+	
+	let canvas = document.getElementById("can");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.offsetWidth;
+	let height = canvas.offsetHeight;			
+	
+	let paint = function() {		
+		ctx.clearRect(0, 0, width, height);
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		let fontSize = 13;
+		ctx.font = fontSize + "px Monospace";		
+		
+		ctx.strokeRect(0, 0, width, height);
+
+		ctx.setLineDash([5, 5]);
+		ctx.strokeStyle = "lightgrey";
+		ctx.fillStyle = "grey";
+		ctx.textAlign = "left";
+		
+	};
+
+	return {
+		start: function() {
+			paint();
+		}
+	};
+	
+})();
+
+$.matrix.start();
+</script>
+</body>
+</html>
