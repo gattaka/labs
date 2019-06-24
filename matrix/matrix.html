@@ -15,12 +15,21 @@ $.Matrix = class Matrix {
 	
 	static checkDefined(o, err) {
 		if (typeof o === 'undefined')
-			throw err;
+			throw err + " is undefined";
 	}
 	
-	static checkDefinedMatrixArgs(row, col) {
-		Matrix.checkDefined(row, "Missing row argument");
-		Matrix.checkDefined(col, "Missing col argument");
+	static checkDefinedNumber(o, err) {
+		Matrix.checkDefined(o, err);
+		if (typeof o != 'number')
+			throw err + " is not a number";
+	}
+	
+	static checkDefinedPositiveInteger(o, err) {
+		Matrix.checkDefinedNumber(o, err);
+		if (!Number.isInteger(o))
+			throw err + " is not an integer";
+		if (o < 0)
+			throw err + " is must be positive integer";
 	}
 	
 	static checkMatrixInstance(m) {
@@ -29,19 +38,30 @@ $.Matrix = class Matrix {
 	}		
 	
 	static createIdentity(dimension) {
-		Matrix.checkDefined(dimension, "Missing dimension argument");
+		Matrix.checkDefinedPositiveInteger(dimension, "dimension");
 		let matrix = new Matrix(dimension, dimension);
 		for (let i = 0; i < dimension; i++)
 			matrix.set(i, i, 1);
 		return matrix;
 	}
 	
+	static fromFlatArray(rows, cols, array) {
+		if (typeof array != 'object')
+			throw "Not a Matrix instance";		
+		let matrix = new Matrix(rows, cols);
+		let i = 0;
+		for (let r = 0; r < rows; r++) {
+			for (let c = 0; c < cols; c++) {
+				Matrix.checkDefinedNumber(array[i], "element [" + r + "," + c + "]");
+				matrix.set(r,c, array[i++]);
+			}
+		}
+		return matrix;
+	}
+	
 	constructor(rows, cols) {
-		Matrix.checkDefined(rows, "Missing rows argument");
-		Matrix.checkDefined(cols, "Missing cols argument");
-		if (rows < 0) throw "Invalid rows number (negative number)";
-		if (cols < 0) throw "Invalid cols number (negative number)";
-		
+		Matrix.checkDefinedPositiveInteger(rows, "rows");
+		Matrix.checkDefinedPositiveInteger(cols, "cols");	
 		this.#rows = rows;
 		this.#cols = cols;
 		// indexově jsou nejprve řádky, pak sloupce		
@@ -54,7 +74,8 @@ $.Matrix = class Matrix {
 	}
 	
 	checkDimensions(row, col) {
-		Matrix.checkDefinedMatrixArgs(row, col);
+		Matrix.checkDefinedPositiveInteger(row, "row");
+		Matrix.checkDefinedPositiveInteger(col, "col");
 		if (row > this.#rows - 1 || row < 0) throw "Invalid row number (0-" + (this.#rows - 1) + ")";
 		if (col > this.#cols - 1 || col < 0) throw "Invalid col number (0-" + (this.#cols - 1) + ")";
 	}
@@ -78,15 +99,16 @@ $.Matrix = class Matrix {
 	
 	set(row, col, value) {
 		this.checkDimensions(row, col);	
+		Matrix.checkDefinedNumber(value, "value");
 		this.#data[row][col] = value;
 	}
 	
 	add(m) {
 		Matrix.checkMatrixInstance(m);		
 		if (m.getRows() != this.#rows)
-			throw  "A and B has different number of rows";
+			throw "A and B has different number of rows";
 		if (m.getCols() != this.#cols)
-			throw  "A and B has different number of rows";
+			throw "A and B has different number of rows";
 		let result = new Matrix(this.#rows, this.#cols);
 		for (let r = 0; r < this.#rows; r++)			
 			for (let c = 0; c < this.#cols; c++)
@@ -95,14 +117,46 @@ $.Matrix = class Matrix {
 	}
 	
 	addScalar(n) {
-		Matrix.checkDefined(n, "Missing number argument");
+		Matrix.checkDefinedNumber(n, "value");
 		let result = new Matrix(this.#rows, this.#cols);
 		for (let r = 0; r < this.#rows; r++)			
 			for (let c = 0; c < this.#cols; c++)
 				result.set(r, c, this.get(r, c) + n);
 		return result;				
 	}
-
+	
+	multiply(m) {
+		Matrix.checkMatrixInstance(m);		
+		if (m.getRows() != this.getCols())
+			throw "A.B requires A.cols = B.rows";
+		let result = new Matrix(this.getRows(), m.getCols());
+		for (let r = 0; r < result.getRows(); r++) {
+			for (let c = 0; c < result.getCols(); c++) {
+				let sum = 0;
+				for (let i = 0; i < this.getCols(); i++)
+					sum += this.get(r, i) * m.get(i, c);
+				result.set(r, c, sum);
+			}
+		}			
+		return result;				
+	}
+	
+	multiplyByScalar(n) {
+		Matrix.checkDefinedNumber(n, "value");
+		let result = new Matrix(this.#rows, this.#cols);
+		for (let r = 0; r < this.#rows; r++)			
+			for (let c = 0; c < this.#cols; c++)
+				result.set(r, c, this.get(r, c) * n);
+		return result;				
+	}
+	
+	transpose() {		
+		let result = new Matrix(this.getCols(), this.getRows());
+		for (let r = 0; r < this.getRows(); r++)
+			for (let c = 0; c < this.getCols(); c++) 
+				result.set(c, r, this.get(r, c));
+		return result;
+	}
 };
 $.matrix = (function() {
 	
@@ -111,10 +165,16 @@ $.matrix = (function() {
 	let width = canvas.offsetWidth;
 	let height = canvas.offsetHeight;			
 	
+	let paintMatrix = function(x, y, matrix) {
+		ctx.begin();
+		
+		ctx.stroke();
+	};
+	
 	let paint = function() {		
 		ctx.clearRect(0, 0, width, height);
-		ctx.strokeStyle = "grey";
-		ctx.fillStyle = "grey";
+		ctx.strokeStyle = "black";
+		ctx.fillStyle = "black";
 		let fontSize = 13;
 		ctx.font = fontSize + "px Monospace";		
 		
