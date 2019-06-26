@@ -14,11 +14,10 @@ $.plotter = (function() {
 	let draggedStartX;
 	let draggedStartY;
 	
-	let xUnit = 5;
+	let xUnit = 0.5;
 	let yUnit = 2;
-	let xCenter = 0;
-	let yCenter = 0;
-	let zoom = 1;
+	let xCenter = -5;
+	let yCenter = 2;
 	
 	let xUnitOriginal = xUnit;
 	let yUnitOriginal = yUnit;
@@ -28,25 +27,33 @@ $.plotter = (function() {
 	let cyUnit;
 	let cxUnit;
 	
-	let cxOffset = 0;
-	let cyOffset = 0;
-	
 	// kolik px má na jednotka na ose
 	let axisUnitPxSize = 50;
 	let xAxisSteps = Math.ceil(width / axisUnitPxSize);	
 	let yAxisSteps = Math.ceil(height / axisUnitPxSize);	
 	
+	let cxOffset;
+	let cyOffset;
+	
 	let func = function(x) {
 		return x * x;
 	};
 	
-	let calibrate = function() {	
-		// xLengthOriginal + xLengthOriginal dílek na každé straně osy
+	let calibrate = function() {			
 		xLength = xAxisSteps * xUnit;
 		yLength = yAxisSteps * yUnit;
 		cyUnit = height / yLength;
 		cxUnit = width / xLength;
 	};
+	
+	let init = function() {	
+		calibrate();
+		cxOffset = -xCenter * cxUnit;
+		cyOffset = yCenter * cyUnit;
+		xUnit = xUnitOriginal;
+		yUnit = yUnitOriginal;
+		paint();
+	}
 
 	let roundUnit = function(unit) {
 		return Number(unit.toPrecision(2));
@@ -67,9 +74,9 @@ $.plotter = (function() {
 		
 		calibrate();
 
-		let fromX = xCenter - Math.floor(xLength / 2);
+		let fromX = -Math.floor(xLength / 2);
 		let toX = fromX + xLength;
-		let fromY = yCenter - Math.floor(yLength / 2);
+		let fromY = -Math.floor(yLength / 2);
 		let toY = fromY + yLength;
 		
 		// poloha hlavních osy 
@@ -146,12 +153,14 @@ $.plotter = (function() {
 
 	canvas.addEventListener("wheel", function(e) {
 		e.preventDefault();
-		let multiplier = 1.1;
-		let delta = e.deltaY > 0 ? multiplier : 1 / multiplier;	
-		startX = (startX) * delta;
-		endX = (endX) * delta;
-		startY = (startY) * delta;
-		endY = (endY) * delta;	
+		let step = 1.1;
+		if (e.deltaY > 0) {
+			xUnit *= step;
+			yUnit *= step;
+		} else {
+			xUnit /= step;
+			yUnit /= step;
+		}
 		paint();
 	});	
 		
@@ -181,14 +190,12 @@ $.plotter = (function() {
 	
 	canvas.addEventListener("dblclick", function (e) {
 		e.preventDefault();
-		cxOffset = 0;
-		cyOffset = 0;
-		paint();
+		init();		
 	}, false);
 
 	return {
 		start: function() {
-			paint();
+			init();
 		}
 	};
 	
