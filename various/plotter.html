@@ -74,23 +74,25 @@ $.plotter = (function() {
 		
 		calibrate();
 
-		let fromX = -Math.floor(xLength / 2);
+		let xOffset = Math.floor(cxOffset / axisUnitPxSize);
+		let yOffset = Math.floor(cyOffset / axisUnitPxSize);	
+		let cxOffsetRest = cxOffset % axisUnitPxSize;
+		let cyOffsetRest = cyOffset % axisUnitPxSize;
+
+		let fromX = -Math.floor(xLength / 2) - xOffset * xUnit;
 		let toX = fromX + xLength;
-		let fromY = -Math.floor(yLength / 2);
+		let fromY = -Math.floor(yLength / 2) - yOffset * yUnit;
 		let toY = fromY + yLength;
 		
 		// poloha hlavních osy 
-		let cyZero = height + fromY * cyUnit + cyOffset;
-		let cxZero = - fromX * cxUnit + cxOffset;		
+		let cxZero = - fromX * cxUnit + cxOffsetRest;		
+		let cyZero = height + fromY * cyUnit + cyOffsetRest;		
 			
 		// Jednotky na osách a popisky
 		ctx.setLineDash([5, 5]);
 		ctx.strokeStyle = "lightgrey";
 		ctx.fillStyle = "grey";
-		ctx.textAlign = "left";
-
-		let xOffset = Math.floor(cxOffset / axisUnitPxSize);
-		let yOffset = Math.floor(cyOffset / axisUnitPxSize);		
+		ctx.textAlign = "left";	
 		
 		// X osa
 		// je od -1, protože se písmo zobrazuje vpravo, když
@@ -98,7 +100,7 @@ $.plotter = (function() {
 		// se najednou zobrazilo, namísto toho, aby vyjelo
 		// již vykreslené, proto se zleva kreslí o 1 navíc
 		for (let i = -1; i <= xAxisSteps; i++) {	
-			let axisNumber = xUnit * (i - xOffset) + fromX;
+			let axisNumber = xUnit * i + fromX;
 			let cx = cxZero + axisNumber * cxUnit;			
 			let textX = cx + fontOffset;
 
@@ -112,7 +114,7 @@ $.plotter = (function() {
 		
 		// Y osa		
 		for (let i = 0; i <= yAxisSteps; i++) {		
-			let axisNumber = yUnit * (i + yOffset) + fromY;
+			let axisNumber = yUnit * i + fromY;
 			let cy = cyZero - axisNumber * cyUnit;		
 	
 			ctx.beginPath();
