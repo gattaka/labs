@@ -14,7 +14,7 @@ $.plotter = (function() {
 	let xDraggedStart;
 	let yDraggedStart;
 	
-	let xUnit = 0.52;
+	let xUnit = 0.1;
 	let yUnit = 2;
 	let xCenter = 0;
 	let yCenter = 0;
@@ -22,8 +22,8 @@ $.plotter = (function() {
 	let xUnitOriginal = xUnit;
 	let yUnitOriginal = yUnit;
 	
-	let xLength;
-	let yLength;
+	let xUnitsLength;
+	let yUnitsLength;
 	let xUnitPx;
 	let yUnitPx;
 	
@@ -40,10 +40,10 @@ $.plotter = (function() {
 	};
 	
 	let calibrate = function() {			
-		xLength = xAxisSteps * xUnit;
-		yLength = yAxisSteps * yUnit;
-		yUnitPx = height / yLength;
-		xUnitPx = width / xLength;
+		xUnitsLength = xAxisSteps * xUnit;
+		yUnitsLength = yAxisSteps * yUnit;
+		xUnitPx = axisStepPx / xUnit;
+		yUnitPx = axisStepPx / yUnit;
 	};
 	
 	let init = function() {	
@@ -64,14 +64,14 @@ $.plotter = (function() {
 		ctx.clearRect(0, 0, width, height);
 		ctx.strokeStyle = "grey";
 		ctx.fillStyle = "grey";
-		let fontSize = 13;
-		let fontOffset = 8;
+		let fontSize = 11;
+		let fontOffset = 6;
 		let axesDrawTolerance = fontSize + fontOffset;
 		ctx.font = fontSize + "px Monospace";		
 		
 		ctx.strokeRect(0, 0, width, height);
 
-		let pointSize = 3;
+		let pointSize = 2;
 		
 		calibrate();
 
@@ -86,10 +86,10 @@ $.plotter = (function() {
 		if (yPxOffsetRest < 0)
 			yPxOffsetRest += axisStepPx;
 
-		let xFromUnit = -Math.floor(xLength / 2) - xOffsetSteps * xUnit;
-		let xToUnit = xFromUnit + xLength;
-		let yFromUnit = -Math.floor(yLength / 2) + yOffsetSteps * yUnit;
-		let yToUnit = yFromUnit + yLength;
+		let xFromUnit = -xUnitsLength / 2 - xOffsetSteps * xUnit;
+		let xToUnit = xFromUnit + xUnitsLength;
+		let yFromUnit = -yUnitsLength / 2 + yOffsetSteps * yUnit;
+		let yToUnit = yFromUnit + yUnitsLength;
 		
 		// poloha hlavních osy 
 		let xPxZero = - xFromUnit * xUnitPx + xPxOffsetRest;		
@@ -104,11 +104,11 @@ $.plotter = (function() {
 		// -1 a <= přidává na okraje +1 jednotku, to je kvůli 
 		// předvykreslování textu a osy, protože by se jinak 
 		// při scrollování najednou objevila, namísto vysunutí		
-		let xFromPxZeroSteps = xOffsetSteps - Math.floor(xAxisSteps / 2);
+		let xFromPxZeroSteps = Math.floor(xAxisSteps / 2) + xOffsetSteps;
 		let xFromPxZeroPxOffset = xPxZero - axisStepPx * xFromPxZeroSteps;
 		for (let i = -1; i <= xAxisSteps; i++) {	
-			let axisNumber = xUnit * -(xFromPxZeroSteps + i);
-			let cx = xFromPxZeroPxOffset - axisStepPx * i;
+			let axisNumber = xUnit * (i - xFromPxZeroSteps);
+			let cx = xFromPxZeroPxOffset + axisStepPx * i;
 			let textX = cx + fontOffset;
 
 			ctx.beginPath();
@@ -123,7 +123,7 @@ $.plotter = (function() {
 		let yFromPxZeroSteps = yOffsetSteps - Math.floor(yAxisSteps / 2);
 		let yFromPxZeroPxOffset = yPxZero - axisStepPx * yFromPxZeroSteps;
 		for (let i = 0; i <= yAxisSteps; i++) {		
-			let axisNumber = yUnit * -(yFromPxZeroSteps + i);
+			let axisNumber = yUnit * (yFromPxZeroSteps + i);
 			let cy = yFromPxZeroPxOffset - axisStepPx * i;		
 	
 			ctx.beginPath();
