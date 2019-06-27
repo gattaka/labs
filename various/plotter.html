@@ -16,8 +16,8 @@ $.plotter = (function() {
 	
 	let xUnit = 0.1;
 	let yUnit = 2;
-	let xCenter = 0;
-	let yCenter = 0;
+	let xCenter = 0.1;
+	let yCenter = 1.7;
 	
 	let xUnitOriginal = xUnit;
 	let yUnitOriginal = yUnit;
@@ -49,9 +49,8 @@ $.plotter = (function() {
 	let init = function() {	
 		calibrate();
 		xUnit = xUnitOriginal;
-		yUnit = yUnitOriginal;
-		// protože x jednotky jsou vypisované zleva
-		xPxOffset = -(xCenter - xUnit) * xUnitPx;
+		yUnit = yUnitOriginal;		
+		xPxOffset = -xCenter * xUnitPx;
 		yPxOffset = yCenter * yUnitPx;
 		paint();
 	}
