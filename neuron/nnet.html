@@ -25,6 +25,177 @@
 <div id="status"></div>[/HTML]
 <script>
 let $ = {};
+// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes
+// https://stackoverflow.com/questions/32647215/declaring-static-constants-in-es6-classes
+$.Matrix = class Matrix {
+
+	#rows = 0;
+	#cols = 0;
+	#data = [];
+	
+	static checkDefined(o, err) {
+		if (typeof o === 'undefined')
+			throw err + " is undefined";
+	}
+	
+	static checkDefinedNumber(o, err) {
+		Matrix.checkDefined(o, err);
+		if (typeof o != 'number')
+			throw err + " is not a number";
+	}
+	
+	static checkDefinedPositiveInteger(o, err) {
+		Matrix.checkDefinedNumber(o, err);
+		if (!Number.isInteger(o))
+			throw err + " is not an integer";
+		if (o < 0)
+			throw err + " is must be positive integer";
+	}
+	
+	static checkMatrixInstance(m) {
+		if (!(m instanceof Matrix)) 
+			throw "Not a Matrix instance";
+	}		
+	
+	static createIdentity(dimension) {
+		Matrix.checkDefinedPositiveInteger(dimension, "dimension");
+		let matrix = new Matrix(dimension, dimension);
+		for (let i = 0; i < dimension; i++)
+			matrix.set(i, i, 1);
+		return matrix;
+	}
+	
+	static fromFlatArray(rows, cols, array) {
+		if (typeof array != 'object')
+			throw "Not a Matrix instance";		
+		let matrix = new Matrix(rows, cols);
+		let i = 0;
+		for (let r = 0; r < rows; r++) {
+			for (let c = 0; c < cols; c++) {
+				Matrix.checkDefinedNumber(array[i], "element [" + r + "," + c + "]");
+				matrix.set(r,c, array[i++]);
+			}
+		}
+		return matrix;
+	}
+	
+	constructor(rows, cols) {
+		Matrix.checkDefinedPositiveInteger(rows, "rows");
+		Matrix.checkDefinedPositiveInteger(cols, "cols");	
+		this.#rows = rows;
+		this.#cols = cols;
+		// indexově jsou nejprve řádky, pak sloupce		
+		for (let r = 0; r < rows; r++) {
+			let row = [];
+			this.#data[r] = row;
+			for (let c = 0; c < cols; c++) 
+				row[c] = 0;
+		}
+	}
+	
+	checkDimensions(row, col) {
+		Matrix.checkDefinedPositiveInteger(row, "row");
+		Matrix.checkDefinedPositiveInteger(col, "col");
+		if (row > this.#rows - 1 || row < 0) throw "Invalid row number (0-" + (this.#rows - 1) + ")";
+		if (col > this.#cols - 1 || col < 0) throw "Invalid col number (0-" + (this.#cols - 1) + ")";
+	}
+	
+	print() {
+		//console.table(this.#data);
+		let line = '';
+		for (let r = 0; r < this.#rows; r++) {
+			line += r == 0 ? '┌\t' : (r == this.#rows - 1 ? '└\t' : '│\t');
+			for (let c = 0; c < this.#cols; c++) {
+				line += this.get(r,c) + '\t';
+				if (c == this.#cols - 1) {
+					line += r == 0 ? '┐' : (r == this.#rows - 1 ? '┘' : '│');
+					console.log(line);
+					line = '';
+				}
+			}
+		}		
+	}
+	
+	getRows() {
+		return this.#rows;
+	}
+	
+	getCols() {
+		return this.#cols;
+	}
+		
+	get(row, col) {
+		this.checkDimensions(row, col);		
+		return this.#data[row][col];
+	}
+	
+	set(row, col, value) {
+		this.checkDimensions(row, col);	
+		Matrix.checkDefinedNumber(value, "value");
+		this.#data[row][col] = value;
+	}
+	
+	add(m) {
+		Matrix.checkMatrixInstance(m);		
+		if (m.getRows() != this.#rows)
+			throw "A and B has different number of rows";
+		if (m.getCols() != this.#cols)
+			throw "A and B has different number of rows";
+		let result = new Matrix(this.#rows, this.#cols);
+		for (let r = 0; r < this.#rows; r++)			
+			for (let c = 0; c < this.#cols; c++)
+				result.set(r, c, this.get(r, c) + m.get(r, c));
+		return result;				
+	}
+	
+	subtract(m) {
+		let m2 = m.multiplyByScalar(-1);
+		return this.add(m2);
+	}
+	
+	addScalar(n) {
+		Matrix.checkDefinedNumber(n, "value");
+		let result = new Matrix(this.#rows, this.#cols);
+		for (let r = 0; r < this.#rows; r++)			
+			for (let c = 0; c < this.#cols; c++)
+				result.set(r, c, this.get(r, c) + n);
+		return result;				
+	}
+	
+	multiply(m) {
+		Matrix.checkMatrixInstance(m);		
+		if (m.getRows() != this.getCols())
+			throw "A.B requires A.cols = B.rows";
+		let result = new Matrix(this.getRows(), m.getCols());
+		for (let r = 0; r < result.getRows(); r++) {
+			for (let c = 0; c < result.getCols(); c++) {
+				let sum = 0;
+				for (let i = 0; i < this.getCols(); i++)
+					sum += this.get(r, i) * m.get(i, c);
+				result.set(r, c, sum);
+			}
+		}			
+		return result;	
+	}
+	
+	multiplyByScalar(n) {
+		Matrix.checkDefinedNumber(n, "value");
+		let result = new Matrix(this.#rows, this.#cols);
+		for (let r = 0; r < this.#rows; r++)			
+			for (let c = 0; c < this.#cols; c++)
+				result.set(r, c, this.get(r, c) * n);
+		return result;				
+	}
+	
+	transpose() {		
+		let result = new Matrix(this.getCols(), this.getRows());
+		for (let r = 0; r < this.getRows(); r++)
+			for (let c = 0; c < this.getCols(); c++) 
+				result.set(c, r, this.get(r, c));
+		return result;
+	}
+};
+
 $.nnet = (function() {
 
 	/**
@@ -86,7 +257,7 @@ $.nnet = (function() {
 
 	let sensitivity = 0.2;
 	
-	let layersSizes = [2, 3, 2];
+	let layersSizes = [2, 2, 1];
 	let net = [];
 	
 	let interval = 1;
@@ -163,42 +334,35 @@ $.nnet = (function() {
 		
 	let separator = function(x, y) {
 		let fceY = separatorFunc(x);
-		return fceY > y ? -1 : 1;
+		return fceY > y ? 0 : 1;
 	};
 	
-	let transform = function(output) {
-		return Math.sign(output);
+	let activate = function(output) {
+		return 1 / (1 + Math.pow(Math.E, -output));
 	};
-	
+		
 	let activation = function(inputsVector, layerId, nodeId) {
 		if (layerId == 0)
 			return inputsVector[nodeId];		
 		let neuron = net[layerId][nodeId];
-		let value = 0;
+		let potential = 0;
 		// pro každý vstup do neuronu		
 		for (let i = 0; i < neuron.weights.length; i++) 
-			value += neuron.weights[i] * activation(inputsVector, layerId - 1, i);	
-		return transform(value - neuron.bias);
+			potential += neuron.weights[i] * activation(inputsVector, layerId - 1, i);	
+		potential -= neuron.bias;
+		return activate(potential);
 	};
 	
-	// Hodnocení sítě -- čím menší, tím lepší
-	// hledá se tedy globální minimum.
-	// Hodnotící funkce je funkcí vektoru všech vah a biasů v síti
-	// K dosažení je potřeba získat negativní gradient,
-	// tedy vektor délky vektoru všech vah a biasů
-	// https://youtu.be/IHZwWFHWa-w?t=535
-	// https://youtu.be/tIeHLnjs5U8?t=514
-	// https://youtu.be/tIeHLnjs5U8?t=574
-	let evaluate = function(inputsVector, targetVector) {
-		let sum = 0;
+	let evaluate = function(inputsVector) {
+		let outputVector = [];
 		let layerId = layersSizes.length - 1;
 		let layerNodeCount = layersSizes[layerId];
 		for (let n = 0; n < layerNodeCount; n++) 
-			sum += Math.pow(activation(inputsVector, layerId, n) - targetVector[n], 2);
-		return sum;
+			outputVector.push(activation(inputsVector, layerId, n));
+		return outputVector;
 	};
 	
-	let train = function(inputsVector, targetVector) {		
+	let backpropagate = function(inputsVector, targetVector) {		
 		// Projdi vrstvy odzadu (kromě 0, to je vstup)
 		for (let l = layersSizes.length - 1; l > 0; l--) {
 			// Projdi neurony na vrstvě
@@ -223,26 +387,25 @@ $.nnet = (function() {
 		// známá hodnota
 		let target = separator(x, y);
 		
-		// perceptron
-		let targetVector = [target, -target];
-		let inputsVector = [x, y];
-		let error = evaluate(inputsVector, targetVector);
+		// neuronová síť
+		let targetVector = $.Matrix.fromFlatArray(1, 1, [target]);
+		let inputsVector = $.Matrix.fromFlatArray(1, 2, [x, y]);
+		let outputVector = $.Matrix.fromFlatArray(1, 1, [0]); //evaluate(inputsVector, targetVector);
+		let outputError = 0;
 		triesCount++;
 	
 		// učení
-		if (error < 0.2) {
+		if (outputError < 0.1) {
 			successCount++;			
-			ctx.fillStyle = guessed > 0 ? "#e5ff0f" : "orange";
+			ctx.fillStyle = outputVector.get(0, 0) > 0 ? "#e5ff0f" : "orange";
 		} else {
 			ctx.fillStyle = "black";
-			train(inputsVector, targetVector);			
+			backpropagate(inputsVector, targetVector);			
 		}			
 		
 		let status = "Try = " + triesCount + "<br/>"
-			+ "Success rate = " + Math.floor((successCount / triesCount) * 100) + " %";
-		for (let i = 0; i < dendriteCount; i++) 
-				status += "<br/>w<sub>" + i + "</sub> = " + weights[i];
-			document.getElementById("status").innerHTML = status;
+			+ "Success rate = " + Math.floor((successCount / triesCount) * 100) + " %";	
+		document.getElementById("status").innerHTML = status;
 		
 		ctx.fillRect(x, y, pointSize, pointSize);		
 	};
@@ -288,7 +451,7 @@ $.nnet = (function() {
 			}
 		}
 
-		// plocha1 funkce 	
+		// plocha funkce 	
 		ctx.clearRect(0, 0, width, height);			
 		ctx.strokeStyle = "grey";
 		ctx.fillStyle = "grey";
