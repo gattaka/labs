@@ -178,6 +178,19 @@ $.Matrix = class Matrix {
 		return result;	
 	}
 	
+	multiplyHadamard(m) {
+		Matrix.checkMatrixInstance(m);		
+		if (m.getRows() != this.getRows())
+			throw "A.B requires A.rows = B.rows";
+		if (m.getCols() != this.getCols())
+			throw "A.B requires A.cols = B.cols";
+		let result = new Matrix(this.getRows(), this.getCols());
+		for (let r = 0; r < result.getRows(); r++)
+			for (let c = 0; c < result.getCols(); c++)
+				result.set(r, c, this.get(r, c) * m.get(r, c));	
+		return result;	
+	}
+	
 	multiplyByScalar(n) {
 		Matrix.checkDefinedNumber(n, "value");
 		let result = new Matrix(this.#rows, this.#cols);
@@ -185,6 +198,14 @@ $.Matrix = class Matrix {
 			for (let c = 0; c < this.#cols; c++)
 				result.set(r, c, this.get(r, c) * n);
 		return result;				
+	}
+	
+	map(func) {
+		let result = new Matrix(this.#rows, this.#cols);
+		for (let r = 0; r < this.#rows; r++)			
+			for (let c = 0; c < this.#cols; c++)
+				result.set(r, c, func(this.get(r, c)));
+		return result;
 	}
 	
 	transpose() {		
@@ -257,8 +278,17 @@ $.nnet = (function() {
 
 	let sensitivity = 0.2;
 	
-	let layersSizes = [2, 2, 1];
-	let net = [];
+	let layersSizes = [2, 1];
+	// pole matic vah dle vrstvy
+	let weights = [];
+	// pole vektorů biasů dle vrstvy
+	let biases = [];
+	// pole vektorů potenciálů dle vrstvy
+	let potentials = [];
+	// pole vektorů aktivací dle vrstvy
+	let activations = [];
+	// pole vektorů chyb dle vrstvy
+	let errors = [];
 	
 	let interval = 1;
 	let innerIntervalCallback;
@@ -337,43 +367,12 @@ $.nnet = (function() {
 		return fceY > y ? 0 : 1;
 	};
 	
-	let activate = function(output) {
-		return 1 / (1 + Math.pow(Math.E, -output));
-	};
-		
-	let activation = function(inputsVector, layerId, nodeId) {
-		if (layerId == 0)
-			return inputsVector[nodeId];		
-		let neuron = net[layerId][nodeId];
-		let potential = 0;
-		// pro každý vstup do neuronu		
-		for (let i = 0; i < neuron.weights.length; i++) 
-			potential += neuron.weights[i] * activation(inputsVector, layerId - 1, i);	
-		potential -= neuron.bias;
-		return activate(potential);
+	let activationFunc = function(x) {
+		return 1 / (1 + Math.pow(Math.E, -x));
 	};
 	
-	let evaluate = function(inputsVector) {
-		let outputVector = [];
-		let layerId = layersSizes.length - 1;
-		let layerNodeCount = layersSizes[layerId];
-		for (let n = 0; n < layerNodeCount; n++) 
-			outputVector.push(activation(inputsVector, layerId, n));
-		return outputVector;
-	};
-	
-	let backpropagate = function(inputsVector, targetVector) {		
-		// Projdi vrstvy odzadu (kromě 0, to je vstup)
-		for (let l = layersSizes.length - 1; l > 0; l--) {
-			// Projdi neurony na vrstvě
-			for (let n = 0; n < layersSizes[l]; n++) {
-				let neuron = net[l][n];
-				// Projdi jejich váhy
-				for (let w = 0; w < neuron.weights.length; w++) {
-					value += neuron.weights[i] * activation(inputsVector, layerId - 1, i);	
-				}
-			}		
-		}
+	let activationDerFunc = function(x) {
+		return activationFunc(x) * (1 - activationFunc(x));
 	};
 	
 	let test = function() {
@@ -384,23 +383,56 @@ $.nnet = (function() {
 		ctx.fillStyle = "black";
 		ctx.fillRect(x, y, pointSize, pointSize);
 		
-		// známá hodnota
-		let target = separator(x, y);
+		// sloupcový vektor vstupů
+		let inputs = $.Matrix.fromFlatArray(2, 1, [x, y]);
+		// sloupcový vektor známé hodnoty výstupu
+		let target = $.Matrix.fromFlatArray(1, 1, [separator(x, y)]);
 		
-		// neuronová síť
-		let targetVector = $.Matrix.fromFlatArray(1, 1, [target]);
-		let inputsVector = $.Matrix.fromFlatArray(1, 2, [x, y]);
-		let outputVector = $.Matrix.fromFlatArray(1, 1, [0]); //evaluate(inputsVector, targetVector);
-		let outputError = 0;
+		// potenciály a aktivace
+		activations[0] = inputs;
+		for (let l = 1; l < layersSizes.length; l++) {
+			// z^l = w^l . a^(l-1) + b^l
+			potentials[l] = weights[l].multiply(activations[l - 1]).add(biases[l]);
+			// a^l = sigma(z^l)
+			activations[l] = potentials[l].map(activationFunc);
+		}
+		
+		// chyba výsledné vrstvy
+		let L = layersSizes.length - 1;
+		for (let l = L; l > 0; l--) {
+			if (l == L) {
+				// delta^L = (a^L - y) o sigma'(z^L)
+				errors[l] = activations[l].subtract(target).multiplyHadamard(potentials[l].map(activationDerFunc));
+			} else {
+				// delta^l = ((w^(l+1))^T . delta^(l+1)) o sigma'(z^L)
+				errors[l] = weights[l+1].transpose().multiply(errors[l+1]).multiplyHadamard(potentials[l].map(activationDerFunc));
+			}
+		}
+		
 		triesCount++;
 	
+		let overallError = 0;
+		for (let j = 0; j < layersSizes[L]; j++)
+			overallError += Math.abs(errors[L].get(j, 0));
+		overallError /= layersSizes[L];
+	
 		// učení
-		if (outputError < 0.1) {
+		if (overallError < 0.1) {
 			successCount++;			
-			ctx.fillStyle = outputVector.get(0, 0) > 0 ? "#e5ff0f" : "orange";
+			ctx.fillStyle = activations[L].get(0, 0) > 0 ? "#e5ff0f" : "orange";
 		} else {
 			ctx.fillStyle = "black";
-			backpropagate(inputsVector, targetVector);			
+			// aktualizuj váhy a biasy
+			for (let l = L; l > 0; l--) {
+				// Projdi neurony na vrstvě
+				for (let j = 0; j < layersSizes[l]; j++) {
+					// Projdi jejich váhy
+					for (let k = 0; k < weights[l].getCols(); k++) {
+						weights[l].set(j, k, weights[l].get(j, k) - activations[l-1].get(j, 0) * errors[l].get(j, 0));
+					}
+					biases[l].set(j, 0, biases[l].get(j, 0) - errors[l].get(j, 0));
+				}
+			}
 		}			
 		
 		let status = "Try = " + triesCount + "<br/>"
@@ -431,23 +463,32 @@ $.nnet = (function() {
 		triesCount = 0;			
 		successCount = 0;
 	
+		// Matice vah -- pro každý neuron vrstvy jsou 
+		// zapsány váhy neuronů (co řádek, to jeden neuron)
+		// pokud pak matici vynásobím maticí vstupů
+		// projdou se postupně sloupce matice (vstupy neuronu)
+		// a provede se součet součinů jeho vah a vstupů
+		//	
+		//	| w11 w12 w13 |   | x1 |       | w11x1 + w12x2 + w13x3 |   | b1 |
+		//  | w21 w22 w23 | . | x2 | + B = | w21x1 + w22x2 + w23x3 | + | b2 |
+		//                    | x3 |   
+		
 		// net init
-		// pro každou vrstvu
+		// pro každou vrstvu (kromě 0. ta indikuje pouze počet vstupů)
 		for (let l = 1; l < layersSizes.length; l++) {
-			let layer = [];
-			net[l] = layer;
 			let inputSize = layersSizes[l - 1];
 			let layerSize = layersSizes[l]
+			let layerWeights = new $.Matrix(layerSize, inputSize);
+			// sloupcový vektor
+			let layerBiases = new $.Matrix(layerSize, 1);
+			weights[l] = layerWeights;
+			biases[l] = layerBiases;			
 			// pro každý neuron z vrstvy
-			for (let n = 0; n < layerSize; n++) {	
-				let weights = [];
+			for (let row = 0; row < layerSize; row++) {	
 				// pro každý vstup do neuronu
-				for (let i = 0; i < inputSize; i++) 
-					weights.push(Math.random >= 0.5 ? 1 : -1);
-				layer[n] = {
-					weights: weights,
-					bias: Math.random >= 0.5 ? 1 : -1				
-				}
+				for (let col = 0; col < inputSize; col++) 
+					layerWeights.set(row, col, Math.random >= 0.5 ? 1 : -1);
+				layerBiases.set(row, 0, Math.random >= 0.5 ? 1 : -1);
 			}
 		}
 
