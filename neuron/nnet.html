@@ -344,27 +344,30 @@ $.nnet = (function() {
 		drawNodes();
 	};
 		
-	let linearFce = function(x) {				
-		return x * height / width;
+	let linearFce = function(cx) {				
+		return cx * 2;
+	};	
+
+	let linearFce2 = function(cx) {				
+		//return height / 4 + (x * height / 2) / width;
+		return cx + 0.2;
 	};	
 	
-	let sineFce = function(x) {				
-		return Math.sin(Math.PI * x / width) * height;
+	let sineFce = function(cx) {				
+		return Math.sin(Math.PI * cx);
 	};	
 			
-	let angleFce = function(x) {				
-		let widthHalf = width / 2;
-		let heightHalf = height / 2;
-		if (x < widthHalf)
-			return heightHalf;		
-		return heightHalf * x / widthHalf; 
+	let angleFce = function(cx) {				
+		if (cx < 0)
+			return 0.5;		
+		return 0.5 + cx * 0.2; 
 	};
 	
 	let separatorFunc = linearFce;	
 		
-	let separator = function(x, y) {
-		let fceY = separatorFunc(x);
-		return fceY > y ? 0 : 1;
+	let separator = function(cx, cy) {
+		let fceY = separatorFunc(cx);
+		return fceY > cy ? 0 : 1;
 	};
 	
 	let activationFunc = function(x) {
@@ -375,18 +378,35 @@ $.nnet = (function() {
 		return activationFunc(x) * (1 - activationFunc(x));
 	};
 	
+	let toCartX = function(x) {
+		return x / halfWidth - 1;
+	}
+	
+	let toCartY = function(y) {
+		return -y / halfHeight + 1;
+	}
+	
+	let toScreenX = function(cx) {
+		return cx * halfWidth + halfWidth;
+	}
+	
+	let toScreenY = function(cy) {
+		return - cy * halfHeight + halfHeight;
+	}
+	
 	let test = function() {
 	
 		// náhodně vyber místo
-		let x = Math.random() * width;
-		let y = Math.random() * height;
+		// náhodně vyber souřadnici mezi -1 a 1
+		let cx = Math.random() * 2 - 1; 
+		let cy = Math.random() * 2 - 1;	
 		ctx.fillStyle = "black";
-		ctx.fillRect(x, y, pointSize, pointSize);
+		ctx.fillRect(toScreenX(cx), toScreenY(cy), pointSize, pointSize);
 		
 		// sloupcový vektor vstupů
-		let inputs = $.Matrix.fromFlatArray(2, 1, [x, y]);
+		let inputs = $.Matrix.fromFlatArray(2, 1, [cx, cy]);
 		// sloupcový vektor známé hodnoty výstupu
-		let target = $.Matrix.fromFlatArray(1, 1, [separator(x, y)]);
+		let target = $.Matrix.fromFlatArray(1, 1, [separator(cx, cy)]);
 		
 		// potenciály a aktivace
 		activations[0] = inputs;
@@ -413,13 +433,13 @@ $.nnet = (function() {
 	
 		let overallError = 0;
 		for (let j = 0; j < layersSizes[L]; j++)
-			overallError += Math.abs(errors[L].get(j, 0));
+			overallError += Math.abs(target.get(j, 0) - activations[L].get(j, 0));
 		overallError /= layersSizes[L];
 	
 		// učení
 		if (overallError < 0.1) {
 			successCount++;			
-			ctx.fillStyle = activations[L].get(0, 0) > 0 ? "#e5ff0f" : "orange";
+			ctx.fillStyle = activations[L].get(0, 0) > 0.5 ? "#e5ff0f" : "orange";
 		} else {
 			ctx.fillStyle = "black";
 			// aktualizuj váhy a biasy
@@ -436,10 +456,28 @@ $.nnet = (function() {
 		}			
 		
 		let status = "Try = " + triesCount + "<br/>"
-			+ "Success rate = " + Math.floor((successCount / triesCount) * 100) + " %";	
+			+ "Success rate = " + Math.floor((successCount / triesCount) * 100) + " %<br/>";	
+			
+		status += "<table>"
+		for (let l = L; l > 0; l--) {
+				// Projdi neurony na vrstvě
+				for (let j = 0; j < layersSizes[l]; j++) {
+					status += "<tr>"
+					// Projdi jejich váhy
+					for (let k = 0; k < weights[l].getCols(); k++) {
+						status += "<td>"
+						weights[l].set(j, k, weights[l].get(j, k) - activations[l-1].get(j, 0) * errors[l].get(j, 0));
+						status += weights[l].get(j, k);
+						status += "</td>"
+					}
+					biases[l].set(j, 0, biases[l].get(j, 0) - errors[l].get(j, 0));
+					status += "</tr>"
+				}
+			}
+		status += "</table>"	
 		document.getElementById("status").innerHTML = status;
 		
-		ctx.fillRect(x, y, pointSize, pointSize);		
+		ctx.fillRect(toScreenX(cx), toScreenY(cy), pointSize, pointSize);		
 	};
 
 	let innnerChangeInterval = function(value) {
@@ -499,8 +537,9 @@ $.nnet = (function() {
 		ctx.strokeRect(0, 0, width, height);		
 						
 		// vykresli oddělovač funkce
-		for (let x = 0; x < width; x++) 
-			ctx.fillRect(x, separatorFunc(x), 1, 1);
+		let step = 2 / width;
+		for (let cx = -1; cx < 1; cx += step)			
+			ctx.fillRect(toScreenX(cx), toScreenY(separatorFunc(cx)), 1, 1);
 		
 		netCtx.clearRect(0, 0, netWidth, netHeight);			
 		netCtx.strokeStyle = "lightgrey";
