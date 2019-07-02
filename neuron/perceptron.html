@@ -106,8 +106,8 @@ $.perceptron = (function() {
 			
 	let angleFce = function(cx) {				
 		if (cx < 0)
-			return 0.2;		
-		return 0.2 + cx * 2; 
+			return 0;		
+		return 1; 
 	};
 	
 	let separatorFunc = linearFce2;
