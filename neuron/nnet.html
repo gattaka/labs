@@ -386,13 +386,13 @@ $.nnet = (function() {
 	};	
 	
 	let sineFce = function(cx) {				
-		return Math.sin(Math.PI * cx);
+		return Math.sin(Math.PI * cx / cw) * ch;
 	};	
 			
 	let angleFce = function(cx) {				
 		if (cx < 0)
 			return 0;		
-		return 1; 
+		return ch; 
 	};
 	
 	let separatorFunc = linearFce2;	
@@ -478,17 +478,13 @@ $.nnet = (function() {
 				cost += Math.pow(target.get(j, 0) - activations[b][L].get(j, 0), 2);
 			cost /= 2;
 		
-			ctx.fillStyle = activations[b][L].get(0, 0) > 0.5 ? "#e5ff0f" : "orange";
-		
 			// učení
-			/*
 			if (cost < 0.1) {
 				successCount++;			
 				ctx.fillStyle = activations[b][L].get(0, 0) > 0.5 ? "#e5ff0f" : "orange";
 			} else {
 				ctx.fillStyle = "black";
 			}		
-			*/
 			document.getElementById("tryNumber").value = triesCount;
 			document.getElementById("successRate").value = 
 				Math.floor((successCount / triesCount) * 100) + " %";
@@ -497,7 +493,6 @@ $.nnet = (function() {
 		}
 				
 		// aktualizuj váhy a biasy
-		return;
 		for (let l = L; l > 0; l--) {
 			let weightsDeltaSumMatrix;
 			let biasesDeltaSumVector;
