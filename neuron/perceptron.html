@@ -43,9 +43,9 @@ Problémem je rozlišení třídy nad křivkou a pod ní. Jako převodní funkce
 			<td>Try</td>
 			<td>Success rate</td>
 			<td>Bias θ</td>
-			<td>w<sub>θ</sub></td>
-			<td>w<sub>0</sub></td>
+			<td>w<sub>θ</sub> (w<sub>0</sub>)</td>
 			<td>w<sub>1</sub></td>
+			<td>w<sub>2</sub></td>
 		</tr>
 		<tr>
 			<td><input id="tryNumber" style="width: 60px; 
@@ -54,11 +54,11 @@ Problémem je rozlišení třídy nad křivkou a pod ní. Jako převodní funkce
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
 			<td><input id="bias" style="width: 80px; 
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
-			<td><input id="wb" style="width: 150px; 
-				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
 			<td><input id="w0" style="width: 150px; 
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
 			<td><input id="w1" style="width: 150px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+			<td><input id="w2" style="width: 150px; 
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
 		</tr>
 	</table>
@@ -106,14 +106,14 @@ $.perceptron = (function() {
 			
 	let angleFce = function(cx) {				
 		if (cx < 0)
-			return 0.5;		
-		return 0.5 + cx * 0.2; 
+			return 0.2;		
+		return 0.2 + cx * 2; 
 	};
 	
 	let separatorFunc = linearFce2;
 		
 	let activationFunc = function(x) {
-		return 1 / (1 + Math.pow(Math.E, -x));
+		return Math.sign(x);
 	};
 	
 	let guess = function(inputs) {
@@ -132,7 +132,7 @@ $.perceptron = (function() {
 	
 	let separator = function(cx, cy) {
 		let fceY = separatorFunc(cx);
-		return fceY > cy ? 0 : 1;
+		return fceY > cy ? -1 : 1;
 	};
 	
 	let guessSeparatorFunc = function(cx) {
@@ -200,7 +200,7 @@ $.perceptron = (function() {
 	
 		// učení
 		let error = target - guessed;
-		if (Math.abs(error) < 0.1) {
+		if (Math.abs(error) < 0.5) {
 			successCount++;			
 			ctx.fillStyle = guessed > 0.5 ? "#a9f90e" : "orange";
 		} else {
@@ -213,9 +213,9 @@ $.perceptron = (function() {
 		document.getElementById("successRate").value = 
 			Math.floor((successCount / triesCount) * 100) + " %";
 		document.getElementById("bias").value = bias;
-		document.getElementById("wb").value = w2;
 		document.getElementById("w0").value = w0;
 		document.getElementById("w1").value = w1;
+		document.getElementById("w2").value = w2;
 	};
 
 	let innnerChangeInterval = function(value) {
