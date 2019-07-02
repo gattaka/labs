@@ -306,10 +306,10 @@ $.nnet = (function() {
 	let cw = 20;
 	let ch = 20;
 
-	let sensitivity = 0.3;
+	let sensitivity = 0.8;
 	let batchSize = 100;
 	
-	let layersSizes = [2, 2, 1];
+	let layersSizes = [2, 4, 4, 1];
 	let L = layersSizes.length - 1;
 	// pole matic vah dle vrstvy
 	let weights = [];
@@ -386,7 +386,7 @@ $.nnet = (function() {
 	};	
 	
 	let sineFce = function(cx) {				
-		return Math.sin(Math.PI * cx / cw) * ch;
+		return Math.sin(Math.PI * cx / cw) * ch / 2;
 	};	
 			
 	let angleFce = function(cx) {				
@@ -544,30 +544,23 @@ $.nnet = (function() {
 		
 		// net init
 		// pro každou vrstvu (kromě 0. ta indikuje pouze počet vstupů)
-		let calibration = true;
-		if (calibration) {
-			weights[1] = $.Matrix.fromFlatArray(2, 2, [-0.25, 0.31, -0.55, 0.39]);
-			weights[2] = $.Matrix.fromFlatArray(1, 2, [0.37, -0.24]);
-			biases[1] = $.Matrix.fromFlatArray(2, 1, [0.098, 0.098]);
-			biases[2] = $.Matrix.fromFlatArray(1, 1, [0]);
-		} else {
-			for (let l = 1; l < layersSizes.length; l++) {
-				let inputSize = layersSizes[l - 1];
-				let layerSize = layersSizes[l]
-				let layerWeights = new $.Matrix(layerSize, inputSize);
-				// sloupcový vektor
-				let layerBiases = new $.Matrix(layerSize, 1);
-				weights[l] = layerWeights;
-				biases[l] = layerBiases;			
-				// pro každý neuron z vrstvy
-				for (let row = 0; row < layerSize; row++) {	
-					// pro každý vstup do neuronu
-					for (let col = 0; col < inputSize; col++) 
-						layerWeights.set(row, col, Math.random());
-					layerBiases.set(row, 0, Math.random());
-				}
-			}			
-		}
+		for (let l = 1; l < layersSizes.length; l++) {
+			let inputSize = layersSizes[l - 1];
+			let layerSize = layersSizes[l]
+			let layerWeights = new $.Matrix(layerSize, inputSize);
+			// sloupcový vektor
+			let layerBiases = new $.Matrix(layerSize, 1);
+			weights[l] = layerWeights;
+			biases[l] = layerBiases;			
+			// pro každý neuron z vrstvy
+			for (let row = 0; row < layerSize; row++) {	
+				// pro každý vstup do neuronu
+				for (let col = 0; col < inputSize; col++) 
+					layerWeights.set(row, col, Math.random());
+				layerBiases.set(row, 0, Math.random());
+			}
+		}			
+		
 		// plocha funkce 	
 		ctx.clearRect(0, 0, width, height);			
 		ctx.strokeStyle = "grey";
