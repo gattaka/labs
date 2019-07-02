@@ -36,7 +36,20 @@
 		<canvas id="netCanvas" width="700" height="250"></canvas>
 	</div>
 </div>
-<div id="status"></div>[/HTML]
+<div>
+	<table>
+		<tr>
+			<td>Try</td>
+			<td>Success rate</td>
+		</tr>
+		<tr>
+			<td><input id="tryNumber" style="width: 60px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+			<td><input id="successRate" style="width: 80px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+		</tr>
+	</table>
+</div>[/HTML]
 <script>
 let $ = {};
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes
@@ -292,7 +305,7 @@ $.nnet = (function() {
 
 	let sensitivity = 1;
 	
-	let layersSizes = [2, 1];
+	let layersSizes = [2, 4, 1];
 	// pole matic vah dle vrstvy
 	let weights = [];
 	// pole vektorů biasů dle vrstvy
@@ -373,8 +386,8 @@ $.nnet = (function() {
 			
 	let angleFce = function(cx) {				
 		if (cx < 0)
-			return 0.5;		
-		return 0.5 + cx * 0.2; 
+			return 0.2;		
+		return 0.2 + cx * 2; 
 	};
 	
 	let separatorFunc = linearFce2;	
@@ -476,25 +489,9 @@ $.nnet = (function() {
 			+ "Success rate = " + Math.floor((successCount / triesCount) * 100) + " %<br/>"
 			+ "Cost: " + cost;	
 			
-		status += "<table>"
-		for (let l = L; l > 0; l--) {
-				// Projdi neurony na vrstvě
-				for (let j = 0; j < layersSizes[l]; j++) {
-					status += "<tr>"
-					// Projdi jejich váhy
-					for (let k = 0; k < weights[l].getCols(); k++) {
-						status += "<td>"
-						status += weights[l].get(j, k);
-						status += "</td>"
-					}
-					status += "<td>"
-					status += biases[l].get(j, 0);
-					status += "</td>"
-					status += "</tr>"
-				}
-			}
-		status += "</table>"	
-		document.getElementById("status").innerHTML = status;
+		document.getElementById("tryNumber").value = triesCount;
+		document.getElementById("successRate").value = 
+			Math.floor((successCount / triesCount) * 100) + " %";
 		
 		ctx.fillRect(toScreenX(cx), toScreenY(cy), pointSize, pointSize);		
 	};
