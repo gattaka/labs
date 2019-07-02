@@ -1,26 +1,40 @@
 [N1]Demo[/N1]
-[HTML]<table>
-	<tbody>
-		<tr>
-			<td>Function</td>
-		</tr>
-		<tr>
-			<td>	
-				<input type="radio" name="func" value="linear" 
-					onchange="$.nnet.changeFceLinear()" checked> Linear 
-				<input type="radio" name="func" value="sine" 
-					onchange="$.nnet.changeFceSine()"> Sine 
-				<input type="radio" name="func" value="angle" 
-					onchange="$.nnet.changeFceAngle()"> Angle			
-			</td>
-		</tr>
-	</tbody>
-</table>
-<div style="margin: 10px 0;">
-	<canvas id="myCanvas" width="700" height="250"></canvas>
+[HTML]<div style="margin-bottom: 8px;">
+	<input type="radio" name="func" value="linear" 
+		onchange="$.nnet.changeFceLinear()"  /> Linear</label>
+	<input type="radio" name="func" value="linear2" 
+		onchange="$.nnet.changeFceLinear2()" checked /> Linear 2</label>
+	<input type="radio" name="func" value="sine" 
+		onchange="$.nnet.changeFceSine()" /> Sine 
+	<input type="radio" name="func" value="angle" 
+		onchange="$.nnet.changeFceAngle()" /> Angle
+	<span style="
+    	border: 1px solid black;
+    	margin-left: 4px;
+    	padding: 4px;
+    	background-color: orange;
+	">Správně prostor A</span>
+	<span style="
+    	border: 1px solid black;
+    	margin-left: 4px;
+    	padding: 4px;
+    	background-color: #a9f90e;
+	">Správně prostor B</span>
+	<span style="
+    	border: 1px solid black;
+    	margin-left: 4px;
+    	padding: 4px;
+    	background-color: #191919;
+	    color: white;
+	">Špatně</span>
 </div>
-<div style="margin: 10px 0;">
-	<canvas id="netCanvas" width="700" height="500"></canvas>
+<div>
+	<div style="margin: 10px 0;display: inline-block;">
+		<canvas id="myCanvas" width="700" height="250"></canvas>
+	</div>
+	<div style="margin: 10px 0;display: inline-block;">
+		<canvas id="netCanvas" width="700" height="250"></canvas>
+	</div>
 </div>
 <div id="status"></div>[/HTML]
 <script>
@@ -363,7 +377,7 @@ $.nnet = (function() {
 		return 0.5 + cx * 0.2; 
 	};
 	
-	let separatorFunc = linearFce;	
+	let separatorFunc = linearFce2;	
 		
 	let separator = function(cx, cy) {
 		let fceY = separatorFunc(cx);
@@ -431,18 +445,22 @@ $.nnet = (function() {
 		
 		triesCount++;
 	
-		let overallError = 0;
+		// C = 1/2 * sum_j((y_j - a_j^L)^2)
+		let cost = 0;
 		for (let j = 0; j < layersSizes[L]; j++)
-			overallError += Math.abs(target.get(j, 0) - activations[L].get(j, 0));
-		overallError /= layersSizes[L];
+			cost += Math.pow(target.get(j, 0) - activations[L].get(j, 0), 2);
+		cost /= 2;
+	
+		//console.log(cx + " " + cy + " " + target.get(0, 0) + " " + activations[L].get(0, 0));
 	
 		// učení
-		if (overallError < 0.1) {
+		if (cost < 0.1) {
 			successCount++;			
 			ctx.fillStyle = activations[L].get(0, 0) > 0.5 ? "#e5ff0f" : "orange";
 		} else {
 			ctx.fillStyle = "black";
 			// aktualizuj váhy a biasy
+			/*
 			for (let l = L; l > 0; l--) {
 				// Projdi neurony na vrstvě
 				for (let j = 0; j < layersSizes[l]; j++) {
@@ -453,10 +471,12 @@ $.nnet = (function() {
 					biases[l].set(j, 0, biases[l].get(j, 0) - errors[l].get(j, 0));
 				}
 			}
+			*/
 		}			
 		
 		let status = "Try = " + triesCount + "<br/>"
-			+ "Success rate = " + Math.floor((successCount / triesCount) * 100) + " %<br/>";	
+			+ "Success rate = " + Math.floor((successCount / triesCount) * 100) + " %<br/>"
+			+ "Cost: " + cost;	
 			
 		status += "<table>"
 		for (let l = L; l > 0; l--) {
@@ -466,11 +486,12 @@ $.nnet = (function() {
 					// Projdi jejich váhy
 					for (let k = 0; k < weights[l].getCols(); k++) {
 						status += "<td>"
-						weights[l].set(j, k, weights[l].get(j, k) - activations[l-1].get(j, 0) * errors[l].get(j, 0));
 						status += weights[l].get(j, k);
 						status += "</td>"
 					}
-					biases[l].set(j, 0, biases[l].get(j, 0) - errors[l].get(j, 0));
+					status += "<td>"
+					status += biases[l].get(j, 0);
+					status += "</td>"
 					status += "</tr>"
 				}
 			}
@@ -513,6 +534,7 @@ $.nnet = (function() {
 		
 		// net init
 		// pro každou vrstvu (kromě 0. ta indikuje pouze počet vstupů)
+		/*
 		for (let l = 1; l < layersSizes.length; l++) {
 			let inputSize = layersSizes[l - 1];
 			let layerSize = layersSizes[l]
@@ -529,7 +551,10 @@ $.nnet = (function() {
 				layerBiases.set(row, 0, Math.random >= 0.5 ? 1 : -1);
 			}
 		}
-
+		*/
+		weights[1] = $.Matrix.fromFlatArray(1, 2, [-15.762988588067191, 16.041376301537525]);
+		biases[1] = $.Matrix.fromFlatArray(1, 1, [-3.2351914356633737]);
+		
 		// plocha funkce 	
 		ctx.clearRect(0, 0, width, height);			
 		ctx.strokeStyle = "grey";
@@ -562,7 +587,12 @@ $.nnet = (function() {
 			separatorFunc = linearFce;	
 			init();
 		},
-		
+				
+		changeFceLinear2: function() {
+			separatorFunc = linearFce2;	
+			init();
+		},
+
 		changeFceSine: function() {
 			separatorFunc = sineFce;	
 			init();
@@ -571,7 +601,7 @@ $.nnet = (function() {
 		changeFceAngle: function() {
 			separatorFunc = angleFce;	
 			init();
-		}
+		}	
 		
 	};
 
