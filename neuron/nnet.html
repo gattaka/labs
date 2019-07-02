@@ -303,10 +303,13 @@ $.nnet = (function() {
 	let layerNodeRadius = 10;
 	let layerNodesOffset = layerYOffset + layerNodeRadius * 2;
 
-	let sensitivity = 1;
+	let cw = 20;
+	let ch = 20;
+
+	let sensitivity = 0.3;
 	let batchSize = 100;
 	
-	let layersSizes = [2, 4, 4, 1];
+	let layersSizes = [2, 2, 1];
 	let L = layersSizes.length - 1;
 	// pole matic vah dle vrstvy
 	let weights = [];
@@ -399,6 +402,10 @@ $.nnet = (function() {
 		return fceY > cy ? 0 : 1;
 	};
 	
+	let radialSeparator = function(cx, cy) {
+		return cx*cx + cy*cy > 0.7 ? 0 : 1;
+	};
+	
 	let activationFunc = function(x) {
 		return 1 / (1 + Math.pow(Math.E, -x));
 	};
@@ -408,19 +415,19 @@ $.nnet = (function() {
 	};
 	
 	let toCartX = function(x) {
-		return x / halfWidth - 1;
+		return cw * x / halfWidth - cw;
 	}
 	
 	let toCartY = function(y) {
-		return -y / halfHeight + 1;
+		return -ch * y / halfHeight + ch;
 	}
 	
 	let toScreenX = function(cx) {
-		return cx * halfWidth + halfWidth;
+		return (cx / cw) * halfWidth + halfWidth;
 	}
 	
 	let toScreenY = function(cy) {
-		return - cy * halfHeight + halfHeight;
+		return - (cy / ch) * halfHeight + halfHeight;
 	}
 	
 	let test = function() {
@@ -432,14 +439,15 @@ $.nnet = (function() {
 			
 			// náhodně vyber místo
 			// náhodně vyber souřadnici mezi -1 a 1
-			let cx = Math.random() * 2 - 1; 
-			let cy = Math.random() * 2 - 1;	
+			let cx = Math.random() * 2 * cw - cw; 
+			let cy = Math.random() * 2 * ch - ch;	
 			ctx.fillStyle = "black";
 			ctx.fillRect(toScreenX(cx), toScreenY(cy), pointSize, pointSize);
 			
 			// sloupcový vektor vstupů
 			let inputs = $.Matrix.fromFlatArray(2, 1, [cx, cy]);
 			// sloupcový vektor známé hodnoty výstupu
+			//let target = $.Matrix.fromFlatArray(1, 1, [radialSeparator(cx, cy)]);
 			let target = $.Matrix.fromFlatArray(1, 1, [separator(cx, cy)]);
 			
 			// potenciály a aktivace
@@ -452,15 +460,14 @@ $.nnet = (function() {
 			}
 			
 			// chyba výsledné vrstvy
-			for (let l = L; l > 0; l--) {
-				if (l == L) {
-					// delta^L = (a^L - y) o sigma'(z^L)
-					errors[b][l] = activations[b][l].subtract(target).multiplyHadamard(potentials[l].map(activationDerFunc));
-				} else {
-					// l = L - 1, L - 2, ..., 2 (1. je vstup)
-					// delta^l = ((w^(l+1))^T . delta^(l+1)) o sigma'(z^L)
-					errors[b][l] = weights[l+1].transpose().multiply(errors[b][l+1]).multiplyHadamard(potentials[l].map(activationDerFunc));
-				}
+			// delta^L = (a^L - y) o sigma'(z^L)
+			errors[b][L] = activations[b][L].subtract(target).multiplyHadamard(potentials[L].map(activationDerFunc));
+			
+			// chyby vnitřních vrstev
+			for (let l = L - 1; l > 0; l--) {
+				// l = L - 1, L - 2, ..., 2 (1. je vstup)
+				// delta^l = ((w^(l+1))^T . delta^(l+1)) o sigma'(z^l)
+				errors[b][l] = weights[l+1].transpose().multiply(errors[b][l+1]).multiplyHadamard(potentials[l].map(activationDerFunc));
 			}
 			
 			triesCount++;
@@ -471,14 +478,17 @@ $.nnet = (function() {
 				cost += Math.pow(target.get(j, 0) - activations[b][L].get(j, 0), 2);
 			cost /= 2;
 		
+			ctx.fillStyle = activations[b][L].get(0, 0) > 0.5 ? "#e5ff0f" : "orange";
+		
 			// učení
+			/*
 			if (cost < 0.1) {
 				successCount++;			
 				ctx.fillStyle = activations[b][L].get(0, 0) > 0.5 ? "#e5ff0f" : "orange";
 			} else {
 				ctx.fillStyle = "black";
 			}		
-			
+			*/
 			document.getElementById("tryNumber").value = triesCount;
 			document.getElementById("successRate").value = 
 				Math.floor((successCount / triesCount) * 100) + " %";
@@ -487,6 +497,7 @@ $.nnet = (function() {
 		}
 				
 		// aktualizuj váhy a biasy
+		return;
 		for (let l = L; l > 0; l--) {
 			let weightsDeltaSumMatrix;
 			let biasesDeltaSumVector;
@@ -538,23 +549,30 @@ $.nnet = (function() {
 		
 		// net init
 		// pro každou vrstvu (kromě 0. ta indikuje pouze počet vstupů)
-		for (let l = 1; l < layersSizes.length; l++) {
-			let inputSize = layersSizes[l - 1];
-			let layerSize = layersSizes[l]
-			let layerWeights = new $.Matrix(layerSize, inputSize);
-			// sloupcový vektor
-			let layerBiases = new $.Matrix(layerSize, 1);
-			weights[l] = layerWeights;
-			biases[l] = layerBiases;			
-			// pro každý neuron z vrstvy
-			for (let row = 0; row < layerSize; row++) {	
-				// pro každý vstup do neuronu
-				for (let col = 0; col < inputSize; col++) 
-					layerWeights.set(row, col, Math.random >= 0.5 ? 1 : -1);
-				layerBiases.set(row, 0, Math.random >= 0.5 ? 1 : -1);
-			}
+		let calibration = true;
+		if (calibration) {
+			weights[1] = $.Matrix.fromFlatArray(2, 2, [-0.25, 0.31, -0.55, 0.39]);
+			weights[2] = $.Matrix.fromFlatArray(1, 2, [0.37, -0.24]);
+			biases[1] = $.Matrix.fromFlatArray(2, 1, [0.098, 0.098]);
+			biases[2] = $.Matrix.fromFlatArray(1, 1, [0]);
+		} else {
+			for (let l = 1; l < layersSizes.length; l++) {
+				let inputSize = layersSizes[l - 1];
+				let layerSize = layersSizes[l]
+				let layerWeights = new $.Matrix(layerSize, inputSize);
+				// sloupcový vektor
+				let layerBiases = new $.Matrix(layerSize, 1);
+				weights[l] = layerWeights;
+				biases[l] = layerBiases;			
+				// pro každý neuron z vrstvy
+				for (let row = 0; row < layerSize; row++) {	
+					// pro každý vstup do neuronu
+					for (let col = 0; col < inputSize; col++) 
+						layerWeights.set(row, col, Math.random());
+					layerBiases.set(row, 0, Math.random());
+				}
+			}			
 		}
-		
 		// plocha funkce 	
 		ctx.clearRect(0, 0, width, height);			
 		ctx.strokeStyle = "grey";
