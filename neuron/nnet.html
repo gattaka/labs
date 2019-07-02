@@ -290,7 +290,7 @@ $.nnet = (function() {
 	let layerNodeRadius = 10;
 	let layerNodesOffset = layerYOffset + layerNodeRadius * 2;
 
-	let sensitivity = 0.2;
+	let sensitivity = 1;
 	
 	let layersSizes = [2, 1];
 	// pole matic vah dle vrstvy
@@ -438,6 +438,7 @@ $.nnet = (function() {
 				// delta^L = (a^L - y) o sigma'(z^L)
 				errors[l] = activations[l].subtract(target).multiplyHadamard(potentials[l].map(activationDerFunc));
 			} else {
+				// l = L - 1, L - 2, ..., 2 (1. je vstup)
 				// delta^l = ((w^(l+1))^T . delta^(l+1)) o sigma'(z^L)
 				errors[l] = weights[l+1].transpose().multiply(errors[l+1]).multiplyHadamard(potentials[l].map(activationDerFunc));
 			}
@@ -460,18 +461,15 @@ $.nnet = (function() {
 		} else {
 			ctx.fillStyle = "black";
 			// aktualizuj váhy a biasy
-			/*
 			for (let l = L; l > 0; l--) {
 				// Projdi neurony na vrstvě
 				for (let j = 0; j < layersSizes[l]; j++) {
-					// Projdi jejich váhy
-					for (let k = 0; k < weights[l].getCols(); k++) {
-						weights[l].set(j, k, weights[l].get(j, k) - activations[l-1].get(j, 0) * errors[l].get(j, 0));
-					}
-					biases[l].set(j, 0, biases[l].get(j, 0) - errors[l].get(j, 0));
+					// korekce vah je dána a_k^(l-1) . delta_j^k
+					for (let k = 0; k < weights[l].getCols(); k++)
+						weights[l].set(j, k, weights[l].get(j, k) - sensitivity * activations[l-1].get(k, 0) * errors[l].get(j, 0));					
+					biases[l].set(j, 0, biases[l].get(j, 0) - sensitivity * errors[l].get(j, 0));
 				}
 			}
-			*/
 		}			
 		
 		let status = "Try = " + triesCount + "<br/>"
@@ -534,26 +532,28 @@ $.nnet = (function() {
 		
 		// net init
 		// pro každou vrstvu (kromě 0. ta indikuje pouze počet vstupů)
-		/*
-		for (let l = 1; l < layersSizes.length; l++) {
-			let inputSize = layersSizes[l - 1];
-			let layerSize = layersSizes[l]
-			let layerWeights = new $.Matrix(layerSize, inputSize);
-			// sloupcový vektor
-			let layerBiases = new $.Matrix(layerSize, 1);
-			weights[l] = layerWeights;
-			biases[l] = layerBiases;			
-			// pro každý neuron z vrstvy
-			for (let row = 0; row < layerSize; row++) {	
-				// pro každý vstup do neuronu
-				for (let col = 0; col < inputSize; col++) 
-					layerWeights.set(row, col, Math.random >= 0.5 ? 1 : -1);
-				layerBiases.set(row, 0, Math.random >= 0.5 ? 1 : -1);
+		let calibrating = false;
+		if (calibrating) {
+			weights[1] = $.Matrix.fromFlatArray(1, 2, [-15.762988588067191, 16.041376301537525]);
+			biases[1] = $.Matrix.fromFlatArray(1, 1, [-3.2351914356633737]);
+		} else {
+			for (let l = 1; l < layersSizes.length; l++) {
+				let inputSize = layersSizes[l - 1];
+				let layerSize = layersSizes[l]
+				let layerWeights = new $.Matrix(layerSize, inputSize);
+				// sloupcový vektor
+				let layerBiases = new $.Matrix(layerSize, 1);
+				weights[l] = layerWeights;
+				biases[l] = layerBiases;			
+				// pro každý neuron z vrstvy
+				for (let row = 0; row < layerSize; row++) {	
+					// pro každý vstup do neuronu
+					for (let col = 0; col < inputSize; col++) 
+						layerWeights.set(row, col, Math.random >= 0.5 ? 1 : -1);
+					layerBiases.set(row, 0, Math.random >= 0.5 ? 1 : -1);
+				}
 			}
 		}
-		*/
-		weights[1] = $.Matrix.fromFlatArray(1, 2, [-15.762988588067191, 16.041376301537525]);
-		biases[1] = $.Matrix.fromFlatArray(1, 1, [-3.2351914356633737]);
 		
 		// plocha funkce 	
 		ctx.clearRect(0, 0, width, height);			
