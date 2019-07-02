@@ -111,9 +111,9 @@ $.perceptron = (function() {
 	};
 	
 	let separatorFunc = linearFce2;
-	
-	let transform = function(output) {
-		return Math.sign(output);
+		
+	let activationFunc = function(x) {
+		return 1 / (1 + Math.pow(Math.E, -x));
 	};
 	
 	let guess = function(inputs) {
@@ -121,7 +121,7 @@ $.perceptron = (function() {
 		sum += w0 * inputs[0];
 		sum += w1 * inputs[1];
 		sum += w2 * inputs[2];	
-		return transform(sum);
+		return activationFunc(sum);
 	};
 	
 	let train = function(inputs, error) {
@@ -132,7 +132,7 @@ $.perceptron = (function() {
 	
 	let separator = function(cx, cy) {
 		let fceY = separatorFunc(cx);
-		return fceY > cy ? -1 : 1;
+		return fceY > cy ? 0 : 1;
 	};
 	
 	let guessSeparatorFunc = function(cx) {
@@ -200,9 +200,9 @@ $.perceptron = (function() {
 	
 		// učení
 		let error = target - guessed;
-		if (error == 0) {
+		if (Math.abs(error) < 0.1) {
 			successCount++;			
-			ctx.fillStyle = guessed > 0 ? "#a9f90e" : "orange";
+			ctx.fillStyle = guessed > 0.5 ? "#a9f90e" : "orange";
 		} else {
 			ctx.fillStyle = "black";
 			train(inputs, error);			
