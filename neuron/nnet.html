@@ -6,8 +6,12 @@
 		onchange="$.nnet.changeFceLinear2()" checked /> Linear 2</label>
 	<input type="radio" name="func" value="sine" 
 		onchange="$.nnet.changeFceSine()" /> Sine 
+	<input type="radio" name="func" value="sine2" 
+		onchange="$.nnet.changeFceSine2()" /> Sine 2 
 	<input type="radio" name="func" value="angle" 
 		onchange="$.nnet.changeFceAngle()" /> Angle
+	<input type="radio" name="func" value="circle" 
+		onchange="$.nnet.changeFceCircle()" /> Circle
 	<span style="
     	border: 1px solid black;
     	margin-left: 4px;
@@ -27,6 +31,30 @@
     	background-color: #191919;
 	    color: white;
 	">Špatně</span>
+</div>
+<div>
+	<table>
+		<tbody>
+			<tr>
+				<td>Vstupní vrstva</td>
+				<td>Skrytá vrstva <0-5></td>
+				<td>Výstupní vrstva</td>
+				<td>Dávka učení <1-1000></td>
+				<td>Citlivost <1-100></td>
+				<td>Jednotka os <1-100></td>
+				<td></td>
+			</tr>
+			<tr>
+				<td><input id="inputLayerInput" style="width: 80px; background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly="" value="2"></td>
+				<td><input id="hiddenLayersInput" style="width: 100px;" value="2"></td>
+				<td><input id="outputLayerInput" style="width: 90px; background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly="" value="1"></td>
+				<td><input id="batchSizeInput" style="width: 120px;" value="100"></td>
+				<td><input id="sensitivityInput" style="width: 100px;" value="1"></td>
+				<td><input id="axisUnitInput" style="width: 120px;" value="3"></td>
+				<td><button type="button" onclick="$.nnet.start()">Run!</button></td>
+			</tr>
+		</tbody>
+	</table>
 </div>
 <div>
 	<div style="margin: 10px 0;display: inline-block;">
@@ -303,14 +331,15 @@ $.nnet = (function() {
 	let layerNodeRadius = 10;
 	let layerNodesOffset = layerYOffset + layerNodeRadius * 2;
 
-	let cw = 20;
-	let ch = 20;
+	let cw;
+	let ch;
 
-	let sensitivity = 0.8;
-	let batchSize = 100;
+	let sensitivity;
+	let batchSize;
 	
-	let layersSizes = [2, 4, 4, 1];
-	let L = layersSizes.length - 1;
+	let layersSizes;
+	let L;
+	
 	// pole matic vah dle vrstvy
 	let weights = [];
 	// pole vektorů biasů dle vrstvy
@@ -381,12 +410,15 @@ $.nnet = (function() {
 	};	
 
 	let linearFce2 = function(cx) {				
-		//return height / 4 + (x * height / 2) / width;
 		return cx + 0.2;
 	};	
 	
-	let sineFce = function(cx) {				
+	let sine2Fce = function(cx) {				
 		return Math.sin(Math.PI * cx / cw) * ch / 2;
+	};	
+	
+	let sineFce = function(cx) {				
+		return Math.sin(Math.PI / 2 + Math.PI * cx / cw) * ch;
 	};	
 			
 	let angleFce = function(cx) {				
@@ -394,17 +426,18 @@ $.nnet = (function() {
 			return 0;		
 		return ch; 
 	};
-	
-	let separatorFunc = linearFce2;	
 		
-	let separator = function(cx, cy) {
+	let fceSeparator = function(cx, cy) {
 		let fceY = separatorFunc(cx);
 		return fceY > cy ? 0 : 1;
 	};
 	
 	let radialSeparator = function(cx, cy) {
-		return cx*cx + cy*cy > 0.7 ? 0 : 1;
+		return cx*cx + cy*cy > Math.pow(cw / 2, 2) ? 0 : 1;
 	};
+	
+	let separatorFunc = linearFce2;	
+	let separator = fceSeparator;
 	
 	let activationFunc = function(x) {
 		return 1 / (1 + Math.pow(Math.E, -x));
@@ -566,11 +599,6 @@ $.nnet = (function() {
 		ctx.strokeStyle = "grey";
 		ctx.fillStyle = "grey";
 		ctx.strokeRect(0, 0, width, height);		
-						
-		// vykresli oddělovač funkce
-		let step = 2 / width;
-		for (let cx = -1; cx < 1; cx += step)			
-			ctx.fillRect(toScreenX(cx), toScreenY(separatorFunc(cx)), 1, 1);
 		
 		netCtx.clearRect(0, 0, netWidth, netHeight);			
 		netCtx.strokeStyle = "lightgrey";
@@ -582,32 +610,75 @@ $.nnet = (function() {
 
 		innnerChangeInterval(interval);	
 	};
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
 
 	return {
 	
 		start: function() {			
-			init();			
+			let hiddenLayersParam = validate("Invalid hidden layer size", "hiddenLayersInput", 0, 5);
+			let batchSizeParam = validate("Invalid batch size", "batchSizeInput", 1, 1000);
+			let axisUnitParam = validate("Invalid axis unit", "axisUnitInput", 1, 100);
+			let sensitivityParam = validate("Invalid sensitivity", "sensitivityInput", 1, 100);
+
+			if (batchSizeParam && axisUnitParam) {	
+				layersSizes = hiddenLayersParam == 0 ? [2, 1] : [2, hiddenLayersParam, 1];				
+				L = layersSizes.length - 1;
+				batchSize = batchSizeParam;
+				sensitivity = sensitivityParam / 10;
+				cw = axisUnitParam;
+				ch = axisUnitParam;
+				init();	
+			}
 		},
 		
 		changeFceLinear: function() {
+			separator = fceSeparator;
 			separatorFunc = linearFce;	
 			init();
 		},
 				
 		changeFceLinear2: function() {
+			separator = fceSeparator;
 			separatorFunc = linearFce2;	
 			init();
 		},
 
 		changeFceSine: function() {
+			separator = fceSeparator;
 			separatorFunc = sineFce;	
 			init();
 		},
 		
+		changeFceSine2: function() {
+			separator = fceSeparator;
+			separatorFunc = sine2Fce;	
+			init();
+		},
+		
 		changeFceAngle: function() {
+			separator = fceSeparator;
 			separatorFunc = angleFce;	
 			init();
-		}	
+		},
+		
+		changeFceCircle: function() {
+			document.getElementById("hiddenLayersInput").value = 4;
+			separator = radialSeparator;
+			init();
+		}
 		
 	};
 
