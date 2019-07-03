@@ -49,20 +49,15 @@
 				<td><input id="hiddenLayersInput" style="width: 100px;" value="2"></td>
 				<td><input id="outputLayerInput" style="width: 90px; background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly="" value="1"></td>
 				<td><input id="batchSizeInput" style="width: 120px;" value="100"></td>
-				<td><input id="sensitivityInput" style="width: 100px;" value="1"></td>
+				<td><input id="sensitivityInput" style="width: 100px;" value="10"></td>
 				<td><input id="axisUnitInput" style="width: 120px;" value="3"></td>
 				<td><button type="button" onclick="$.nnet.start()">Run!</button></td>
 			</tr>
 		</tbody>
 	</table>
 </div>
-<div>
-	<div style="margin: 10px 0;display: inline-block;">
-		<canvas id="myCanvas" width="700" height="250"></canvas>
-	</div>
-	<div style="margin: 10px 0;display: inline-block;">
-		<canvas id="netCanvas" width="700" height="250"></canvas>
-	</div>
+<div style="margin: 10px 0;display: inline-block;">
+	<canvas id="myCanvas" width="700" height="250"></canvas>
 </div>
 <div>
 	<table>
@@ -77,6 +72,9 @@
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
 		</tr>
 	</table>
+</div>
+<div style="margin: 10px 0;display: inline-block;">
+	<canvas id="netCanvas" width="700" height="180"></canvas>
 </div>[/HTML]
 <script>
 let $ = {};
@@ -326,8 +324,8 @@ $.nnet = (function() {
 	let netHalfWidth = netWidth / 2;
 	let netHalfHeight = netHeight / 2;
 	
-	let layerXOffset = 70;
-	let layerYOffset = 20;
+	let layerXOffset = 60;
+	let layerYOffset = 10;
 	let layerNodeRadius = 10;
 	let layerNodesOffset = layerYOffset + layerNodeRadius * 2;
 
@@ -360,49 +358,123 @@ $.nnet = (function() {
 	let successCount;		
 		
 	let drawLines = function() {
-		netCtx.strokeStyle = "black";	
-		for (let l = 0; l < layersSizes.length; l++) {
+		netCtx.strokeStyle = "black";
+		netCtx.lineWidth = 3;
+		for (let l = 1; l < layersSizes.length; l++) {
+			netCtx.strokeStyle = hslToRGB(l / layersSizes.length, 1, 0.4);
+			let x = layerXOffset * (l + 1);
+			let inputSize = layersSizes[l - 1];
 			let layerSize = layersSizes[l]; 			
 			// pro každý neuron z vrstvy
+			let netInputYStart = netHalfHeight - (inputSize * layerNodesOffset - layerYOffset) / 2;
+			let netYStart = netHalfHeight - (layerSize * layerNodesOffset - layerYOffset) / 2;
 			for (let n = 0; n < layerSize; n++) {
-				let x = layerXOffset * (l + 1);
-				let y = netHalfHeight + (n - layerSize / 2) * layerNodesOffset;
-				if (l > 0) {
-					let inputSize = layersSizes[l - 1];
-					let ix = x - layerXOffset;					
-					// pro každý vstup do neuronu
-					for (let i = 0; i < inputSize; i++) {
-						let iy = netHalfHeight + (i - inputSize / 2) * layerNodesOffset;
-						netCtx.beginPath();
-						netCtx.moveTo(ix, iy);
-						netCtx.lineTo(x, y);
-						netCtx.stroke();
-					}
+				let y = netYStart + n * layerNodesOffset + layerNodeRadius;
+				let ix = x - layerXOffset;					
+				// pro každý vstup do neuronu
+				for (let i = 0; i < inputSize; i++) {
+					let iy = netInputYStart + i * layerNodesOffset + layerNodeRadius;
+					netCtx.beginPath();
+					netCtx.moveTo(ix, iy);
+					netCtx.lineTo(x, y);
+					netCtx.stroke();
 				}
 			}			
 		}
 	};
 	
 	let drawNodes = function() {
+		netCtx.lineWidth = 1;
+		netCtx.font = "15px Monospace";
 		for (let l = 0; l < layersSizes.length; l++) {
 			netCtx.strokeStyle = "black";
 			netCtx.fillStyle = hslToRGB(l / layersSizes.length, 1, 0.5);
 			let layerSize = layersSizes[l]; 			
 			let x = layerXOffset * (l + 1);
 			// pro každý neuron z vrstvy
-			for (let n = 0; n < layerSize; n++) {				
-				let y = netHalfHeight + (n - layerSize / 2) * layerNodesOffset;
+			let netYStart = netHalfHeight - (layerSize * layerNodesOffset - layerYOffset) / 2;
+			for (let n = 0; n < layerSize; n++) {			
+				let y = netYStart + n * layerNodesOffset + layerNodeRadius;
+				if (n == 0)
+					netCtx.fillText("L" + (l+1), x, y - 15);
 				netCtx.beginPath();
 				netCtx.arc(x, y, layerNodeRadius, 0, Math.PI * 2);
 				netCtx.stroke();
 				netCtx.fill();
+				if (l == 0) 
+					netCtx.fillText(n == 0 ? "x" : "y", x - 25, y + 5);
 			}			
 		}
 	};
 	
+	let drawMatrixStart = function(x, h) {
+		netCtx.beginPath();
+		netCtx.moveTo(x + 5, netHalfHeight - h / 2);
+		netCtx.lineTo(x, netHalfHeight - h / 2);
+		netCtx.lineTo(x, netHalfHeight + h / 2);
+		netCtx.lineTo(x + 5, netHalfHeight + h / 2);
+		netCtx.stroke();
+	};
+	
+	let drawMatrixEnd = function(x, h) {
+		netCtx.beginPath();
+		netCtx.moveTo(x - 5, netHalfHeight - h / 2);
+		netCtx.lineTo(x, netHalfHeight - h / 2);
+		netCtx.lineTo(x, netHalfHeight + h / 2);
+		netCtx.lineTo(x - 5, netHalfHeight + h / 2);
+		netCtx.stroke();
+	};
+	
+	let drawMatrices = function() {
+		let xstart = layerXOffset * layersSizes.length + 50;
+		netCtx.lineWidth = 1;
+		netCtx.font = "15px Monospace";
+		netCtx.strokeStyle = "black";
+		let matrixXMargin = 10;
+		let matrixYMargin = 18;
+		let textHeight = 25;
+		let textYSpace = 10;
+		let textWidth = 26;
+		let textXSpace = 10	;
+		let matricesSpace = 20;
+		for (let l = 0; l < layersSizes.length; l++) {
+			let h;
+			let cols;
+			let rows;
+			if (l == 0) {
+				h = 2 * (textHeight + textYSpace) - textYSpace;
+				cols = 1;
+				rows = 2;
+			} else {
+				h = weights[l].getRows() * (textHeight + textYSpace) - textYSpace;
+				cols = weights[l].getCols();
+				rows = weights[l].getRows();
+			}
+			drawMatrixStart(xstart, h);
+			xstart += matrixXMargin;
+			netCtx.fillStyle = hslToRGB(l / layersSizes.length, 1, 0.5);
+			for (let row = 0; row < rows; row++) {
+				for (let col = 0; col < cols; col++) {
+					let x = xstart + col * (textWidth + textXSpace) + textWidth / 2;
+					let y = netHalfHeight - h / 2 + row * (textHeight + textYSpace) + matrixYMargin;
+					if (l == 0) {
+						netCtx.fillText(row == 0 ? "x" : "y", x, y);
+					} else {
+						netCtx.fillText("w" + (row + 1) + (col + 1), x, y);
+					}
+				}
+			}
+			xstart += cols * (textWidth + textXSpace) - textXSpace + matrixXMargin; 
+			drawMatrixEnd(xstart, h);
+			xstart += matricesSpace;
+		}
+	};
+	
 	let drawNet = function() {
+		netCtx.textAlign = "center"; 
 		drawLines();
 		drawNodes();
+		drawMatrices();
 	};
 		
 	let linearFce = function(cx) {				
@@ -601,9 +673,6 @@ $.nnet = (function() {
 		ctx.strokeRect(0, 0, width, height);		
 		
 		netCtx.clearRect(0, 0, netWidth, netHeight);			
-		netCtx.strokeStyle = "lightgrey";
-		netCtx.fillStyle = "grey";
-		netCtx.strokeRect(0, 0, netWidth, netHeight);
 
 		// vykresli neuronovou síť
 		drawNet();
@@ -624,60 +693,64 @@ $.nnet = (function() {
 		}
 		return value;
 	};
+	
+	let innerStart = function() {
+		let hiddenLayersParam = validate("Invalid hidden layer size", "hiddenLayersInput", 0, 5);
+		let batchSizeParam = validate("Invalid batch size", "batchSizeInput", 1, 1000);
+		let axisUnitParam = validate("Invalid axis unit", "axisUnitInput", 1, 100);
+		let sensitivityParam = validate("Invalid sensitivity", "sensitivityInput", 1, 100);
+
+		if (batchSizeParam && axisUnitParam) {	
+			layersSizes = hiddenLayersParam == 0 ? [2, 1] : [2, hiddenLayersParam, 1];				
+			L = layersSizes.length - 1;
+			batchSize = batchSizeParam;
+			sensitivity = sensitivityParam / 10;
+			cw = axisUnitParam;
+			ch = axisUnitParam;
+			init();	
+		}
+	};
 
 	return {
 	
 		start: function() {			
-			let hiddenLayersParam = validate("Invalid hidden layer size", "hiddenLayersInput", 0, 5);
-			let batchSizeParam = validate("Invalid batch size", "batchSizeInput", 1, 1000);
-			let axisUnitParam = validate("Invalid axis unit", "axisUnitInput", 1, 100);
-			let sensitivityParam = validate("Invalid sensitivity", "sensitivityInput", 1, 100);
-
-			if (batchSizeParam && axisUnitParam) {	
-				layersSizes = hiddenLayersParam == 0 ? [2, 1] : [2, hiddenLayersParam, 1];				
-				L = layersSizes.length - 1;
-				batchSize = batchSizeParam;
-				sensitivity = sensitivityParam / 10;
-				cw = axisUnitParam;
-				ch = axisUnitParam;
-				init();	
-			}
+			innerStart();
 		},
 		
 		changeFceLinear: function() {
 			separator = fceSeparator;
 			separatorFunc = linearFce;	
-			init();
+			innerStart();
 		},
 				
 		changeFceLinear2: function() {
 			separator = fceSeparator;
 			separatorFunc = linearFce2;	
-			init();
+			innerStart();
 		},
 
 		changeFceSine: function() {
 			separator = fceSeparator;
 			separatorFunc = sineFce;	
-			init();
+			innerStart();
 		},
 		
 		changeFceSine2: function() {
 			separator = fceSeparator;
 			separatorFunc = sine2Fce;	
-			init();
+			innerStart();
 		},
 		
 		changeFceAngle: function() {
 			separator = fceSeparator;
 			separatorFunc = angleFce;	
-			init();
+			innerStart();
 		},
 		
 		changeFceCircle: function() {
 			document.getElementById("hiddenLayersInput").value = 4;
 			separator = radialSeparator;
-			init();
+			innerStart();
 		}
 		
 	};
