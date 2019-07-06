@@ -6,13 +6,6 @@
 [HTML]<div style="margin: 10px 0;display: inline-block;">
 	<canvas id="myCanvas" width="700" height="300"></canvas>
 </div>
-<table>
-	<tr><td>Speed X</td><td>Speed Y</td></tr>
-	<tr>
-		<td><input id="speedX" style="width: 90px; background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly="" value="1"></td>
-		<td><input id="speedY" style="width: 90px; background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly="" value="1"></td>
-	</tr>
-</table>
 [/HTML]
 <script>
 var $ = $ || {};
@@ -30,68 +23,64 @@ $.gravity = (function() {
 
 	let timeStep = 1;
 	let gravity = 0.02;
-	let absorption = 0.5;
+	let absorption = 0.2;
 	
 	let ballMass = 10;
-	let ballRadius = 5;		
+	let ballRadius = 10;		
+
+	let ballCount = 100;
+	let balls = [];
 	
-	let ballX = halfWidth;
-	let ballY = halfHeight;
-	let ballXSpeed = 10;
-	let ballYSpeed = 0;
 	let minSpeed = 0.01;
 			
-	let processY = function(timeDelta) {
+	let processY = function(ball, timeDelta) {
 		// s_t = v_0 . dt + 1/2 a . dt^2
-		let newY = ballY + ballYSpeed * timeDelta + 0.5 * gravity * timeDelta * timeDelta;
-		if (newY + ballRadius < height) {
-			ballYSpeed += gravity * timeDelta;
-			ballY = newY;
-		} else {
-			// zbývající dráha do kolize se zemí
-			let restY = height - (ballY + ballRadius);
-			// zbývající čas do kolize se zemí
-			let restTime = (-ballYSpeed + Math.sqrt(ballYSpeed * ballYSpeed + 2 * gravity * restY)) / gravity;
-			if (restTime < 0)
-				restTime = (-ballYSpeed - Math.sqrt(ballYSpeed * ballYSpeed + 2 * gravity * restY)) / gravity;
-			if (restTime < 0)
-				console.log("Negative rest time");
+		let newY = ball.y + ball.sy * timeDelta + 0.5 * gravity * timeDelta * timeDelta;
+		let topHit = newY - ballRadius < 0;
+		let bottomHit = newY + ballRadius > height;
+		if (topHit || bottomHit) {
+			// zbývající dráha do kolize se stěnou
+			let restY = bottomHit ? height - (ball.y + ballRadius) : ball.y - ballRadius;
+			// zbývající čas do kolize se stěnou
+			let directionKoef = bottomHit ? 1 : -1;
+			let restTime = Math.abs((-ball.sy + directionKoef * Math.sqrt(ball.sy * ball.sy + 2 * gravity * restY)) / gravity);
 			// rychlost v čase odrazu
-			ballYSpeed = -(ballYSpeed * absorption + restTime * gravity);
-			if (Math.abs(ballYSpeed) < minSpeed) {
-				ballYSpeed = 0;
-				ballY = height - ballRadius;
+			ball.sy = -(ball.sy * (1 - absorption) + restTime * gravity);
+			if (Math.abs(ball.sy) < minSpeed) {
+				ball.sy = 0;
+				ball.y = bottomHit ? height - ballRadius : ballRadius;
 			} else {
 				// dopočítej vzdálenost odrazu za zbytek časového kroku, který byl rozložen na dopad a odraz
-				let timeUp = timeDelta - restTime;
-				processX(timeUp);
+				let timeBack = timeDelta - restTime;
+				processY(ball, timeBack);
 			}
+		} else {
+			ball.sy += gravity * timeDelta;
+			ball.y = newY;
 		}
-		document.getElementById("speedY").value = ballYSpeed;
 	};
 	
-	let processX = function(timeDelta) {
-		let newX = ballX + ballXSpeed * timeDelta;
+	let processX = function(ball, timeDelta) {
+		let newX = ball.x + ball.sx * timeDelta;
 		let rightHit = newX + ballRadius > width;
 		let leftHit = newX - ballRadius < 0;
 		if (leftHit || rightHit) {
 			// zbývající dráha do kolize se stěnou
-			let restX = rightHit ? width - (ballX + ballRadius) : ballX - ballRadius;
+			let restX = rightHit ? width - (ball.x + ballRadius) : ball.x - ballRadius;
 			// zbývající čas do kolize se zemí
-			let restTime = Math.abs(restX / ballXSpeed);
-			ballXSpeed = -ballXSpeed * absorption;
-			if (Math.abs(ballXSpeed) < minSpeed) {
-				ballXSpeed = 0;
-				ballX = rightHit ? width - ballRadius : ballRadius;
+			let restTime = Math.abs(restX / ball.sx);
+			ball.sx = -ball.sx * (1 - absorption);
+			if (Math.abs(ball.sx) < minSpeed) {
+				ball.sx = 0;
+				ball.x = rightHit ? width - ballRadius : ballRadius;
 			} else {
 				// dopočítej vzdálenost odrazu za zbytek časového kroku, který byl rozložen na dopad a odraz
 				let timeBack = timeDelta - restTime;
-				processX(timeBack);
+				processX(ball, timeBack);
 			}
 		} else {
-			ballX = newX;
+			ball.x = newX;
 		}
-		document.getElementById("speedX").value = ballXSpeed;
 	};
 			
 	let step = function() {
@@ -100,18 +89,17 @@ $.gravity = (function() {
 		ctx.strokeStyle = "grey";
 		ctx.fillStyle = "grey";
 		ctx.strokeRect(0, 0, width, height);	
-		
-		ctx.strokeStyle = "black";
-		ctx.lineWidth = 1;
-		ctx.fillStyle = "red";
 			
-		processY(timeStep);
-		processX(timeStep)	
+		for (let i = 0; i < balls.length; i++) {
+			let ball = balls[i];
+			processY(ball, timeStep);
+			processX(ball, timeStep);
+			ctx.fillStyle = ball.c;			
+			ctx.beginPath();
+			ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+			ctx.fill();
+		}
 
-		ctx.beginPath();
-		ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
-		ctx.stroke();
-		ctx.fill();
 
 	};
 
@@ -133,6 +121,16 @@ $.gravity = (function() {
 	};
 
 	let init = function() {	
+		for (let i = 0; i < ballCount; i++) {
+			balls.push({
+				c: $.GJSLibColors.hslToRGB(i / ballCount, 1, 0.5),
+				x: ballRadius + Math.random() * (width - 2 * ballRadius),
+				y: ballRadius + Math.random() * (height - 2 * ballRadius),
+				sx: 5 - Math.random() * 10,
+				sy: 5 - Math.random() * 10
+			});
+		}
+	
 		innnerChangeInterval(interval);	
 	};
 
