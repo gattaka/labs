@@ -24,14 +24,14 @@ $.gravity = (function() {
 	let timeStep = 1;
 	let gravity = 0.02;
 	let absorption = 0.2;
-	
+	let friction = 0.0001;
 	let ballMass = 10;
 	let ballRadius = 10;		
 
 	let ballCount = 100;
 	let balls = [];
 	
-	let minSpeed = 0.01;
+	let minSpeed = 0.05;
 			
 	let processY = function(ball, timeDelta) {
 		// s_t = v_0 . dt + 1/2 a . dt^2
@@ -80,6 +80,8 @@ $.gravity = (function() {
 			}
 		} else {
 			ball.x = newX;
+			if (ball.y == height - ballRadius)
+				ball.sx -= Math.sign(ball.sx) * friction * timeDelta;
 		}
 	};
 			
