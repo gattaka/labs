@@ -3,8 +3,28 @@
 </head>
 
 [N1]Demo[/N1]
-[HTML]<div style="margin: 10px 0;display: inline-block;">
-	<canvas id="myCanvas" width="700" height="300"></canvas>
+[HTML]<div>
+	<table>
+		<tbody>
+			<tr>
+				<td>Gravity <0-0.1></td>
+				<td>Balls count <1-300></td>
+				<td>Blast power <1-100></td>
+				<td></td>
+			</tr>
+			<tr>
+				<td><input id="gravityInput" style="width: 80px;" value="0.002"></td>
+				<td><input id="ballsInput" style="width: 80px;" value="200"></td>
+				<td><input id="blastInput" style="width: 80px;" value="15"></td>
+				<td><input id="drawInput" type="checkbox" onclick="$.gravity.draw(this.checked)" >Draw?</input></td>
+				<td><input id="outlinesInput" type="checkbox" onclick="$.gravity.outline(this.checked)" checked>Outlines?</input></td>
+				<td><button type="button" onclick="$.gravity.start()">Run!</button></td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<div style="margin: 10px 0;display: inline-block;">
+	<canvas id="myCanvas" width="700" height="700"></canvas>
 </div>
 [/HTML]
 <script>
@@ -26,21 +46,35 @@ $.gravity = (function() {
 	let absorption = 0.2;
 	let friction = 0.0001;
 	let ballMass = 10;
-	let ballRadius = 10;		
+	let ballMinRadius = 5;
+	let ballMaxRadius = 15;
+		
+	let blastPower = 15;
+	let draw = false;
+	let outline = true;
 
 	let ballCount = 100;
 	let balls = [];
 	
 	let minSpeed = 0.05;
 			
+	let sigmoid = function(x) {
+		return 1 / (1 + Math.pow(Math.E, -x));
+	};
+	
+	let blastEffect = function(x) {
+		let i = x / 100;
+		return blastPower * sigmoid(i) * (1 - sigmoid(i));
+	};	
+		
 	let processY = function(ball, timeDelta) {
 		// s_t = v_0 . dt + 1/2 a . dt^2
 		let newY = ball.y + ball.sy * timeDelta + 0.5 * gravity * timeDelta * timeDelta;
-		let topHit = newY - ballRadius < 0;
-		let bottomHit = newY + ballRadius > height;
+		let topHit = newY - ball.r < 0;
+		let bottomHit = newY + ball.r > height;
 		if (topHit || bottomHit) {
 			// zbývající dráha do kolize se stěnou
-			let restY = bottomHit ? height - (ball.y + ballRadius) : ball.y - ballRadius;
+			let restY = bottomHit ? height - (ball.y + ball.r) : ball.y - ball.r;
 			// zbývající čas do kolize se stěnou
 			let directionKoef = bottomHit ? 1 : -1;
 			let restTime = Math.abs((-ball.sy + directionKoef * Math.sqrt(ball.sy * ball.sy + 2 * gravity * restY)) / gravity);
@@ -48,7 +82,7 @@ $.gravity = (function() {
 			ball.sy = -(ball.sy * (1 - absorption) + restTime * gravity);
 			if (Math.abs(ball.sy) < minSpeed) {
 				ball.sy = 0;
-				ball.y = bottomHit ? height - ballRadius : ballRadius;
+				ball.y = bottomHit ? height - ball.r : ball.r;
 			} else {
 				// dopočítej vzdálenost odrazu za zbytek časového kroku, který byl rozložen na dopad a odraz
 				let timeBack = timeDelta - restTime;
@@ -62,17 +96,17 @@ $.gravity = (function() {
 	
 	let processX = function(ball, timeDelta) {
 		let newX = ball.x + ball.sx * timeDelta;
-		let rightHit = newX + ballRadius > width;
-		let leftHit = newX - ballRadius < 0;
+		let rightHit = newX + ball.r > width;
+		let leftHit = newX - ball.r < 0;
 		if (leftHit || rightHit) {
 			// zbývající dráha do kolize se stěnou
-			let restX = rightHit ? width - (ball.x + ballRadius) : ball.x - ballRadius;
+			let restX = rightHit ? width - (ball.x + ball.r) : ball.x - ball.r;
 			// zbývající čas do kolize se zemí
 			let restTime = Math.abs(restX / ball.sx);
 			ball.sx = -ball.sx * (1 - absorption);
 			if (Math.abs(ball.sx) < minSpeed) {
 				ball.sx = 0;
-				ball.x = rightHit ? width - ballRadius : ballRadius;
+				ball.x = rightHit ? width - ball.r : ball.r;
 			} else {
 				// dopočítej vzdálenost odrazu za zbytek časového kroku, který byl rozložen na dopad a odraz
 				let timeBack = timeDelta - restTime;
@@ -80,29 +114,31 @@ $.gravity = (function() {
 			}
 		} else {
 			ball.x = newX;
-			if (ball.y == height - ballRadius)
+			if (ball.y == height - ball.r)
 				ball.sx -= Math.sign(ball.sx) * friction * timeDelta;
 		}
 	};
 			
 	let step = function() {
-		// plocha 	
-		ctx.clearRect(0, 0, width, height);			
-		ctx.strokeStyle = "grey";
-		ctx.fillStyle = "grey";
-		ctx.strokeRect(0, 0, width, height);	
-			
+		if (!draw) {
+			ctx.clearRect(0, 0, width, height);			
+			ctx.strokeStyle = "grey";
+			ctx.fillStyle = "grey";
+			ctx.strokeRect(0, 0, width, height);
+			ctx.strokeStyle = "black";
+		}
+		
 		for (let i = 0; i < balls.length; i++) {
 			let ball = balls[i];
 			processY(ball, timeStep);
 			processX(ball, timeStep);
-			ctx.fillStyle = ball.c;			
+			ctx.fillStyle = ball.c;	
 			ctx.beginPath();
-			ctx.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2);
+			ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
 			ctx.fill();
+			if (outline)
+				ctx.stroke();
 		}
-
-
 	};
 
 	let innnerChangeInterval = function(value) {
@@ -123,11 +159,22 @@ $.gravity = (function() {
 	};
 
 	let init = function() {	
+	
+		ctx.clearRect(0, 0, width, height);			
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.strokeRect(0, 0, width, height);
+	
+		ctx.lineWidth = 1;
+		ctx.strokeStyle = "black";
+	
 		for (let i = 0; i < ballCount; i++) {
+			let r = ballMinRadius + Math.random() * (ballMaxRadius - ballMinRadius);
 			balls.push({
+				r: r,
 				c: $.GJSLibColors.hslToRGB(i / ballCount, 1, 0.5),
-				x: ballRadius + Math.random() * (width - 2 * ballRadius),
-				y: ballRadius + Math.random() * (height - 2 * ballRadius),
+				x: r + Math.random() * (width - 2 * r),
+				y: r + Math.random() * (height - 2 * r),
 				sx: 5 - Math.random() * 10,
 				sy: 5 - Math.random() * 10
 			});
@@ -135,13 +182,63 @@ $.gravity = (function() {
 	
 		innnerChangeInterval(interval);	
 	};
+	
+	let pulse = function(x, y) {
+		for (let i = 0; i < balls.length; i++) {
+			let ball = balls[i];
+			let diffX = ball.x - x;
+			let diffY = ball.y - y;
+			let distance = Math.sqrt(diffX * diffX + diffY * diffY);
+			let effect = blastEffect(distance);
+			ball.sx += effect * diffX / distance;
+			ball.sy += effect * diffY / distance;
+		}
+	};
+
+	canvas.addEventListener("click", function (e) {		
+		let bound = canvas.getBoundingClientRect();
+		let x = e.clientX - bound.x;
+		let y = e.clientY - bound.y;
+		pulse(x, y);
+	}, false);
+
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
 
 	return {
 	
-		start: function() {			
-			init();
+		start: function() {	
+			let gravityParam = validate("Invalid gravity", "gravityInput", 0, 0.1);
+			let ballsParam = validate("Invalid balls count", "ballsInput", 1, 300);
+			let blastParam = validate("Invalid blast power", "blastInput", 1, 100);
+
+			if (gravityParam && ballsParam && blastParam) {	
+				gravity = gravityParam;
+				blastPower = blastParam;
+				ballCount = ballsParam;
+				balls = [];
+				init();	
+			}
 		},
 		
+		draw: function(value) {
+			draw = value;
+		},
+		
+		outline: function(value) {
+			outline = value;
+		},
 	};
 
 })();
