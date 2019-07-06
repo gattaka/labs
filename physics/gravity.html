@@ -1,0 +1,150 @@
+<head>
+	<script type="text/javascript" src="../libs/colors.js"></script>
+</head>
+
+[N1]Demo[/N1]
+[HTML]<div style="margin: 10px 0;display: inline-block;">
+	<canvas id="myCanvas" width="700" height="300"></canvas>
+</div>
+<table>
+	<tr><td>Speed X</td><td>Speed Y</td></tr>
+	<tr>
+		<td><input id="speedX" style="width: 90px; background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly="" value="1"></td>
+		<td><input id="speedY" style="width: 90px; background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly="" value="1"></td>
+	</tr>
+</table>
+[/HTML]
+<script>
+var $ = $ || {};
+$.gravity = (function() {
+
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let halfWidth = width / 2;
+	let halfHeight = height / 2;
+
+	let interval = 1;
+	let innerIntervalCallback;
+
+	let timeStep = 1;
+	let gravity = 0.02;
+	let absorption = 0.5;
+	
+	let ballMass = 10;
+	let ballRadius = 5;		
+	
+	let ballX = halfWidth;
+	let ballY = halfHeight;
+	let ballXSpeed = 10;
+	let ballYSpeed = 0;
+	let minSpeed = 0.01;
+			
+	let processY = function(timeDelta) {
+		// s_t = v_0 . dt + 1/2 a . dt^2
+		let newY = ballY + ballYSpeed * timeDelta + 0.5 * gravity * timeDelta * timeDelta;
+		if (newY + ballRadius < height) {
+			ballYSpeed += gravity * timeDelta;
+			ballY = newY;
+		} else {
+			// zbývající dráha do kolize se zemí
+			let restY = height - (ballY + ballRadius);
+			// zbývající čas do kolize se zemí
+			let restTime = (-ballYSpeed + Math.sqrt(ballYSpeed * ballYSpeed + 2 * gravity * restY)) / gravity;
+			if (restTime < 0)
+				restTime = (-ballYSpeed - Math.sqrt(ballYSpeed * ballYSpeed + 2 * gravity * restY)) / gravity;
+			if (restTime < 0)
+				console.log("Negative rest time");
+			// rychlost v čase odrazu
+			ballYSpeed = -(ballYSpeed * absorption + restTime * gravity);
+			if (Math.abs(ballYSpeed) < minSpeed) {
+				ballYSpeed = 0;
+				ballY = height - ballRadius;
+			} else {
+				// dopočítej vzdálenost odrazu za zbytek časového kroku, který byl rozložen na dopad a odraz
+				let timeUp = timeDelta - restTime;
+				processX(timeUp);
+			}
+		}
+		document.getElementById("speedY").value = ballYSpeed;
+	};
+	
+	let processX = function(timeDelta) {
+		let newX = ballX + ballXSpeed * timeDelta;
+		let rightHit = newX + ballRadius > width;
+		let leftHit = newX - ballRadius < 0;
+		if (leftHit || rightHit) {
+			// zbývající dráha do kolize se stěnou
+			let restX = rightHit ? width - (ballX + ballRadius) : ballX - ballRadius;
+			// zbývající čas do kolize se zemí
+			let restTime = Math.abs(restX / ballXSpeed);
+			ballXSpeed = -ballXSpeed * absorption;
+			if (Math.abs(ballXSpeed) < minSpeed) {
+				ballXSpeed = 0;
+				ballX = rightHit ? width - ballRadius : ballRadius;
+			} else {
+				// dopočítej vzdálenost odrazu za zbytek časového kroku, který byl rozložen na dopad a odraz
+				let timeBack = timeDelta - restTime;
+				processX(timeBack);
+			}
+		} else {
+			ballX = newX;
+		}
+		document.getElementById("speedX").value = ballXSpeed;
+	};
+			
+	let step = function() {
+		// plocha 	
+		ctx.clearRect(0, 0, width, height);			
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.strokeRect(0, 0, width, height);	
+		
+		ctx.strokeStyle = "black";
+		ctx.lineWidth = 1;
+		ctx.fillStyle = "red";
+			
+		processY(timeStep);
+		processX(timeStep)	
+
+		ctx.beginPath();
+		ctx.arc(ballX, ballY, ballRadius, 0, Math.PI * 2);
+		ctx.stroke();
+		ctx.fill();
+
+	};
+
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};
+
+	let init = function() {	
+		innnerChangeInterval(interval);	
+	};
+
+	return {
+	
+		start: function() {			
+			init();
+		},
+		
+	};
+
+})();
+
+$.gravity.start();
+</script>

@@ -1,3 +1,8 @@
+<head>
+	<script type="text/javascript" src="../libs/matrix.js"></script>
+	<script type="text/javascript" src="../libs/colors.js"></script>
+</head>
+
 [N1]Demo[/N1]
 [HTML]<div style="margin-bottom: 8px;">
 	<input type="radio" name="func" value="linear" 
@@ -77,238 +82,8 @@
 	<canvas id="netCanvas" width="700" height="180"></canvas>
 </div>[/HTML]
 <script>
-let $ = {};
-// https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes
-// https://stackoverflow.com/questions/32647215/declaring-static-constants-in-es6-classes
-$.Matrix = class Matrix {
-
-	#rows = 0;
-	#cols = 0;
-	#data = [];
-	
-	static checkDefined(o, err) {
-		if (typeof o === 'undefined')
-			throw err + " is undefined";
-	}
-	
-	static checkDefinedNumber(o, err) {
-		Matrix.checkDefined(o, err);
-		if (typeof o != 'number')
-			throw err + " is not a number";
-	}
-	
-	static checkDefinedPositiveInteger(o, err) {
-		Matrix.checkDefinedNumber(o, err);
-		if (!Number.isInteger(o))
-			throw err + " is not an integer";
-		if (o < 0)
-			throw err + " is must be positive integer";
-	}
-	
-	static checkMatrixInstance(m) {
-		if (!(m instanceof Matrix)) 
-			throw "Not a Matrix instance";
-	}		
-	
-	static createIdentity(dimension) {
-		Matrix.checkDefinedPositiveInteger(dimension, "dimension");
-		let matrix = new Matrix(dimension, dimension);
-		for (let i = 0; i < dimension; i++)
-			matrix.set(i, i, 1);
-		return matrix;
-	}
-	
-	static fromFlatArray(rows, cols, array) {
-		if (typeof array != 'object')
-			throw "Not a Matrix instance";		
-		let matrix = new Matrix(rows, cols);
-		let i = 0;
-		for (let r = 0; r < rows; r++) {
-			for (let c = 0; c < cols; c++) {
-				Matrix.checkDefinedNumber(array[i], "element [" + r + "," + c + "]");
-				matrix.set(r,c, array[i++]);
-			}
-		}
-		return matrix;
-	}
-	
-	constructor(rows, cols) {
-		Matrix.checkDefinedPositiveInteger(rows, "rows");
-		Matrix.checkDefinedPositiveInteger(cols, "cols");	
-		this.#rows = rows;
-		this.#cols = cols;
-		// indexově jsou nejprve řádky, pak sloupce		
-		for (let r = 0; r < rows; r++) {
-			let row = [];
-			this.#data[r] = row;
-			for (let c = 0; c < cols; c++) 
-				row[c] = 0;
-		}
-	}
-	
-	checkDimensions(row, col) {
-		Matrix.checkDefinedPositiveInteger(row, "row");
-		Matrix.checkDefinedPositiveInteger(col, "col");
-		if (row > this.#rows - 1 || row < 0) throw "Invalid row number (0-" + (this.#rows - 1) + ")";
-		if (col > this.#cols - 1 || col < 0) throw "Invalid col number (0-" + (this.#cols - 1) + ")";
-	}
-	
-	print() {
-		//console.table(this.#data);
-		let line = '';
-		for (let r = 0; r < this.#rows; r++) {
-			line += r == 0 ? '┌\t' : (r == this.#rows - 1 ? '└\t' : '│\t');
-			for (let c = 0; c < this.#cols; c++) {
-				line += this.get(r,c) + '\t';
-				if (c == this.#cols - 1) {
-					line += r == 0 ? '┐' : (r == this.#rows - 1 ? '┘' : '│');
-					console.log(line);
-					line = '';
-				}
-			}
-		}		
-	}
-	
-	getRows() {
-		return this.#rows;
-	}
-	
-	getCols() {
-		return this.#cols;
-	}
-		
-	get(row, col) {
-		this.checkDimensions(row, col);		
-		return this.#data[row][col];
-	}
-	
-	set(row, col, value) {
-		this.checkDimensions(row, col);	
-		Matrix.checkDefinedNumber(value, "value");
-		this.#data[row][col] = value;
-	}
-	
-	add(m) {
-		Matrix.checkMatrixInstance(m);		
-		if (m.getRows() != this.#rows)
-			throw "A and B has different number of rows";
-		if (m.getCols() != this.#cols)
-			throw "A and B has different number of rows";
-		let result = new Matrix(this.#rows, this.#cols);
-		for (let r = 0; r < this.#rows; r++)			
-			for (let c = 0; c < this.#cols; c++)
-				result.set(r, c, this.get(r, c) + m.get(r, c));
-		return result;				
-	}
-	
-	subtract(m) {
-		let m2 = m.multiplyByScalar(-1);
-		return this.add(m2);
-	}
-	
-	addScalar(n) {
-		Matrix.checkDefinedNumber(n, "value");
-		let result = new Matrix(this.#rows, this.#cols);
-		for (let r = 0; r < this.#rows; r++)			
-			for (let c = 0; c < this.#cols; c++)
-				result.set(r, c, this.get(r, c) + n);
-		return result;				
-	}
-	
-	multiply(m) {
-		Matrix.checkMatrixInstance(m);		
-		if (m.getRows() != this.getCols())
-			throw "A.B requires A.cols = B.rows";
-		let result = new Matrix(this.getRows(), m.getCols());
-		for (let r = 0; r < result.getRows(); r++) {
-			for (let c = 0; c < result.getCols(); c++) {
-				let sum = 0;
-				for (let i = 0; i < this.getCols(); i++)
-					sum += this.get(r, i) * m.get(i, c);
-				result.set(r, c, sum);
-			}
-		}			
-		return result;	
-	}
-	
-	multiplyHadamard(m) {
-		Matrix.checkMatrixInstance(m);		
-		if (m.getRows() != this.getRows())
-			throw "A.B requires A.rows = B.rows";
-		if (m.getCols() != this.getCols())
-			throw "A.B requires A.cols = B.cols";
-		let result = new Matrix(this.getRows(), this.getCols());
-		for (let r = 0; r < result.getRows(); r++)
-			for (let c = 0; c < result.getCols(); c++)
-				result.set(r, c, this.get(r, c) * m.get(r, c));	
-		return result;	
-	}
-	
-	multiplyByScalar(n) {
-		Matrix.checkDefinedNumber(n, "value");
-		let result = new Matrix(this.#rows, this.#cols);
-		for (let r = 0; r < this.#rows; r++)			
-			for (let c = 0; c < this.#cols; c++)
-				result.set(r, c, this.get(r, c) * n);
-		return result;				
-	}
-	
-	map(func) {
-		let result = new Matrix(this.#rows, this.#cols);
-		for (let r = 0; r < this.#rows; r++)			
-			for (let c = 0; c < this.#cols; c++)
-				result.set(r, c, func(this.get(r, c)));
-		return result;
-	}
-	
-	transpose() {		
-		let result = new Matrix(this.getCols(), this.getRows());
-		for (let r = 0; r < this.getRows(); r++)
-			for (let c = 0; c < this.getCols(); c++) 
-				result.set(c, r, this.get(r, c));
-		return result;
-	}
-};
-
+var $ = $ || {};
 $.nnet = (function() {
-
-	/**
-	 * https://stackoverflow.com/questions/2353211/hsl-to-rgb-color-conversion
-	 * https://stackoverflow.com/questions/17433015/change-the-hue-of-a-rgb-color-in-javascript
-	 * Converts an HSL color value to RGB. Conversion formula
-	 * adapted from http://en.wikipedia.org/wiki/HSL_color_space.
-	 * Assumes h, s, and l are contained in the set [0, 1] and
-	 * returns r, g, and b in the set [0, 255].
-	 *
-	 * @param   {number}  h       The hue
-	 * @param   {number}  s       The saturation
-	 * @param   {number}  l       The lightness
-	 * @return  {Array}           The RGB representation
-	 */
-	let hslToRGB = function(h, s, l) {
-	    let r, g, b;
-
-	    if (s == 0) {
-	        r = g = b = l; // achromatic
-	    } else {
-	        let hue2rgb = function hue2rgb(p, q, t){
-	            if(t < 0) t += 1;
-	            if(t > 1) t -= 1;
-	            if(t < 1/6) return p + (q - p) * 6 * t;
-	            if(t < 1/2) return q;
-	            if(t < 2/3) return p + (q - p) * (2/3 - t) * 6;
-	            return p;
-	        }
-
-	        let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
-	        let p = 2 * l - q;
-	        r = hue2rgb(p, q, h + 1/3);
-	        g = hue2rgb(p, q, h);
-	        b = hue2rgb(p, q, h - 1/3);
-	    }
-
-	    return "#" + ((1 << 24) + (Math.round(r * 255) << 16) + ( Math.round(g * 255) << 8) + Math.round(b * 255)).toString(16).slice(1);
-	};
 
 	let canvas = document.getElementById("myCanvas");
 	let ctx = canvas.getContext("2d");
@@ -361,7 +136,7 @@ $.nnet = (function() {
 		netCtx.strokeStyle = "black";
 		netCtx.lineWidth = 3;
 		for (let l = 1; l < layersSizes.length; l++) {
-			netCtx.strokeStyle = hslToRGB(l / layersSizes.length, 1, 0.4);
+			netCtx.strokeStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.4);
 			let x = layerXOffset * (l + 1);
 			let inputSize = layersSizes[l - 1];
 			let layerSize = layersSizes[l]; 			
@@ -388,7 +163,7 @@ $.nnet = (function() {
 		netCtx.font = "15px Monospace";
 		for (let l = 0; l < layersSizes.length; l++) {
 			netCtx.strokeStyle = "black";
-			netCtx.fillStyle = hslToRGB(l / layersSizes.length, 1, 0.5);
+			netCtx.fillStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.5);
 			let layerSize = layersSizes[l]; 			
 			let x = layerXOffset * (l + 1);
 			// pro každý neuron z vrstvy
@@ -452,7 +227,7 @@ $.nnet = (function() {
 			}
 			drawMatrixStart(xstart, h);
 			xstart += matrixXMargin;
-			netCtx.fillStyle = hslToRGB(l / layersSizes.length, 1, 0.5);
+			netCtx.fillStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.5);
 			for (let row = 0; row < rows; row++) {
 				for (let col = 0; col < cols; col++) {
 					let x = xstart + col * (textWidth + textXSpace) + textWidth / 2;
@@ -550,10 +325,10 @@ $.nnet = (function() {
 			ctx.fillRect(toScreenX(cx), toScreenY(cy), pointSize, pointSize);
 			
 			// sloupcový vektor vstupů
-			let inputs = $.Matrix.fromFlatArray(2, 1, [cx, cy]);
+			let inputs = $.GJSLibMatrix.fromFlatArray(2, 1, [cx, cy]);
 			// sloupcový vektor známé hodnoty výstupu
-			//let target = $.Matrix.fromFlatArray(1, 1, [radialSeparator(cx, cy)]);
-			let target = $.Matrix.fromFlatArray(1, 1, [separator(cx, cy)]);
+			//let target = $.GJSLibMatrix.fromFlatArray(1, 1, [radialSeparator(cx, cy)]);
+			let target = $.GJSLibMatrix.fromFlatArray(1, 1, [separator(cx, cy)]);
 			
 			// potenciály a aktivace
 			activations[b][0] = inputs;
@@ -652,9 +427,9 @@ $.nnet = (function() {
 		for (let l = 1; l < layersSizes.length; l++) {
 			let inputSize = layersSizes[l - 1];
 			let layerSize = layersSizes[l]
-			let layerWeights = new $.Matrix(layerSize, inputSize);
+			let layerWeights = new $.GJSLibMatrix(layerSize, inputSize);
 			// sloupcový vektor
-			let layerBiases = new $.Matrix(layerSize, 1);
+			let layerBiases = new $.GJSLibMatrix(layerSize, 1);
 			weights[l] = layerWeights;
 			biases[l] = layerBiases;			
 			// pro každý neuron z vrstvy

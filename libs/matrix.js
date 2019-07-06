@@ -1,13 +1,7 @@
-<html>
-<body>
-<div>
-<canvas id="can" width="500" height="300" style="cursor: pointer"></canvas>
-</div>
-<script>let $ = {};
-
+var $ = $ || {};
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes
 // https://stackoverflow.com/questions/32647215/declaring-static-constants-in-es6-classes
-$.Matrix = class Matrix {
+$.GJSLibMatrix = class GJSLibMatrix {
 
 	#rows = 0;
 	#cols = 0;
@@ -19,13 +13,13 @@ $.Matrix = class Matrix {
 	}
 	
 	static checkDefinedNumber(o, err) {
-		Matrix.checkDefined(o, err);
+		GJSLibMatrix.checkDefined(o, err);
 		if (typeof o != 'number')
 			throw err + " is not a number";
 	}
 	
 	static checkDefinedPositiveInteger(o, err) {
-		Matrix.checkDefinedNumber(o, err);
+		GJSLibMatrix.checkDefinedNumber(o, err);
 		if (!Number.isInteger(o))
 			throw err + " is not an integer";
 		if (o < 0)
@@ -33,13 +27,13 @@ $.Matrix = class Matrix {
 	}
 	
 	static checkMatrixInstance(m) {
-		if (!(m instanceof Matrix)) 
-			throw "Not a Matrix instance";
+		if (!(m instanceof GJSLibMatrix)) 
+			throw "Not a GJSLibMatrix instance";
 	}		
 	
 	static createIdentity(dimension) {
-		Matrix.checkDefinedPositiveInteger(dimension, "dimension");
-		let matrix = new Matrix(dimension, dimension);
+		GJSLibMatrix.checkDefinedPositiveInteger(dimension, "dimension");
+		let matrix = new GJSLibMatrix(dimension, dimension);
 		for (let i = 0; i < dimension; i++)
 			matrix.set(i, i, 1);
 		return matrix;
@@ -47,12 +41,12 @@ $.Matrix = class Matrix {
 	
 	static fromFlatArray(rows, cols, array) {
 		if (typeof array != 'object')
-			throw "Not a Matrix instance";		
-		let matrix = new Matrix(rows, cols);
+			throw "Not a GJSLibMatrix instance";		
+		let matrix = new GJSLibMatrix(rows, cols);
 		let i = 0;
 		for (let r = 0; r < rows; r++) {
 			for (let c = 0; c < cols; c++) {
-				Matrix.checkDefinedNumber(array[i], "element [" + r + "," + c + "]");
+				GJSLibMatrix.checkDefinedNumber(array[i], "element [" + r + "," + c + "]");
 				matrix.set(r,c, array[i++]);
 			}
 		}
@@ -60,8 +54,8 @@ $.Matrix = class Matrix {
 	}
 	
 	constructor(rows, cols) {
-		Matrix.checkDefinedPositiveInteger(rows, "rows");
-		Matrix.checkDefinedPositiveInteger(cols, "cols");	
+		GJSLibMatrix.checkDefinedPositiveInteger(rows, "rows");
+		GJSLibMatrix.checkDefinedPositiveInteger(cols, "cols");	
 		this.#rows = rows;
 		this.#cols = cols;
 		// indexově jsou nejprve řádky, pak sloupce		
@@ -74,14 +68,26 @@ $.Matrix = class Matrix {
 	}
 	
 	checkDimensions(row, col) {
-		Matrix.checkDefinedPositiveInteger(row, "row");
-		Matrix.checkDefinedPositiveInteger(col, "col");
+		GJSLibMatrix.checkDefinedPositiveInteger(row, "row");
+		GJSLibMatrix.checkDefinedPositiveInteger(col, "col");
 		if (row > this.#rows - 1 || row < 0) throw "Invalid row number (0-" + (this.#rows - 1) + ")";
 		if (col > this.#cols - 1 || col < 0) throw "Invalid col number (0-" + (this.#cols - 1) + ")";
 	}
 	
 	print() {
-		console.table(this.#data);
+		//console.table(this.#data);
+		let line = '';
+		for (let r = 0; r < this.#rows; r++) {
+			line += r == 0 ? '┌\t' : (r == this.#rows - 1 ? '└\t' : '│\t');
+			for (let c = 0; c < this.#cols; c++) {
+				line += this.get(r,c) + '\t';
+				if (c == this.#cols - 1) {
+					line += r == 0 ? '┐' : (r == this.#rows - 1 ? '┘' : '│');
+					console.log(line);
+					line = '';
+				}
+			}
+		}		
 	}
 	
 	getRows() {
@@ -99,26 +105,31 @@ $.Matrix = class Matrix {
 	
 	set(row, col, value) {
 		this.checkDimensions(row, col);	
-		Matrix.checkDefinedNumber(value, "value");
+		GJSLibMatrix.checkDefinedNumber(value, "value");
 		this.#data[row][col] = value;
 	}
 	
 	add(m) {
-		Matrix.checkMatrixInstance(m);		
+		GJSLibMatrix.checkMatrixInstance(m);		
 		if (m.getRows() != this.#rows)
 			throw "A and B has different number of rows";
 		if (m.getCols() != this.#cols)
 			throw "A and B has different number of rows";
-		let result = new Matrix(this.#rows, this.#cols);
+		let result = new GJSLibMatrix(this.#rows, this.#cols);
 		for (let r = 0; r < this.#rows; r++)			
 			for (let c = 0; c < this.#cols; c++)
 				result.set(r, c, this.get(r, c) + m.get(r, c));
 		return result;				
 	}
 	
+	subtract(m) {
+		let m2 = m.multiplyByScalar(-1);
+		return this.add(m2);
+	}
+	
 	addScalar(n) {
-		Matrix.checkDefinedNumber(n, "value");
-		let result = new Matrix(this.#rows, this.#cols);
+		GJSLibMatrix.checkDefinedNumber(n, "value");
+		let result = new GJSLibMatrix(this.#rows, this.#cols);
 		for (let r = 0; r < this.#rows; r++)			
 			for (let c = 0; c < this.#cols; c++)
 				result.set(r, c, this.get(r, c) + n);
@@ -126,10 +137,10 @@ $.Matrix = class Matrix {
 	}
 	
 	multiply(m) {
-		Matrix.checkMatrixInstance(m);		
+		GJSLibMatrix.checkMatrixInstance(m);		
 		if (m.getRows() != this.getCols())
 			throw "A.B requires A.cols = B.rows";
-		let result = new Matrix(this.getRows(), m.getCols());
+		let result = new GJSLibMatrix(this.getRows(), m.getCols());
 		for (let r = 0; r < result.getRows(); r++) {
 			for (let c = 0; c < result.getCols(); c++) {
 				let sum = 0;
@@ -138,64 +149,44 @@ $.Matrix = class Matrix {
 				result.set(r, c, sum);
 			}
 		}			
-		return result;				
+		return result;	
+	}
+	
+	multiplyHadamard(m) {
+		GJSLibMatrix.checkMatrixInstance(m);		
+		if (m.getRows() != this.getRows())
+			throw "A.B requires A.rows = B.rows";
+		if (m.getCols() != this.getCols())
+			throw "A.B requires A.cols = B.cols";
+		let result = new GJSLibMatrix(this.getRows(), this.getCols());
+		for (let r = 0; r < result.getRows(); r++)
+			for (let c = 0; c < result.getCols(); c++)
+				result.set(r, c, this.get(r, c) * m.get(r, c));	
+		return result;	
 	}
 	
 	multiplyByScalar(n) {
-		Matrix.checkDefinedNumber(n, "value");
-		let result = new Matrix(this.#rows, this.#cols);
+		GJSLibMatrix.checkDefinedNumber(n, "value");
+		let result = new GJSLibMatrix(this.#rows, this.#cols);
 		for (let r = 0; r < this.#rows; r++)			
 			for (let c = 0; c < this.#cols; c++)
 				result.set(r, c, this.get(r, c) * n);
 		return result;				
 	}
 	
+	map(func) {
+		let result = new GJSLibMatrix(this.#rows, this.#cols);
+		for (let r = 0; r < this.#rows; r++)			
+			for (let c = 0; c < this.#cols; c++)
+				result.set(r, c, func(this.get(r, c)));
+		return result;
+	}
+	
 	transpose() {		
-		let result = new Matrix(this.getCols(), this.getRows());
+		let result = new GJSLibMatrix(this.getCols(), this.getRows());
 		for (let r = 0; r < this.getRows(); r++)
 			for (let c = 0; c < this.getCols(); c++) 
 				result.set(c, r, this.get(r, c));
 		return result;
 	}
 };
-$.matrix = (function() {
-	
-	let canvas = document.getElementById("can");
-	let ctx = canvas.getContext("2d");
-	let width = canvas.offsetWidth;
-	let height = canvas.offsetHeight;			
-	
-	let paintMatrix = function(x, y, matrix) {
-		ctx.begin();
-		
-		ctx.stroke();
-	};
-	
-	let paint = function() {		
-		ctx.clearRect(0, 0, width, height);
-		ctx.strokeStyle = "black";
-		ctx.fillStyle = "black";
-		let fontSize = 13;
-		ctx.font = fontSize + "px Monospace";		
-		
-		ctx.strokeRect(0, 0, width, height);
-
-		ctx.setLineDash([5, 5]);
-		ctx.strokeStyle = "lightgrey";
-		ctx.fillStyle = "grey";
-		ctx.textAlign = "left";
-		
-	};
-
-	return {
-		start: function() {
-			paint();
-		}
-	};
-	
-})();
-
-$.matrix.start();
-</script>
-</body>
-</html>

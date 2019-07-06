@@ -14,9 +14,9 @@ $.plotter = (function() {
 	let xDraggedStart;
 	let yDraggedStart;
 	
-	let xUnit = 0.1;
-	let yUnit = 2;
-	let xCenter = 1;
+	let xUnit = 0.5;
+	let yUnit = 1;
+	let xCenter = 0;
 	let yCenter = 0;
 	
 	let xUnitOriginal = xUnit;
@@ -36,7 +36,7 @@ $.plotter = (function() {
 	let yPxOffset;
 	
 	let func = function(x) {
-		return x * x;
+		return 2 * x * x - x - 1;
 	};
 	
 	let calibrate = function() {			
