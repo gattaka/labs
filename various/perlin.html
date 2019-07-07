@@ -1,3 +1,7 @@
+<head>	
+	<script type="text/javascript" src="../libs/colors.js"></script>
+</head>
+
 <div style="margin: 10px 0;">
 	<canvas id="canvas" width="700" height="400"></canvas>
 </div>
@@ -14,8 +18,8 @@ $.perlin = (function() {
 	let grid;
 	let gridSize;
 	let vectorMax;
-	let gridWRatio;
-	let gridHRatio;
+	let cellWidth;
+	let cellHeight;
 		
 	let fillSegment = function(tree) {		
 		let color = getColorByLevel(tree.level);
@@ -26,6 +30,11 @@ $.perlin = (function() {
 		ctx.fillRect(x, y, tree.w, tree.h);
 		ctx.strokeRect(x, y, tree.w, tree.h);		
 	};
+	
+	let distance = function(vectorWidth, vectorHeight, pointCellX, pointCellY) {
+		if (vectorHeight == 0)
+			return 
+	};
 
 	let init = function() {	
 		width = canvas.width;
@@ -34,48 +43,73 @@ $.perlin = (function() {
 		halfHeight = height / 2;
 		
 		grid = [];
-		gridSize = 20;
-		vectorMax = 10;
-		gridWRatio = width / gridSize;
-		gridHRatio = height / gridSize;
+		gridSize = 10;
+		vectorMax = 20;
+		cellWidth = width / gridSize;
+		cellHeight = height / gridSize;
 	
 		ctx.clearRect(0, 0, width, height);
 		
 		ctx.lineWidth = 1;
 		ctx.strokeStyle = "blue";
 		ctx.strokeRect(0, 0, width, height);
-				
-		for (let y = 0; y < gridSize; y++) {
-			let posy = y * gridHRatio;
+
+		for (let y = 0; y <= gridSize; y++) {
 			let row = [];
 			grid[y] = row;
+			for (let x = 0; x <= gridSize; x++) {
+				let cx = x * cellWidth;
+				let lx = vectorMax * (Math.random() * 2 - 1);
+				let ly = vectorMax * (Math.random() * 2 - 1);
+				row[x] = [
+					lx,
+					ly,
+					Math.sqrt(lx * lx + ly * ly),
+					lx / ly
+				];
+			}
+		}
+				
+		for (let y = 0; y < height; y++) {			
+			for (let x = 0; x < width; x++) {
+				let cellX = Math.round(x / cellWidth);
+				let cellY = Math.round(y / cellHeight);
+				let vector = grid[cellY][cellX];
+				// vnitřní souřadnice bodu vzhledem k centru buňky
+				let pointCellX = cellX * cellWidth - x;
+				let pointCellY = cellY * cellHeight - y;
+				//ctx.fillStyle = (cellX + cellY) % 2 == 0 ? "white" : "lightgrey";
+				ctx.fillStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.4);
+				ctx.fillRect(x, y, 1, 1);
+			}
+		}
+				
+		for (let y = 0; y <= gridSize; y++) {
+			let cy = y * cellHeight;
 			ctx.strokeStyle = "blue";
 			ctx.beginPath();
-			ctx.moveTo(0, posy);
-			ctx.lineTo(width, posy);
+			ctx.moveTo(0, cy);
+			ctx.lineTo(width, cy);
 			ctx.stroke();	
-			for (let x = 0; x < gridSize; x++) {
-				let posx = x * gridWRatio;
+			for (let x = 0; x <= gridSize; x++) {
+				let cx = x * cellWidth;
 				if (y == 0) {
 					ctx.strokeStyle = "blue";
 					ctx.beginPath();
-					ctx.moveTo(posx, 0);
-					ctx.lineTo(posx, height);
+					ctx.moveTo(cx, 0);
+					ctx.lineTo(cx, height);
 					ctx.stroke();
-				}
-				row[x] = [
-					vectorMax * (Math.random() * 2 - 1),
-					vectorMax * (Math.random() * 2 - 1)
-				];
+				}				
 				ctx.lineWidth = 2;
 				ctx.strokeStyle = "red";
 				ctx.beginPath();
-				ctx.moveTo(posx, posy);
-				ctx.lineTo(posx + row[x][0], posy + row[x][1]);
+				ctx.moveTo(cx, cy);
+				ctx.lineTo(cx + grid[y][x][0], cy + grid[y][x][1]);
 				ctx.stroke();
 				ctx.lineWidth = 1;
 			}
-		}
+		}	
+
 	};	
 		
 	return {
