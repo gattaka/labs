@@ -1,0 +1,91 @@
+<div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="400"></canvas>
+</div>
+<script>let $ = {};
+$.perlin = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width;
+	let height;
+	let halfWidth;
+	let halfHeight;
+	
+	let grid;
+	let gridSize;
+	let vectorMax;
+	let gridWRatio;
+	let gridHRatio;
+		
+	let fillSegment = function(tree) {		
+		let color = getColorByLevel(tree.level);
+		ctx.fillStyle = color;
+		ctx.strokeStyle = "black";
+		let x = tree.x - tree.w / 2;
+		let y = tree.y - tree.h / 2;		
+		ctx.fillRect(x, y, tree.w, tree.h);
+		ctx.strokeRect(x, y, tree.w, tree.h);		
+	};
+
+	let init = function() {	
+		width = canvas.width;
+		height = canvas.height;
+		halfWidth = width / 2; 
+		halfHeight = height / 2;
+		
+		grid = [];
+		gridSize = 20;
+		vectorMax = 10;
+		gridWRatio = width / gridSize;
+		gridHRatio = height / gridSize;
+	
+		ctx.clearRect(0, 0, width, height);
+		
+		ctx.lineWidth = 1;
+		ctx.strokeStyle = "blue";
+		ctx.strokeRect(0, 0, width, height);
+				
+		for (let y = 0; y < gridSize; y++) {
+			let posy = y * gridHRatio;
+			let row = [];
+			grid[y] = row;
+			ctx.strokeStyle = "blue";
+			ctx.beginPath();
+			ctx.moveTo(0, posy);
+			ctx.lineTo(width, posy);
+			ctx.stroke();	
+			for (let x = 0; x < gridSize; x++) {
+				let posx = x * gridWRatio;
+				if (y == 0) {
+					ctx.strokeStyle = "blue";
+					ctx.beginPath();
+					ctx.moveTo(posx, 0);
+					ctx.lineTo(posx, height);
+					ctx.stroke();
+				}
+				row[x] = [
+					vectorMax * (Math.random() * 2 - 1),
+					vectorMax * (Math.random() * 2 - 1)
+				];
+				ctx.lineWidth = 2;
+				ctx.strokeStyle = "red";
+				ctx.beginPath();
+				ctx.moveTo(posx, posy);
+				ctx.lineTo(posx + row[x][0], posy + row[x][1]);
+				ctx.stroke();
+				ctx.lineWidth = 1;
+			}
+		}
+	};	
+		
+	return {
+
+		start: function() {	
+			init();			
+		},
+		
+	};
+
+})();
+
+$.perlin.start();</script>
