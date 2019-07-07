@@ -138,38 +138,39 @@ $.plotter = (function() {
 		ctx.lineTo(xPxZero, height);
 		ctx.stroke();	
 					
+		// Functions, points
+		
+		let functions = [
+			getVectorFunc(-1, -2, 3, 2),
+			getVectorFunc(-1, -2, -10, 15),
+			getVectorFunc(-1, -2, 3, -2),
+			getVectorFunc(-1, -2, -4, -2),
+		];		
+		
+		let points = [
+			//[0, 0, "[0,0]"],
+		]
+			
 		// PLOT
+			
+		let colors = ["blue", "red", "lime", "cyan", "yellow"];
+		
+		let stepX = 1 / xUnitPx;
 		let xFromUnit = -xUnitsLength / 2 - xOffsetSteps * xUnit;
 		let xToUnit = xFromUnit + xUnitsLength;
 		let yFromUnit = -yUnitsLength / 2 + yOffsetSteps * yUnit;
 		let yToUnit = yFromUnit + yUnitsLength;
-		
-		let stepX = 1 / xUnitPx;
+			
 		// -xUnit protože jednotky X jsou vypisované zleva a graf by se
 		// dokresloval u levého kraje skokově
-		let lineFce = getLineFunc(4/2, 0);
-		let normFce = getNormalFunc(4/2, 0, 2);
-		let parallelFce = getParallelFunc(4/2, 0, 3, 2);
-		let functions = [
-			lineFce, 
-			normFce, 
-			parallelFce
-		];		
-		
-		let crossPoint = getParallelsCrossPoint(4/2, 0, 2, 3, 2);
-		let points = [
-			[2, normFce(2), "[Xk,Yk]"],
-			[3, 2, "[Xp,Yp]"],
-			[crossPoint[0], crossPoint[1], "[Xq,Yq]"]
-		]
-			
-		let colors = ["blue", "red", "lime", "cyan", "yellow"];
-			
 		ctx.font = "15px Monospace";
 		for (let x = xFromUnit - xUnit; x <= xToUnit; x += stepX) {
 			for (let i = 0; i < functions.length; i++) {				
+				let y = functions[i](x);
+				if (typeof y === 'undefined')
+					continue;
 				let cx = x * xUnitPx + xPxZero;
-				let cy = yPxZero - functions[i](x) * yUnitPx;
+				let cy = yPxZero - y * yUnitPx;
 				ctx.fillStyle = colors[i];
 				ctx.fillRect(cx - funcLineSize / 2, cy - funcLineSize / 2, funcLineSize, funcLineSize);
 			}
@@ -185,6 +186,21 @@ $.plotter = (function() {
 					ctx.fillText(point[2], cx + 5, cy - 5);
 				}
 			}
+		}
+	};
+	
+	// vektor -- funkce s omezeným definičním oborem
+	let getVectorFunc = function(x, y, dx, dy) {
+		let minX = Math.min(x, x + dx);
+		let maxX = Math.max(x, x + dx);
+		let a = dy / dx;
+		let yOffset = y;
+		if (minX != x)
+			yOffset -= a * (x - minX);
+		return function(x) {
+			if (x >= minX && x <= maxX)
+				return a * (x - minX) + yOffset;
+			// undefined
 		}
 	};
 	
