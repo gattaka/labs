@@ -14,13 +14,7 @@ $.perlin = (function() {
 	let height;
 	let halfWidth;
 	let halfHeight;
-	
-	let grid;
-	let gridSize;
-	let vectorMax;
-	let cellWidth;
-	let cellHeight;
-		
+			
 	let fillSegment = function(tree) {		
 		let color = getColorByLevel(tree.level);
 		ctx.fillStyle = color;
@@ -37,11 +31,12 @@ $.perlin = (function() {
 		halfWidth = width / 2; 
 		halfHeight = height / 2;
 		
-		grid = [];
-		cellPxSize = 50;
-		gridCols = width / cellPxSize;
-		gridRows = height / cellPxSize;		
-		distanceMax = Math.sqrt(2) * cellPxSize / 2;
+		let grid = [];
+		let cellPxSize = 50;
+		let cellHalfPxSize = cellPxSize / 2;
+		let gridCols = width / cellPxSize;
+		let gridRows = height / cellPxSize;		
+		let distanceMax = Math.sqrt(2) * cellPxSize / 2;
 	
 		ctx.clearRect(0, 0, width, height);
 		
@@ -49,30 +44,13 @@ $.perlin = (function() {
 		ctx.strokeStyle = "blue";
 		ctx.strokeRect(0, 0, width, height);
 
-		for (let y = 0; y <= gridRows; y++) {
-			let row = [];
-			grid[y] = row;
-			for (let x = 0; x <= gridCols; x++) {
-				let cx = x * cellPxSize;
+		for (let row = 0; row <= gridRows; row++) {
+			grid[row] = [];
+			for (let col = 0; col <= gridCols; col++) {
 				let radians = Math.random() * Math.PI * 2;
-				let lx = distanceMax * Math.cos(radians);
-				let ly = distanceMax * Math.sin(radians);
-				row[x] = [lx, ly];
-			}
-		}
-				
-		for (let y = 0; y < height; y++) {			
-			for (let x = 0; x < width; x++) {
-				let cellX = Math.round(x / cellPxSize);
-				let cellY = Math.round(y / cellPxSize);
-				// vektor jde od počátku buňky do [xk, yk]
-				let vector = grid[cellY][cellX];
-				let xk = vector[0];
-				let yk = vector[1];
-				
-				// vnitřní souřadnice bodu vzhledem k centru buňky [xp, yp]
-				let xp = cellX * cellPxSize - x;
-				let yp = cellY * cellPxSize - y;
+				let xk = distanceMax * Math.cos(radians);
+				let yk = distanceMax * Math.sin(radians);
+				grid[row][col] = [xk, yk];
 				
 				// vektor udává lineární funkci 
 				// F1: y = a * x + b
@@ -80,31 +58,37 @@ $.perlin = (function() {
 				// b = 0, protože je vždy v počátku
 				let a = yk / xk;	
 				let b = 0;
-				// zkoumaný bod určuje paralelní lineární funkci 
-				// F2: y = a * x + b + c		
-				let c = yp - a * xp;
+
 				// F1 a F2 jsou paralelní funkce a mají tak společnou kolmici 
 				// Fk: y = ak * x + bk
 				// bk je 0, protože kolmice prochází počátkem
 				let ak = -1 / a;
 				let bk = 0;
-				// bodem [xp, yp] prochází F2, ale ne Fk
-				// bodem [xq, yq] prochází F2 a i Fk
-				let xq = (b - bk + c) / (ak - a);
-				let yq = a * xq + b + c;	
-				// vzdálenost bodu od kolmice
-				let diffX = xq - xp;
-				let diffY = yq - yp;
-				let dist = Math.sign(diffX) * Math.sqrt(diffX * diffX + diffY * diffY) / distanceMax;
-				let scaledDist = Math.max(-1, Math.min(1, dist));
-				let lightnessScaled = 1 - Math.abs(scaledDist);
-								
-				//ctx.fillStyle = (cellX + cellY) % 2 == 0 ? "white" : "lightgrey";
-				ctx.fillStyle = $.GJSLibColors.hslToRGB(scaledDist > 0 ? 0.7 : 0.5, 0.8, lightnessScaled);
-				ctx.fillRect(x, y, 1, 1);
+
+				for (let yp = -cellHalfPxSize; yp < cellHalfPxSize ; yp++) {			
+					for (let xp = -cellHalfPxSize; xp < cellHalfPxSize; xp++) {												
+						// zkoumaný bod určuje paralelní lineární funkci 
+						// F2: y = a * x + b + c		
+						let c = yp - a * xp;
+						// bodem [xp, yp] prochází F2, ale ne Fk
+						// bodem [xq, yq] prochází F2 a i Fk
+						let xq = (b - bk + c) / (ak - a);
+						let yq = a * xq + b + c;	
+						// vzdálenost bodu od kolmice
+						let diffX = xq - xp;
+						let diffY = yq - yp;
+						let dist = Math.sign(diffX) * Math.sqrt(diffX * diffX + diffY * diffY) / distanceMax;
+						let scaledDist = Math.max(-1, Math.min(1, dist));
+						let lightnessScaled = 1 - Math.abs(scaledDist);
+										
+						//ctx.fillStyle = (cellX + cellY) % 2 == 0 ? "white" : "lightgrey";
+						ctx.fillStyle = $.GJSLibColors.hslToRGB(scaledDist > 0 ? 0.7 : 0.5, 0.8, lightnessScaled);
+						ctx.fillRect(xp + cellPxSize * col, yp + cellPxSize * row, 1, 1);
+					}
+				}
 			}
 		}
-				
+										
 		for (let y = 0; y <= gridRows; y++) {
 			let cy = y * cellPxSize;
 			ctx.strokeStyle = "blue";
