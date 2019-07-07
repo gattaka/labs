@@ -147,16 +147,16 @@ $.plotter = (function() {
 		let stepX = 1 / xUnitPx;
 		// -xUnit protože jednotky X jsou vypisované zleva a graf by se
 		// dokresloval u levého kraje skokově
-		let lineFce = getLineFunc(4/2, -3);
-		let normFce = getNormalFunc(4/2, -3, 2);
-		let parallelFce = getParallelFunc(4/2, -3, 3, 2);
+		let lineFce = getLineFunc(4/2, 0);
+		let normFce = getNormalFunc(4/2, 0, 2);
+		let parallelFce = getParallelFunc(4/2, 0, 3, 2);
 		let functions = [
 			lineFce, 
 			normFce, 
 			parallelFce
 		];		
 		
-		let crossPoint = getParallelsCrossPoint(4/2, -3, 2, 3, 2);
+		let crossPoint = getParallelsCrossPoint(4/2, 0, 2, 3, 2);
 		let points = [
 			[2, normFce(2), "[Xk,Yk]"],
 			[3, 2, "[Xp,Yp]"],
@@ -218,8 +218,10 @@ $.plotter = (function() {
 	// F2 je paralelní k F1, takže je kolmice obě protíná. F2 prochází
 	// bodem [xp, yp]. F1 a K se setkávají v [xk]
 	let getParallelsCrossPoint = function(a, b, xk, xp, yp) {
+		let ak = -1 / a;
+		let bk = xk * (a + 1/a) + b;
 		let c = yp - a * xp - b;
-		let xq = xp - c / (a + 1/a);
+		let xq = (b - bk + c) / (ak - a);
 		let yq = a * xq + b + c;
 		return [xq, yq];
 	};

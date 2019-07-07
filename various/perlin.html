@@ -5,7 +5,7 @@
 <div style="margin: 10px 0;">
 	<canvas id="canvas" width="700" height="400"></canvas>
 </div>
-<script>let $ = {};
+<script>var $ = $ || {};
 $.perlin = (function() {
 
 	let canvas = document.getElementById("canvas");
@@ -31,12 +31,6 @@ $.perlin = (function() {
 		ctx.strokeRect(x, y, tree.w, tree.h);		
 	};
 	
-	let distance = function(vectorWidth, vectorHeight, pointCellX, pointCellY) {
-		if (vectorHeight == 0)
-			return Math.abs(pointCellY - vectorWidth);
-		return Math.sqrt(
-	};
-
 	let init = function() {	
 		width = canvas.width;
 		height = canvas.height;
@@ -44,10 +38,12 @@ $.perlin = (function() {
 		halfHeight = height / 2;
 		
 		grid = [];
-		gridSize = 10;
-		vectorMax = 20;
-		cellWidth = width / gridSize;
-		cellHeight = height / gridSize;
+		cellPxSize = 50;
+		gridCols = width / cellPxSize;
+		gridRows = height / cellPxSize;		
+		// maximální X nebo Y délky vektoru (ne diagonála)
+		vectorMax = cellPxSize / 2;
+		distanceMax = Math.sqrt(2) * cellPxSize;
 	
 		ctx.clearRect(0, 0, width, height);
 		
@@ -55,45 +51,65 @@ $.perlin = (function() {
 		ctx.strokeStyle = "blue";
 		ctx.strokeRect(0, 0, width, height);
 
-		for (let y = 0; y <= gridSize; y++) {
+		for (let y = 0; y <= gridRows; y++) {
 			let row = [];
 			grid[y] = row;
-			for (let x = 0; x <= gridSize; x++) {
-				let cx = x * cellWidth;
-				let lx = vectorMax * (Math.random() * 2 - 1);
-				let ly = vectorMax * (Math.random() * 2 - 1);
-				row[x] = [
-					lx,
-					ly,
-					Math.sqrt(lx * lx + ly * ly),
-					lx / ly
-				];
+			for (let x = 0; x <= gridCols; x++) {
+				let cx = x * cellPxSize;
+				let lx = vectorMax;// * (Math.random() * 2 - 1);
+				let ly = vectorMax;// * (Math.random() * 2 - 1);
+				row[x] = [lx, ly];
 			}
 		}
 				
 		for (let y = 0; y < height; y++) {			
 			for (let x = 0; x < width; x++) {
-				let cellX = Math.round(x / cellWidth);
-				let cellY = Math.round(y / cellHeight);
+				let cellX = Math.round(x / cellPxSize);
+				let cellY = Math.round(y / cellPxSize);
+				// vektor jde od počátku buňky do [xk, yk]
 				let vector = grid[cellY][cellX];
-				// vnitřní souřadnice bodu vzhledem k centru buňky
-				let pointCellX = cellX * cellWidth - x;
-				let pointCellY = cellY * cellHeight - y;
+				let xk = vector[0];
+				let yk = vector[0];
+				// vnitřní souřadnice bodu vzhledem k centru buňky [xp, yp]
+				let xp = cellX * cellPxSize - x;
+				let yp = cellY * cellPxSize - y;
+				
+				// vektor udává lineární funkci 
+				// F1: y = a * x + b
+				// a = y / x
+				// b = 0, protože je vždy v počátku
+				let a = yk / xk;	
+				let b = 0;
+				// zkoumaný bod určuje paralelní lineární funkci 
+				// F2: y = a * x + b + c		
+				let c = yp - a * xp;
+				// F1 a F2 jsou paralelní funkce a mají tak společnou kolmici 
+				// Fk: y = ak * x + bk
+				let ak = -1 / a;
+				let bk = xk * (a + 1/a) + b;
+				// bodem [xk, yk] prochází F1 a Fk
+				// bodem [xp, yp] prochází F2, ale ne Fk
+				// bodem [xq, yq] prochází F2 a i Fk
+				let xq = (b - bk + c) / (ak - a);
+				let yq = a * xq + b + c;	
+				// vzdálenost bodu od kolmice
+				let dist = Math.sqrt(Math.pow(xq - xp, 2) + Math.pow(yq - yp, 2));				
+			
 				//ctx.fillStyle = (cellX + cellY) % 2 == 0 ? "white" : "lightgrey";
-				ctx.fillStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.4);
+				ctx.fillStyle = $.GJSLibColors.hslToRGB(0.5, dist / distanceMax, 0.4);
 				ctx.fillRect(x, y, 1, 1);
 			}
 		}
 				
-		for (let y = 0; y <= gridSize; y++) {
-			let cy = y * cellHeight;
+		for (let y = 0; y <= gridRows; y++) {
+			let cy = y * cellPxSize;
 			ctx.strokeStyle = "blue";
 			ctx.beginPath();
 			ctx.moveTo(0, cy);
 			ctx.lineTo(width, cy);
 			ctx.stroke();	
-			for (let x = 0; x <= gridSize; x++) {
-				let cx = x * cellWidth;
+			for (let x = 0; x <= gridCols; x++) {
+				let cx = x * cellPxSize;
 				if (y == 0) {
 					ctx.strokeStyle = "blue";
 					ctx.beginPath();
