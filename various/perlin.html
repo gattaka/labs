@@ -33,7 +33,8 @@ $.perlin = (function() {
 	
 	let distance = function(vectorWidth, vectorHeight, pointCellX, pointCellY) {
 		if (vectorHeight == 0)
-			return 
+			return Math.abs(pointCellY - vectorWidth);
+		return Math.sqrt(
 	};
 
 	let init = function() {	

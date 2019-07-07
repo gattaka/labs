@@ -1,9 +1,13 @@
 <html>
+<head>	
+	<script type="text/javascript" src="../libs/colors.js"></script>
+</head>
 <body>
 <div>
 <canvas id="can" width="1700" height="600" style="cursor: pointer"></canvas>
 </div>
-<script>let $ = {};
+<script>
+var $ = $ || {};
 $.plotter = (function() {
 	
 	let canvas = document.getElementById("can");
@@ -66,7 +70,8 @@ $.plotter = (function() {
 		
 		ctx.strokeRect(0, 0, width, height);
 
-		let pointSize = 2;
+		let funcLineSize = 2;
+		let pointSize = 4;
 		
 		calibrate();
 
@@ -142,37 +147,82 @@ $.plotter = (function() {
 		let stepX = 1 / xUnitPx;
 		// -xUnit protože jednotky X jsou vypisované zleva a graf by se
 		// dokresloval u levého kraje skokově
-		let lineFce = getLineFunc(2, 4);
-		let normFce = getNormalFunc(2, 4);
+		let lineFce = getLineFunc(4/2, -3);
+		let normFce = getNormalFunc(4/2, -3, 2);
+		let parallelFce = getParallelFunc(4/2, -3, 3, 2);
 		let functions = [
-			[lineFce, "blue"],
-			[normFce, "red"],
+			lineFce, 
+			normFce, 
+			parallelFce
 		];		
-				
+		
+		let crossPoint = getParallelsCrossPoint(4/2, -3, 2, 3, 2);
+		let points = [
+			[2, normFce(2), "[Xk,Yk]"],
+			[3, 2, "[Xp,Yp]"],
+			[crossPoint[0], crossPoint[1], "[Xq,Yq]"]
+		]
+			
+		let colors = ["blue", "red", "lime", "cyan", "yellow"];
+			
+		ctx.font = "15px Monospace";
 		for (let x = xFromUnit - xUnit; x <= xToUnit; x += stepX) {
 			for (let i = 0; i < functions.length; i++) {				
 				let cx = x * xUnitPx + xPxZero;
-				let cy = yPxZero - functions[i][0](x) * yUnitPx;
-				ctx.fillStyle = functions[i][1];
-				ctx.fillRect(cx - pointSize / 2, cy - pointSize / 2, pointSize, pointSize);
+				let cy = yPxZero - functions[i](x) * yUnitPx;
+				ctx.fillStyle = colors[i];
+				ctx.fillRect(cx - funcLineSize / 2, cy - funcLineSize / 2, funcLineSize, funcLineSize);
+			}
+		}
+		for (let x = xFromUnit - xUnit; x <= xToUnit; x += stepX) {
+			for (let i = 0; i < points.length; i++) {	
+				let point = points[i];
+				if (point[0] >= x && point[0] < x + stepX) {
+					let cx = x * xUnitPx + xPxZero;
+					let cy = yPxZero - point[1] * yUnitPx;
+					ctx.fillStyle = "black";
+					ctx.fillRect(cx - pointSize / 2, cy - pointSize / 2, pointSize, pointSize);
+					ctx.fillText(point[2], cx + 5, cy - 5);
+				}
 			}
 		}
 	};
 	
-	// dle poměru dx a dy vrátí funkci přímky
-	let getLineFunc = function(dx, dy) {
+	// dle 'a' a 'b' vrátí funkci y = ax + b
+	let getLineFunc = function(a, b) {
 		return function(x) {
-			return dy / dx * x;
+			return a * x + b;
 		}
-	}
+	};
 	
-	// dle poměru dx a dy funkce přímky vrátí
-	// funkci její kolmice v bodě [dx, dy]
-	let getNormalFunc = function(dx, dy) {
+	// dle 'a', 'b' původní funkce a [x, y] průsečíku
+	// vrátí funkci kolmice k původní funkci v [xk]
+	let getNormalFunc = function(a, b, xk) {
+		let ak = -1 / a;
+		let bk = xk * (a + 1/a) + b;
 		return function(x, y) {	
-			return dx / dy * (dx - x) + dy;
+			return ak * x + bk;
 		};
-	}
+	};
+	
+	// vrátí funkci procházející bodem [xp, yp], která
+	// je paralelní k funkci dle 'a', 'b'
+	let getParallelFunc = function(a, b, xp, yp) {
+		let c = yp - a * xp - b;
+		return function(x, y) {	
+			return a * x + b + c;
+		};
+	};
+	
+	// vrátí bod [xq, yq], kterým prochází kolmice K a funkce F2. 
+	// F2 je paralelní k F1, takže je kolmice obě protíná. F2 prochází
+	// bodem [xp, yp]. F1 a K se setkávají v [xk]
+	let getParallelsCrossPoint = function(a, b, xk, xp, yp) {
+		let c = yp - a * xp - b;
+		let xq = xp - c / (a + 1/a);
+		let yq = a * xq + b + c;
+		return [xq, yq];
+	};
 
 	canvas.addEventListener("wheel", function(e) {
 		e.preventDefault();
