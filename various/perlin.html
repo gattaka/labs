@@ -25,6 +25,14 @@ $.perlin = (function() {
 		ctx.strokeRect(x, y, tree.w, tree.h);		
 	};
 	
+	// Fade function as defined by Ken Perlin.  This eases coordinate values
+	// so that they will ease towards integral values.  This ends up smoothing
+	// the final output.
+	// 6t^5 - 15t^4 + 10t^3
+	let fade = function(t) {
+		return t * t * t * (t * (t * 6 - 15) + 10);         
+	};
+	
 	let init = function() {	
 		width = canvas.width;
 		height = canvas.height;
@@ -44,48 +52,58 @@ $.perlin = (function() {
 		ctx.strokeStyle = "blue";
 		ctx.strokeRect(0, 0, width, height);
 
+		let buffer = [];
+
 		for (let row = 0; row <= gridRows; row++) {
 			grid[row] = [];
 			for (let col = 0; col <= gridCols; col++) {
 				let radians = Math.random() * Math.PI * 2;
 				let xk = distanceMax * Math.cos(radians);
 				let yk = distanceMax * Math.sin(radians);
-				grid[row][col] = [xk, yk];
+				grid[row][col] = [xk, yk];				
+			}
+		}
+		
+		for (let y = 0; y < height; y++) {	
+			for (let x = 0; x < width; x++) {
+				let y0 = Math.floor(y / cellPxSize); 
+				let y1 = Math.floor(y / cellPxSize) + 1;
+				let x0 = x % cellPxSize;
+				let x1 = x % cellPxSize + 1;
 				
-				// vektor udává lineární funkci 
-				// F1: y = a * x + b
-				// a = y / x
-				// b = 0, protože je vždy v počátku
-				let a = yk / xk;	
-				let b = 0;
-
-				// F1 a F2 jsou paralelní funkce a mají tak společnou kolmici 
-				// Fk: y = ak * x + bk
-				// bk je 0, protože kolmice prochází počátkem
-				let ak = -1 / a;
-				let bk = 0;
-
-				for (let yp = -cellHalfPxSize; yp < cellHalfPxSize ; yp++) {			
-					for (let xp = -cellHalfPxSize; xp < cellHalfPxSize; xp++) {												
-						// zkoumaný bod určuje paralelní lineární funkci 
-						// F2: y = a * x + b + c		
-						let c = yp - a * xp;
-						// bodem [xp, yp] prochází F2, ale ne Fk
-						// bodem [xq, yq] prochází F2 a i Fk
-						let xq = (b - bk + c) / (ak - a);
-						let yq = a * xq + b + c;	
-						// vzdálenost bodu od kolmice
-						let diffX = xq - xp;
-						let diffY = yq - yp;
-						let dist = Math.sign(diffX) * Math.sqrt(diffX * diffX + diffY * diffY) / distanceMax;
-						let scaledDist = Math.max(-1, Math.min(1, dist));
-						let lightnessScaled = 1 - Math.abs(scaledDist);
-										
-						//ctx.fillStyle = (cellX + cellY) % 2 == 0 ? "white" : "lightgrey";
-						ctx.fillStyle = $.GJSLibColors.hslToRGB(scaledDist > 0 ? 0.7 : 0.5, 0.8, lightnessScaled);
-						ctx.fillRect(xp + cellPxSize * col, yp + cellPxSize * row, 1, 1);
-					}
-				}
+				let grad00 = grid[y0][x0];
+				let grad01 = grid[y0][x1];
+				let grad10 = grid[y1][x0];
+				let grad11 = grid[y1][x1];
+				
+				let dist00 = [y - y0 * cellPxSize, x - x0 * cellPxSize];
+				let dist01 = [y - y0 * cellPxSize, x - x1 * cellPxSize];
+				let dist10 = [y - y1 * cellPxSize, x - x0 * cellPxSize];
+				let dist11 = [y - y1 * cellPxSize, x - x1 * cellPxSize];
+				
+				let dot00 = grad00[0] * dist00[0] + grad00[1] * dist00[1];
+				let dot01 = grad01[0] * dist01[0] + grad01[1] * dist01[1];
+				let dot10 = grad10[0] * dist10[0] + grad10[1] * dist10[1];
+				let dot11 = grad11[0] * dist11[0] + grad11[1] * dist11[1];
+				
+				// zkoumaný bod určuje paralelní lineární funkci 
+				// F2: y = a * x + b + c		
+				let c = yp - a * xp;
+				// bodem [xp, yp] prochází F2, ale ne Fk
+				// bodem [xq, yq] prochází F2 a i Fk
+				let xq = (b - bk + c) / (ak - a);
+				let yq = a * xq + b + c;	
+				// vzdálenost bodu od kolmice
+				let diffX = xq - xp;
+				let diffY = yq - yp;
+				let dist = Math.sign(diffX) * Math.sqrt(diffX * diffX + diffY * diffY) / distanceMax;						
+				let scaledDist = Math.max(-1, Math.min(1, dist));
+				let lightnessScaled = 1 - Math.abs(scaledDist);						
+								
+				bufferRow[xp + cellPxSize * col] = scaledDist;
+				//ctx.fillStyle = (cellX + cellY) % 2 == 0 ? "white" : "lightgrey";
+				ctx.fillStyle = $.GJSLibColors.hslToRGB(scaledDist > 0 ? 0.7 : 0.5, 0.8, lightnessScaled);
+				ctx.fillRect(xp + cellPxSize * col, yp + cellPxSize * row, 1, 1);
 			}
 		}
 										
