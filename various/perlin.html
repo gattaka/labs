@@ -1,19 +1,63 @@
 <head>	
 	<script type="text/javascript" src="../libs/colors.js"></script>
 </head>
-
+[N1]Demo[/N1]
+[HTML]<div>
+	<table>
+		<tbody>
+			<tr>
+				<td>Gravity <0-0.1></td>
+				<td>Balls count <1-300></td>
+				<td>Blast power <1-100></td>
+				<td></td>
+			</tr>
+			<tr>
+				<td><input id="gravityInput" style="width: 80px;" value="0.002"></td>
+				<td><input id="ballsInput" style="width: 80px;" value="200"></td>
+				<td><input id="blastInput" style="width: 80px;" value="15"></td>
+				<td><input id="drawInput" type="checkbox" onclick="$.gravity.draw(this.checked)" >Draw?</input></td>
+				<td><input id="outlinesInput" type="checkbox" onclick="$.gravity.outline(this.checked)" checked>Outlines?</input></td>
+				<td><button type="button" onclick="$.perlin.start()">Run!</button></td>
+			</tr>
+		</tbody>
+	</table>
+</div>
 <div style="margin: 10px 0;">
 	<canvas id="canvas" width="700" height="600"></canvas>
-</div>
+</div>[/HTML]
 <script>var $ = $ || {};
 $.perlin = (function() {
 
 	let canvas = document.getElementById("canvas");
 	let ctx = canvas.getContext("2d");
-	let width;
-	let height;
-	let halfWidth;
-	let halfHeight;
+	let width = canvas.width;
+	let height = canvas.height;
+	let halfWidth = width / 2; 
+	let halfHeight = height / 2;
+	
+	let cellPxSize;
+	let pointSize;
+	let showCells;
+	let showVectors;
+	let smooth;
+	
+	let lightMultiplier;
+	let colorMultiplier;
+	let minAngleStep;
+	let maxAngleStep;
+	let minLengthStep;
+	let maxLengthStep;
+	let colorStep;
+			
+	let colorOffset;
+	let grid;
+	let changeGrid;
+	let cellHalfPxSize;
+	let gridCols;
+	let gridRows;
+	
+	let interval = 50;
+	let innerIntervalCallback;
 	
 	// Fade function as defined by Ken Perlin. This eases coordinate values
 	// so that they will ease towards integral values. This ends up smoothing
@@ -27,51 +71,9 @@ $.perlin = (function() {
 		return a + x * (b - a);
 	};
 	
-	let init = function() {	
-		width = canvas.width;
-		height = canvas.height;
-		halfWidth = width / 2; 
-		halfHeight = height / 2;
-		
-		let cellPxSize = 60;
-		let pointSize = 5;
-		let gradientSize = 0.75;
-		let showCells = false;
-		let showVectors = false;
-		let smooth = true;
-		let colorOffset = 0.2;
-		
-		let grid = [];
-		let cellHalfPxSize = cellPxSize / 2;
-		let gridCols = Math.ceil(width / cellPxSize);
-		let gridRows = Math.ceil(height / cellPxSize);		
-	
-		ctx.clearRect(0, 0, width, height);
-		
-		ctx.lineWidth = 1;
-		ctx.strokeStyle = "blue";
-		ctx.strokeRect(0, 0, width, height);
+	let draw = function() {
+		ctx.clearRect(0, 0, width, height);		
 
-		let buffer = [];
-
-		// generování gradient vektorů
-		for (let col = 0; col <= gridCols; col++) {			
-			grid[col] = [];
-			for (let row = 0; row <= gridRows; row++) {
-				let xk;				
-				let yk;				
-				//xk = Math.random() > 0.5 ? -1 : 1;
-				//yk = Math.random() > 0.5 ? -1 : 1;			
-				let radians = Math.random() * Math.PI * 2;
-				xk = Math.cos(radians);
-				yk = Math.sin(radians);
-				grid[col][row] = {
-					x: xk, 
-					y: yk
-				};
-			}
-		}
-		
 		for (let x = 0; x < width; x += pointSize) {
 			for (let y = 0; y < height; y += pointSize) {	
 				// souřadnice bodu vzhledem ke počátku buňky, v rozsahu 0-1
@@ -108,17 +110,15 @@ $.perlin = (function() {
 				let v2 = lerp(dot01, dot11, u);
 				let average = lerp(v1, v2, v);		
 				let result = average;
+						
+				let lightness = Math.min(1, Math.max(0, (lightMultiplier * result + 1) / 2));
+				let color = ((colorMultiplier * result + 1) / 2 + colorOffset) % 1;										
 				
-				buffer[width * y + x] = result;				
-				let lightness = (result + 1) / 2;
-				let color = ((result + 1) / 2 + colorOffset) % 1;
-				
-				ctx.fillStyle = $.GJSLibColors.hslToRGB(color, 1, lightness);
+				ctx.fillStyle = $.GJSLibColors.hslToRGB(color, 0.8, lightness);
 				ctx.fillRect(x, y, pointSize, pointSize);
 			}
 		}
 			
-		ctx.lineWidth = 1;
 		for (let x = 0; x <= gridCols; x++) {
 			let cx = x * cellPxSize;
 			if (showCells) {
@@ -148,7 +148,89 @@ $.perlin = (function() {
 					ctx.stroke();
 				}
 			}
+		}
+	};
+	
+	let step = function() {
+		for (let col = 0; col <= gridCols; col++) {			
+			for (let row = 0; row <= gridRows; row++) {				
+				grid[col][row].angle = (grid[col][row].angle + changeGrid[col][row].angleStep) % 360;
+				let newLen = grid[col][row].length + changeGrid[col][row].lengthStep;
+				if (newLen > 1 || newLen < 0) {
+					changeGrid[col][row].lengthStep *= -1;
+					newLen += changeGrid[col][row].lengthStep;
+				}
+				grid[col][row].length = newLen
+				let radians = grid[col][row].angle / 180 * Math.PI;
+				grid[col][row].x = Math.cos(radians) * grid[col][row].length; 
+				grid[col][row].y = Math.sin(radians) * grid[col][row].length;				
+			}
 		}	
+		
+		colorOffset = (colorOffset + colorStep) % 1;
+	
+		draw();
+	};
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};
+	
+	let init = function() {	
+
+		ctx.lineWidth = 1;		
+		
+		cellPxSize = 80;
+		pointSize = 5;	
+		showCells = false;
+		showVectors = false;
+		smooth = true;
+				
+		lightMultiplier = 1.5;
+		colorMultiplier = 2;
+		colorStep = 0.01;
+		minAngleStep = 0.2;
+		maxAngleStep = 10;
+		minLengthStep = 0.01;
+		maxLengthStep = 0.1;
+		
+		colorOffset = 0;
+		grid = [];
+		changeGrid = [];
+		cellHalfPxSize = cellPxSize / 2;
+		gridCols = Math.ceil(width / cellPxSize);
+		gridRows = Math.ceil(height / cellPxSize);	
+
+		// generování gradient vektorů
+		for (let col = 0; col <= gridCols; col++) {			
+			grid[col] = [];
+			changeGrid[col] = [];
+			for (let row = 0; row <= gridRows; row++) {
+				grid[col][row] = {
+					angle: Math.random() * 360,
+					length: 1
+				};
+				changeGrid[col][row] = {
+					angleStep: Math.random() * (maxAngleStep - minAngleStep) + minAngleStep,
+					lengthStep: Math.random() * (minLengthStep - maxLengthStep) + minLengthStep
+				};
+			}
+		}				
+		
+		innnerChangeInterval(interval);	
 		
 	};	
 		
