@@ -6,17 +6,35 @@
 	<table>
 		<tbody>
 			<tr>
-				<td>Gravity <0-0.1></td>
-				<td>Balls count <1-300></td>
-				<td>Blast power <1-100></td>
+				<td>Cell size <50-300></td>
+				<td>Point size <2-50></td>
+				<td>Light multiplier <0.1-20></td>
+				<td>Color multiplier <0.1-20></td>
+				<td>Color step <0.001-20></td>
+				<td>Min. angle step <0.1-360></td>
+				<td>Max. angle step <0.1-360></td>
+				<td>Min. length step <0.001-0.5></td>
+				<td>Max. length step <0.001-0.5></td>
+				<td>Max. length <0.1-10></td>
+				<td></td>
+				<td></td>
+				<td></td>
 				<td></td>
 			</tr>
 			<tr>
-				<td><input id="gravityInput" style="width: 80px;" value="0.002"></td>
-				<td><input id="ballsInput" style="width: 80px;" value="200"></td>
-				<td><input id="blastInput" style="width: 80px;" value="15"></td>
-				<td><input id="drawInput" type="checkbox" onclick="$.gravity.draw(this.checked)" >Draw?</input></td>
-				<td><input id="outlinesInput" type="checkbox" onclick="$.gravity.outline(this.checked)" checked>Outlines?</input></td>
+				<td><input id="cellSizeInput" style="width: 80px;" value="80"></td>				
+				<td><input id="pointSizeInput" style="width: 80px;" value="5"></td>
+				<td><input id="lightMultiplierInput" style="width: 80px;" value="1"></td>
+				<td><input id="colorMultiplierInput" style="width: 80px;" value="2"></td>
+				<td><input id="colorStepInput" style="width: 80px;" value="0.01"></td>
+				<td><input id="minAngleStepInput" style="width: 80px;" value="0.2"></td>
+				<td><input id="maxAngleStepInput" style="width: 80px;" value="2"></td>
+				<td><input id="minLengthStepInput" style="width: 80px;" value="0.01"></td>
+				<td><input id="maxLengthStepInput" style="width: 80px;" value="0.1"></td>
+				<td><input id="maxLengthInput" style="width: 80px;" value="1"></td>
+				<td><input id="showCellsInput" type="checkbox" onclick="$.perlin.switchShowCells(this.checked)" >Show cells?</input></td>
+				<td><input id="showVectorsInput" type="checkbox" onclick="$.perlin.switchShowVectors(this.checked)" >Show vectors?</input></td>				
+				<td><input id="smoothInput" type="checkbox" onclick="$.perlin.switchSmooth(this.checked)" checked>Smoothing?</input></td>
 				<td><button type="button" onclick="$.perlin.start()">Run!</button></td>
 			</tr>
 		</tbody>
@@ -35,11 +53,12 @@ $.perlin = (function() {
 	let halfWidth = width / 2; 
 	let halfHeight = height / 2;
 	
+	let showCells = false;
+	let showVectors = false;
+	let smooth = true;
+	
 	let cellPxSize;
 	let pointSize;
-	let showCells;
-	let showVectors;
-	let smooth;
 	
 	let lightMultiplier;
 	let colorMultiplier;
@@ -47,6 +66,7 @@ $.perlin = (function() {
 	let maxAngleStep;
 	let minLengthStep;
 	let maxLengthStep;
+	let maxLength;
 	let colorStep;
 			
 	let colorOffset;
@@ -58,6 +78,9 @@ $.perlin = (function() {
 	
 	let interval = 50;
 	let innerIntervalCallback;
+	
+	let min = 50;
+	let max = -50;
 	
 	// Fade function as defined by Ken Perlin. This eases coordinate values
 	// so that they will ease towards integral values. This ends up smoothing
@@ -72,7 +95,7 @@ $.perlin = (function() {
 	};
 	
 	let draw = function() {
-		ctx.clearRect(0, 0, width, height);		
+		ctx.clearRect(0, 0, width, height);				
 
 		for (let x = 0; x < width; x += pointSize) {
 			for (let y = 0; y < height; y += pointSize) {	
@@ -108,8 +131,10 @@ $.perlin = (function() {
 				// že se vykreslí naprosto nepoužitelné vzory
 				let v1 = lerp(dot00, dot10, u);
 				let v2 = lerp(dot01, dot11, u);
-				let average = lerp(v1, v2, v);		
-				let result = average;
+				let result = lerp(v1, v2, v);		
+				
+				min = Math.min(result, min);
+				max = Math.max(result, max);
 						
 				let lightness = Math.min(1, Math.max(0, (lightMultiplier * result + 1) / 2));
 				let color = ((colorMultiplier * result + 1) / 2 + colorOffset) % 1;										
@@ -156,7 +181,7 @@ $.perlin = (function() {
 			for (let row = 0; row <= gridRows; row++) {				
 				grid[col][row].angle = (grid[col][row].angle + changeGrid[col][row].angleStep) % 360;
 				let newLen = grid[col][row].length + changeGrid[col][row].lengthStep;
-				if (newLen > 1 || newLen < 0) {
+				if (newLen > maxLength || newLen < 0) {
 					changeGrid[col][row].lengthStep *= -1;
 					newLen += changeGrid[col][row].lengthStep;
 				}
@@ -168,6 +193,9 @@ $.perlin = (function() {
 		}	
 		
 		colorOffset = (colorOffset + colorStep) % 1;
+		
+		//console.log("Min: " + min);
+		//console.log("Max: " + max);
 	
 		draw();
 	};
@@ -192,21 +220,7 @@ $.perlin = (function() {
 	let init = function() {	
 
 		ctx.lineWidth = 1;		
-		
-		cellPxSize = 80;
-		pointSize = 5;	
-		showCells = false;
-		showVectors = false;
-		smooth = true;
 				
-		lightMultiplier = 1.5;
-		colorMultiplier = 2;
-		colorStep = 0.01;
-		minAngleStep = 0.2;
-		maxAngleStep = 10;
-		minLengthStep = 0.01;
-		maxLengthStep = 0.1;
-		
 		colorOffset = 0;
 		grid = [];
 		changeGrid = [];
@@ -233,13 +247,66 @@ $.perlin = (function() {
 		innnerChangeInterval(interval);	
 		
 	};	
-		
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
 	return {
 
 		start: function() {	
-			init();			
+			let cellSizeParam = validate("Invalid cell size", "cellSizeInput", 50, 300);
+			let pointSizeParam = validate("Invalid point size", "pointSizeInput", 2, 50);
+			let lightMultiplierParam = validate("Invalid light multiplier", "lightMultiplierInput", 0.1, 20); // 1
+			let colorMultiplierParam = validate("Invalid color multiplier", "colorMultiplierInput", 0.1, 20); // 2
+			let colorStepParam = validate("Invalid color step", "colorStepInput", 0.001, 20); // 0.01
+			let minAngleStepParam = validate("Invalid min. angle step", "minAngleStepInput", 0.1, 360); // 0.2
+			let maxAngleStepParam = validate("Invalid max. angle step", "maxAngleStepInput", 0.1, 360); // 2
+			let minLengthStepParam = validate("Invalid min. length step", "minLengthStepInput", 0.001, 1); // 0.01
+			let maxLengthStepParam = validate("Invalid max. length step", "maxLengthStepInput", 0.001, 1); // 1
+			let maxLengthParam = validate("Invalid max. length", "maxLengthInput", 0.1, 10); // 1
+
+			if (cellSizeParam && pointSizeParam && lightMultiplierParam 
+				&& colorMultiplierParam && colorStepParam && minAngleStepParam
+				&& maxAngleStepParam && minLengthStepParam && maxLengthStepParam
+				&& maxLengthParam) {	
+			
+				cellPxSize = cellSizeParam;
+				pointSize = pointSizeParam;						
+				lightMultiplier = lightMultiplierParam;
+				colorMultiplier = colorMultiplierParam;
+				colorStep = colorStepParam;
+				minAngleStep = minAngleStepParam;
+				maxAngleStep = maxAngleStepParam;
+				minLengthStep = minLengthStepParam;
+				maxLengthStep = maxLengthStepParam;
+				maxLength = maxLengthParam;
+			
+				init();			
+			}
 		},
 		
+		switchShowCells: function(value) {
+			showCells = value;
+		},
+		
+		switchShowVectors: function(value) {
+			showVectors = value;
+		},
+		
+		switchSmooth: function(value) {
+			smooth = value;
+		},
 	};
 
 })();
