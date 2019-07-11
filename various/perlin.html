@@ -10,39 +10,61 @@
 				<td>Point size <2-50></td>
 				<td>Light multiplier <0.1-20></td>
 				<td>Color multiplier <0.1-20></td>
-				<td>Color step <0.001-20></td>
+				<td>Color step <0.001-0.9></td>
+			</tr>
+			<tr>
+				<td><input id="cellSizeInput" style="width: 110px;" value="80"></td>				
+				<td><input id="pointSizeInput" style="width: 110px;" value="10"></td>
+				<td><input id="lightMultiplierInput" style="width: 140px;" value="1"></td>
+				<td><input id="colorMultiplierInput" style="width: 140px;" value="2"></td>
+				<td><input id="colorStepInput" style="width: 130px;" value="0.01"></td>				
+			</tr>
+		</tbody>
+	</table>
+	<table>
+		<tbody>
+			<tr>
 				<td>Min. angle step <0.1-360></td>
 				<td>Max. angle step <0.1-360></td>
 				<td>Min. length step <0.001-0.5></td>
 				<td>Max. length step <0.001-0.5></td>
+			</tr>
+			<tr>
+				<td><input id="minAngleStepInput" style="width: 140px;" value="0.2"></td>
+				<td><input id="maxAngleStepInput" style="width: 140px;" value="2"></td>
+				<td><input id="minLengthStepInput" style="width: 160px;" value="0.01"></td>
+				<td><input id="maxLengthStepInput" style="width: 160px;" value="0.1"></td>	
+			</tr>
+		</tbody>
+	</table>
+	<table>
+		<tbody>
+			<tr>
 				<td>Max. length <0.1-10></td>
+				<td></td>
 				<td></td>
 				<td></td>
 				<td></td>
 				<td></td>
 			</tr>
 			<tr>
-				<td><input id="cellSizeInput" style="width: 80px;" value="80"></td>				
-				<td><input id="pointSizeInput" style="width: 80px;" value="5"></td>
-				<td><input id="lightMultiplierInput" style="width: 80px;" value="1"></td>
-				<td><input id="colorMultiplierInput" style="width: 80px;" value="2"></td>
-				<td><input id="colorStepInput" style="width: 80px;" value="0.01"></td>
-				<td><input id="minAngleStepInput" style="width: 80px;" value="0.2"></td>
-				<td><input id="maxAngleStepInput" style="width: 80px;" value="2"></td>
-				<td><input id="minLengthStepInput" style="width: 80px;" value="0.01"></td>
-				<td><input id="maxLengthStepInput" style="width: 80px;" value="0.1"></td>
-				<td><input id="maxLengthInput" style="width: 80px;" value="1"></td>
-				<td><input id="showCellsInput" type="checkbox" onclick="$.perlin.switchShowCells(this.checked)" >Show cells?</input></td>
-				<td><input id="showVectorsInput" type="checkbox" onclick="$.perlin.switchShowVectors(this.checked)" >Show vectors?</input></td>				
-				<td><input id="smoothInput" type="checkbox" onclick="$.perlin.switchSmooth(this.checked)" checked>Smoothing?</input></td>
-				<td><button type="button" onclick="$.perlin.start()">Run!</button></td>
+				<td><input id="maxLengthInput" style="width: 160px;" value="1"></td>
+				<td><input id="showCellsInput" type="checkbox" 
+					onclick="$.perlin.switchShowCells(this.checked)" >Show cells?</input></td>
+				<td><input id="showVectorsInput" type="checkbox" 
+					onclick="$.perlin.switchShowVectors(this.checked)" >Show vectors?</input></td>				
+				<td><input id="smoothInput" type="checkbox" 
+					onclick="$.perlin.switchSmooth(this.checked)" checked>Smoothing?</input></td>
+				<td><input id="interpolationInput" type="checkbox" 
+					onclick="$.perlin.switchInterpolation(this.checked)" checked>Interpolation?</input></td>
+				<td><button type="button" onclick="$.perlin.start()">Run!</button></td>			
 			</tr>
 		</tbody>
 	</table>
 </div>
 <div style="margin: 10px 0;">
 	<canvas id="canvas" width="700" height="600"></canvas>
-</div>[/HTML]
+</div>[/HTML][GJSLibColors][/GJSLibColors]
 <script>var $ = $ || {};
 $.perlin = (function() {
 
@@ -56,6 +78,7 @@ $.perlin = (function() {
 	let showCells = false;
 	let showVectors = false;
 	let smooth = true;
+	let interpolation = true;
 	
 	let cellPxSize;
 	let pointSize;
@@ -79,8 +102,7 @@ $.perlin = (function() {
 	let interval = 50;
 	let innerIntervalCallback;
 	
-	let min = 50;
-	let max = -50;
+	let preprocess;
 	
 	// Fade function as defined by Ken Perlin. This eases coordinate values
 	// so that they will ease towards integral values. This ends up smoothing
@@ -97,51 +119,39 @@ $.perlin = (function() {
 	let draw = function() {
 		ctx.clearRect(0, 0, width, height);				
 
-		for (let x = 0; x < width; x += pointSize) {
-			for (let y = 0; y < height; y += pointSize) {	
-				// souřadnice bodu vzhledem ke počátku buňky, v rozsahu 0-1
-				let cx = (x % cellPxSize) / cellPxSize;			
-				let cy = (y % cellPxSize) / cellPxSize;
+		for (let i = 0; i < preprocess.length; i++) {			
+			let p = preprocess[i];
 				
-				let x0 = Math.floor(x / cellPxSize); 
-				let x1 = x0 + 1;
-				let y0 = Math.floor(y / cellPxSize); 
-				let y1 = y0 + 1;
-				
-				let grad00 = grid[x0][y0];	
-				let grad01 = grid[x0][y1];
-				let grad10 = grid[x1][y0];
-				let grad11 = grid[x1][y1];			
-				
-				let dist00 = {x: cx, y: cy};
-				let dist01 = {x: cx, y: cy - 1};
-				let dist10 = {x: cx - 1, y: cy};
-				let dist11 = {x: cx - 1, y: cy - 1};
-				
-				let dot00 = grad00.x * dist00.x + grad00.y * dist00.y;
-				let dot01 = grad01.x * dist01.x + grad01.y * dist01.y;
-				let dot10 = grad10.x * dist10.x + grad10.y * dist10.y;
-				let dot11 = grad11.x * dist11.x + grad11.y * dist11.y;
-				
-				let u = smooth ? fade(cx) : cx;
-				let v = smooth ? fade(cy) : cy;
-				
-				// Je potřeba, aby se interpolace prováděla na ose, 
-				// na které dochází ke změně -- drobná chyba způsobí
-				// že se vykreslí naprosto nepoužitelné vzory
+			let grad00 = grid[p.x0][p.y0];	
+			let grad01 = grid[p.x0][p.y1];
+			let grad10 = grid[p.x1][p.y0];
+			let grad11 = grid[p.x1][p.y1];			
+							
+			let dot00 = grad00.x * p.dist00.x + grad00.y * p.dist00.y;
+			let dot01 = grad01.x * p.dist01.x + grad01.y * p.dist01.y;
+			let dot10 = grad10.x * p.dist10.x + grad10.y * p.dist10.y;
+			let dot11 = grad11.x * p.dist11.x + grad11.y * p.dist11.y;
+			
+			let u = smooth ? p.u : p.cx;
+			let v = smooth ? p.v : p.cy;
+			
+			// Je potřeba, aby se interpolace prováděla na ose, 
+			// na které dochází ke změně -- drobná chyba způsobí
+			// že se vykreslí naprosto nepoužitelné vzory
+			let result = 0;
+			if (interpolation) {
 				let v1 = lerp(dot00, dot10, u);
 				let v2 = lerp(dot01, dot11, u);
-				let result = lerp(v1, v2, v);		
-				
-				min = Math.min(result, min);
-				max = Math.max(result, max);
-						
-				let lightness = Math.min(1, Math.max(0, (lightMultiplier * result + 1) / 2));
-				let color = ((colorMultiplier * result + 1) / 2 + colorOffset) % 1;										
-				
-				ctx.fillStyle = $.GJSLibColors.hslToRGB(color, 0.8, lightness);
-				ctx.fillRect(x, y, pointSize, pointSize);
+				result = lerp(v1, v2, v);		
+			} else {
+				result = (dot00 + dot01 + dot10 + dot11) / 4;
 			}
+
+			let lightness = Math.min(1, Math.max(0, (lightMultiplier * result + 1) / 2));
+			let color = ((colorMultiplier * result + 1) / 2 + colorOffset) % 1;										
+			
+			ctx.fillStyle = $.GJSLibColors.hslToRGB(color, 0.8, lightness);
+			ctx.fillRect(p.x, p.y, pointSize, pointSize);
 		}
 			
 		for (let x = 0; x <= gridCols; x++) {
@@ -193,9 +203,6 @@ $.perlin = (function() {
 		}	
 		
 		colorOffset = (colorOffset + colorStep) % 1;
-		
-		//console.log("Min: " + min);
-		//console.log("Max: " + max);
 	
 		draw();
 	};
@@ -242,7 +249,39 @@ $.perlin = (function() {
 					lengthStep: Math.random() * (minLengthStep - maxLengthStep) + minLengthStep
 				};
 			}
-		}				
+		}		
+
+		preprocess = [];
+		
+		for (let x = 0; x < width; x += pointSize) {
+			for (let y = 0; y < height; y += pointSize) {							
+				// souřadnice bodu vzhledem ke počátku buňky, v rozsahu 0-1
+				let cx = (x % cellPxSize) / cellPxSize;			
+				let cy = (y % cellPxSize) / cellPxSize;
+				
+				let x0 = Math.floor(x / cellPxSize); 
+				let x1 = x0 + 1;
+				let y0 = Math.floor(y / cellPxSize); 
+				let y1 = y0 + 1;
+				
+				preprocess.push({
+					x: x,
+					y: y,
+					cx: cx,
+					cy: cy,
+					x0: x0,
+					x1: x1,
+					y0: y0,
+					y1: y1,
+					u: fade(cx),
+					v: fade(cy),
+					dist00: {x: cx, y: cy},
+					dist01: {x: cx, y: cy - 1},
+					dist10: {x: cx - 1, y: cy},
+					dist11: {x: cx - 1, y: cy - 1}
+				});
+			}
+		}
 		
 		innnerChangeInterval(interval);	
 		
@@ -269,7 +308,7 @@ $.perlin = (function() {
 			let pointSizeParam = validate("Invalid point size", "pointSizeInput", 2, 50);
 			let lightMultiplierParam = validate("Invalid light multiplier", "lightMultiplierInput", 0.1, 20); // 1
 			let colorMultiplierParam = validate("Invalid color multiplier", "colorMultiplierInput", 0.1, 20); // 2
-			let colorStepParam = validate("Invalid color step", "colorStepInput", 0.001, 20); // 0.01
+			let colorStepParam = validate("Invalid color step", "colorStepInput", 0.001, 0.9); // 0.01
 			let minAngleStepParam = validate("Invalid min. angle step", "minAngleStepInput", 0.1, 360); // 0.2
 			let maxAngleStepParam = validate("Invalid max. angle step", "maxAngleStepInput", 0.1, 360); // 2
 			let minLengthStepParam = validate("Invalid min. length step", "minLengthStepInput", 0.001, 1); // 0.01
@@ -306,6 +345,10 @@ $.perlin = (function() {
 		
 		switchSmooth: function(value) {
 			smooth = value;
+		},
+
+		switchInterpolation: function(value) {
+			interpolation = value;
 		},
 	};
 
