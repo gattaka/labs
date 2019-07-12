@@ -1,0 +1,125 @@
+<head>	
+	<script type="text/javascript" src="../libs/colors.js"></script>
+</head>
+[N1]Demo[/N1]
+[HTML]<div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="600"></canvas>
+</div>[/HTML][GJSLibColors][/GJSLibColors]
+<script>var $ = $ || {};
+$.gradient = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let hWidth = width / 2; 
+	let hHeight = height / 2;
+	let qWidth = hWidth / 2; 
+	let qHeight = hHeight / 2;
+	let maxLength = Math.sqrt(2) * Math.max(width, height);
+	let maxResult = Math.pow(Math.max(width, height), 2);
+	
+	let interval = 50;
+	let innerIntervalCallback;
+	
+	let pointSize = 30;
+	let gradient = {};
+		
+	let min = 50;
+	let max = -50;
+	
+	let pointFlag = false;
+		
+	let draw = function() {	
+
+		for (let x = 0; x < width; x += pointSize) {
+			for (let y = 0; y < height; y += pointSize) {							
+				// souřadnice bodu vzhledem ke středu
+				let cx = x - hWidth - (gradient.x - hWidth);			
+				let cy = y - hHeight - (gradient.y - hHeight);
+
+				let result = gradient.w * cx + gradient.h * cy;
+				let scaled = Math.min(1, Math.max(0, 0.5 + result / maxResult));
+
+				min = Math.min(result, min);
+				max = Math.max(result, max);
+
+				ctx.fillStyle = $.GJSLibColors.hslToRGB(scaled, 0.8, 0.5);
+				ctx.fillRect(x, y, pointSize, pointSize);
+			}
+		}
+		
+		ctx.strokeStyle = "black";
+		ctx.beginPath();
+		ctx.moveTo(gradient.x, gradient.y);
+		ctx.lineTo(gradient.x + gradient.w, gradient.y + gradient.h);
+		ctx.stroke();
+
+	};
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);
+	};
+	
+	let setPoint = function(x, y) {
+		if (!pointFlag) {
+			gradient.x = x;
+			gradient.y = y;
+			gradient.cx = x - hWidth;
+			gradient.cy = y - hHeight;
+		} else {
+			gradient.w = x - gradient.x;
+			gradient.h = y - gradient.y;
+			// inverted and halfed
+			gradient.iw = Math.sign(gradient.w) * Math.max(0, Math.min(hWidth, hWidth - Math.abs(gradient.w)));
+			gradient.ih = Math.sign(gradient.h) * Math.max(0, Math.min(hHeight, hHeight - Math.abs(gradient.h)));
+			gradient.length = Math.sqrt(Math.pow(gradient.w, 2) + Math.pow(gradient.h, 2), 2);
+			draw();
+		}
+		pointFlag = !pointFlag;
+	}
+	
+	let init = function() {	
+		ctx.lineWidth = 2;				
+		
+		setPoint(Math.random() * width, Math.random() * height);
+		setPoint(Math.random() * width, Math.random() * height);
+		
+		//innnerChangeInterval(interval);					
+		
+		console.log("Min: " + min);
+		console.log("Max: " + max);
+		console.log("MaxLength: " + maxLength);
+	};	
+	
+	canvas.addEventListener("click", function (e) {		
+		let bound = canvas.getBoundingClientRect();
+		let x = e.clientX - bound.x;
+		let y = e.clientY - bound.y;
+		setPoint(x, y);	
+	}, false);
+	
+	return {
+
+		start: function() {					
+			init();						
+		},
+		
+	};
+
+})();
+
+$.gradient.start();</script>
