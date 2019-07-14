@@ -134,7 +134,7 @@ $.GJSLibPlotter = class GJSLibPlotter {
 				
 			// PLOT		
 				
-			let colors = ["blue", "red", "lime", "cyan", "yellow"];
+			let colors = ["blue", "red", "lime", "cyan", "orange"];
 			
 			let stepX = 1 / xUnitPx;
 			let xFromUnit = -xUnitsLength / 2 - xOffsetSteps * xUnit;

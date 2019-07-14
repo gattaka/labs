@@ -13,13 +13,17 @@
 	let canvas = document.getElementById("can");
 	let plotter = new $.GJSLibPlotter(canvas, 1, 1, 0, 0);
 
-	plotter.addFunc($.GJSLibPlotter.createVectorFunc(0,0,4,2));
-	plotter.addPoint(4,2,"[4,2]");
-	plotter.addFunc($.GJSLibPlotter.createNormalFunc(2/4,0,4));
-	plotter.addFunc($.GJSLibPlotter.createVectorFunc(0,0,4,3));
-	plotter.addPoint(4,3,"[4*4+2*3]=[" + (4*4+2*3) + "]");
-	plotter.addFunc($.GJSLibPlotter.createVectorFunc(0,0,5,1));
-	plotter.addPoint(5,1,"[4*5+2*1]=[" + (4*5+2*1) + "]");
+	let vx = 3;
+	let vy = 1;
+		
+	plotter.addFunc($.GJSLibPlotter.createVectorFunc(0, 0, vx, vy));
+	plotter.addFunc($.GJSLibPlotter.createLineFunc(-vx/vy, 0));
+	plotter.addFunc($.GJSLibPlotter.createLineFunc(-vx/vy, 8));
+	plotter.addFunc($.GJSLibPlotter.createVectorFunc(0, 0, 2, 2));
+	plotter.addFunc($.GJSLibPlotter.createVectorFunc(0, 0, 3, -1));
+	plotter.addPoint(2, 2, "P [2*3+2*1 = 8]");
+	plotter.addPoint(3, -1, "Q [3*3-1*1 = 8]");
+	plotter.addPoint(vx, vy, "V [" + vx + "," + vy +"]"); 
 	
 	plotter.refresh();
 		
