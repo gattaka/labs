@@ -12,12 +12,29 @@ $.GJSLibNeuralNet = class GJSLibNeuralNet {
 	#triesCount = 0;
 	#successCount = 0;
 					
-	static activationFunc(x) {
+	static sigmoidFunc(x) {
 		return 1 / (1 + Math.pow(Math.E, -x));
 	}
 	
+	static sigmoidDerFunc(x) {
+		return GJSLibNeuralNet.sigmoidFunc(x) * (1 - GJSLibNeuralNet.sigmoidFunc(x));
+	}
+	
+	// SmoothReLU 
+	static reluFunc(x) {
+		return Math.log(1 + Math.pow(Math.E, x));
+	}
+	
+	static reluDerFunc(x) {
+		return 1 / (1 + Math.pow(Math.E, -x));
+	}
+	
+	static activationFunc(x) {
+		return GJSLibNeuralNet.reluFunc(x);
+	}
+	
 	static activationDerFunc(x) {
-		return GJSLibNeuralNet.activationFunc(x) * (1 - GJSLibNeuralNet.activationFunc(x));
+		return GJSLibNeuralNet.reluDerFunc(x);
 	}
 
 	constructor(layersSizes) {
