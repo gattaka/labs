@@ -1,0 +1,199 @@
+<head>
+	<script type="text/javascript" src="../libs/matrix.js"></script>
+	<script type="text/javascript" src="../libs/colors.js"></script>
+	<script type="text/javascript" src="../libs/nnet.js"></script>
+</head>
+
+[N1]Demo[/N1]
+[HTML]<div>
+	<table>
+		<tr>
+			<td>Try</td>
+			<td>Success rate</td>
+		</tr>
+		<tr>
+			<td><input id="tryNumber" style="width: 60px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+			<td><input id="successRate" style="width: 80px; 
+				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+		</tr>
+	</table>
+</div>
+<div style="margin: 10px 0;display: inline-block;">
+	<canvas id="netCanvas" width="700" height="180"></canvas>
+</div>[/HTML]
+<script>
+var $ = $ || {};
+$.nnet = (function() {
+	
+	let netCanvas = document.getElementById("netCanvas");
+	let netCtx = netCanvas.getContext("2d");
+	let netWidth = netCanvas.width;
+	let netHeight = netCanvas.height;
+	let netHalfWidth = netWidth / 2;
+	let netHalfHeight = netHeight / 2;
+	
+	let layerXOffset = 60;
+	let layerYOffset = 10;
+	let layerNodeRadius = 10;
+	let layerNodesOffset = layerYOffset + layerNodeRadius * 2;
+
+	let cw;
+	let ch;
+	
+	let interval = 1;
+	let innerIntervalCallback;
+	
+	let layersSizes;
+	let nnet;
+		
+	let drawLines = function() {
+		netCtx.strokeStyle = "black";
+		netCtx.lineWidth = 3;
+		for (let l = 1; l < layersSizes.length; l++) {
+			netCtx.strokeStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.4);
+			let x = layerXOffset * (l + 1);
+			let inputSize = layersSizes[l - 1];
+			let layerSize = layersSizes[l]; 			
+			// pro každý neuron z vrstvy
+			let netInputYStart = netHalfHeight - (inputSize * layerNodesOffset - layerYOffset) / 2;
+			let netYStart = netHalfHeight - (layerSize * layerNodesOffset - layerYOffset) / 2;
+			for (let n = 0; n < layerSize; n++) {
+				let y = netYStart + n * layerNodesOffset + layerNodeRadius;
+				let ix = x - layerXOffset;					
+				// pro každý vstup do neuronu
+				for (let i = 0; i < inputSize; i++) {
+					let iy = netInputYStart + i * layerNodesOffset + layerNodeRadius;
+					netCtx.beginPath();
+					netCtx.moveTo(ix, iy);
+					netCtx.lineTo(x, y);
+					netCtx.stroke();
+				}
+			}			
+		}
+	};
+	
+	let drawNodes = function() {
+		netCtx.lineWidth = 1;
+		netCtx.font = "15px Monospace";
+		for (let l = 0; l < layersSizes.length; l++) {
+			netCtx.strokeStyle = "black";
+			netCtx.fillStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.5);
+			let layerSize = layersSizes[l]; 			
+			let x = layerXOffset * (l + 1);
+			// pro každý neuron z vrstvy
+			let netYStart = netHalfHeight - (layerSize * layerNodesOffset - layerYOffset) / 2;
+			for (let n = 0; n < layerSize; n++) {			
+				let y = netYStart + n * layerNodesOffset + layerNodeRadius;
+				if (n == 0)
+					netCtx.fillText("L" + (l+1), x, y - 15);
+				netCtx.beginPath();
+				netCtx.arc(x, y, layerNodeRadius, 0, Math.PI * 2);
+				netCtx.stroke();
+				netCtx.fill();
+			}			
+		}
+	};
+	
+	let drawInputsOutputs = function(inputs, target, outputs) {
+		netCtx.strokeStyle = "black";
+		netCtx.fillStyle = "black";
+		netCtx.lineWidth = 1;
+		netCtx.font = "15px Monospace";
+		for (let l = 0; l < layersSizes.length; l += layersSizes.length - 1) {
+			let layerSize = layersSizes[l]; 			
+			let x = layerXOffset * (l + 1) + 30 * (l == 0 ? -1 : 1);			
+			// pro každý neuron z vrstvy
+			let netYStart = netHalfHeight - (layerSize * layerNodesOffset - layerYOffset) / 2;
+			netCtx.clearRect(x + (l == 0 ? - 15 : 0), netYStart, l == 0 ? 25 : 200, layerSize * layerNodesOffset + layerNodeRadius);			
+			netCtx.fillStyle = "black";
+			for (let n = 0; n < layerSize; n++) {			
+				let y = netYStart + n * layerNodesOffset + layerNodeRadius;
+				let expected = target[n];
+				let guess = Math.round(outputs[n]);
+				if (l != 0)
+					netCtx.fillStyle = expected == guess ? "green" : "red";				
+				netCtx.fillText(l == 0 ? inputs[n] : guess, x, y + 5);
+			}			
+		}
+	};
+	
+	let drawNet = function() {
+		netCtx.textAlign = "left"; 
+		drawLines();
+		drawNodes();
+	};
+	
+	let test = function() {
+	
+		let batchSize = 100;
+		let trainBatchInputs = [];
+		let trainBatchOutputs = [];
+		let sensitivity = 1.0;
+		let maxError = 0.1;			
+				
+		// pro každý příklad z dávky
+		for (let b = 0; b < batchSize; b++) {
+			let input = [];
+			let output = [];
+			for (let i = 0; i < layersSizes[0]; i++) {
+				if (Math.random() > 0.5) {
+					input.push(1);
+					output.push(0);
+				} else {
+					input.push(0);
+					output.push(1);
+				}				
+			}
+			trainBatchInputs.push(input);
+			trainBatchOutputs.push(output);
+		}
+		
+		let onGuess = function(inputsArray, targetArray, activationsArray, triesCount, successCount) {			
+			drawInputsOutputs(inputsArray, targetArray, activationsArray);
+			document.getElementById("tryNumber").value = triesCount;
+			document.getElementById("successRate").value = 
+				Math.floor((successCount / triesCount) * 100) + " %";
+		};
+		
+		nnet.train(trainBatchInputs, trainBatchOutputs, sensitivity, maxError, onGuess);
+	
+	};
+
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			test();
+		}, interval);
+	};
+
+	let innerStart = function() {
+		layersSizes = [4, 5, 4];
+		nnet = new $.GJSLibNeuralNet(layersSizes);
+		
+		// vykresli neuronovou síť
+		netCtx.clearRect(0, 0, netWidth, netHeight);
+		drawNet();
+		innnerChangeInterval(interval);	
+	};
+	
+	return {
+	
+		start: function() {			
+			innerStart();
+		},
+	};
+})();
+
+$.nnet.start();
+</script>

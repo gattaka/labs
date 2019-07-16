@@ -90,6 +90,14 @@ $.GJSLibMatrix = class GJSLibMatrix {
 		}		
 	}
 	
+	toArray() {
+		let result = [];
+		for (let r = 0; r < this.#rows; r++)
+			for (let c = 0; c < this.#cols; c++)
+				result.push(this.get(r,c));
+		return result;
+	}
+	
 	getRows() {
 		return this.#rows;
 	}
