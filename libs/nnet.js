@@ -47,8 +47,8 @@ $.GJSLibNeuralNet = class GJSLibNeuralNet {
 			for (let row = 0; row < layerSize; row++) {	
 				// pro každý vstup do neuronu
 				for (let col = 0; col < inputSize; col++) 
-					layerWeights.set(row, col, Math.random());
-				layerBiases.set(row, 0, Math.random());
+					layerWeights.set(row, col, Math.random() * 2 - 1);
+				layerBiases.set(row, 0, Math.random() * 2 - 1);
 			}
 		}	
 	}	
@@ -124,7 +124,8 @@ $.GJSLibNeuralNet = class GJSLibNeuralNet {
 			if (cost < maxError)
 				this.#successCount++;	
 
-			onGuess(inputs.toArray(), target.toArray(), activations[b][L].toArray(), this.#triesCount, this.#successCount);
+			if (b == 0)
+				onGuess(inputs.toArray(), target.toArray(), activations[b][L].toArray(), this.#triesCount, this.#successCount);
 		}
 				
 		// aktualizuj váhy a biasy
