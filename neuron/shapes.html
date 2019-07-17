@@ -10,21 +10,25 @@
 		<tr>
 			<td>Try</td>
 			<td>Success rate</td>
+			<td></td>
+			<td></td>
 		</tr>
 		<tr>
 			<td><input id="tryNumber" style="width: 60px; 
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
 			<td><input id="successRate" style="width: 80px; 
 				background-color: #faf7eb; border: 1px solid #a8a8a8;" readonly=""></td>
+			<td><input type="radio" name="func" value="angle" 
+				onchange="$.nnet.changeSigmoid()" /> Sigmoid</td>
+			<td><input type="radio" name="func" value="circle" 
+				onchange="$.nnet.changeSmoothReLU()" checked /> SmoothReLU</td>
 		</tr>
 	</table>
 </div>
-<div style="margin: 10px 0;display: inline-block;">
-	<canvas id="netCanvas" width="700" height="600"></canvas>
+<div style="margin: 10px 0;display: inline-block">
+	<canvas id="netCanvas" width="700" height="380"></canvas>
 </div>[/HTML]
-<script>
-var $ = $ || {};
-$.nnet = (function() {
+<script>$.nnet = (function() {
 	
 	let netCanvas = document.getElementById("netCanvas");
 	let netCtx = netCanvas.getContext("2d");
@@ -34,15 +38,15 @@ $.nnet = (function() {
 	let netHalfHeight = netHeight / 2;
 	
 	let netXOffset = 120;
-	let layerXOffset = 100;
+	let layerXOffset = 250;
 	let layerYOffset = 10;
-	let layerNodeRadius = 5;
+	let layerNodeRadius = 6;
 	let layerNodesOffset = layerYOffset + layerNodeRadius * 2;
 
 	let imgOffset = 10;
 	let imgPxSize = 10;
 	
-	let imgSide = 3;
+	let imgSide = 4;
 	let imgYOffset = netHalfHeight - (imgSide * imgPxSize) / 2;
 	
 	let interval = 1;
@@ -139,10 +143,10 @@ $.nnet = (function() {
 	
 	let test = function() {
 	
-		let batchSize = 100;
+		let batchSize = 200;
 		let trainBatchInputs = [];
 		let trainBatchOutputs = [];
-		let sensitivity = 0.5;
+		let sensitivity = 0.8;
 		let maxError = 0.1;			
 				
 		// pro každý příklad z dávky
@@ -191,9 +195,10 @@ $.nnet = (function() {
 		}, interval);
 	};
 
-	let innerStart = function() {
+	let innerStart = function(sigmoid) {
 		layersSizes = [imgSide * imgSide, imgSide * imgSide, 2];
-		nnet = new $.GJSLibNeuralNet(layersSizes, $.GJSLibNeuralNet.smoothReLU());
+		nnet = new $.GJSLibNeuralNet(layersSizes, 
+			sigmoid ? $.GJSLibNeuralNet.sigmoid() : $.GJSLibNeuralNet.smoothReLU());
 		
 		// vykresli neuronovou síť
 		netCtx.clearRect(0, 0, netWidth, netHeight);
@@ -204,7 +209,15 @@ $.nnet = (function() {
 	return {
 	
 		start: function() {			
-			innerStart();
+			innerStart(false);
+		},
+		
+		changeSigmoid: function() {			
+			innerStart(true);
+		},
+		
+		changeSmoothReLU: function() {			
+			innerStart(false);
 		},
 	};
 })();
