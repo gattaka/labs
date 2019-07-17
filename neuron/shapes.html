@@ -192,8 +192,8 @@ $.nnet = (function() {
 	};
 
 	let innerStart = function() {
-		layersSizes = [imgSide * imgSide, imgSide * imgSide, imgSide * imgSide, imgSide * imgSide, 2];
-		nnet = new $.GJSLibNeuralNet(layersSizes);
+		layersSizes = [imgSide * imgSide, imgSide * imgSide, 2];
+		nnet = new $.GJSLibNeuralNet(layersSizes, $.GJSLibNeuralNet.smoothReLU());
 		
 		// vykresli neuronovou síť
 		netCtx.clearRect(0, 0, netWidth, netHeight);

@@ -11,34 +11,38 @@ $.GJSLibNeuralNet = class GJSLibNeuralNet {
 
 	#triesCount = 0;
 	#successCount = 0;
+	
+	#activationFunc;
 					
-	static sigmoidFunc(x) {
-		return 1 / (1 + Math.pow(Math.E, -x));
-	}
-	
-	static sigmoidDerFunc(x) {
-		return GJSLibNeuralNet.sigmoidFunc(x) * (1 - GJSLibNeuralNet.sigmoidFunc(x));
-	}
-	
-	// SmoothReLU 
-	static reluFunc(x) {
-		return Math.log(1 + Math.pow(Math.E, x));
-	}
-	
-	static reluDerFunc(x) {
-		return 1 / (1 + Math.pow(Math.E, -x));
-	}
-	
-	static activationFunc(x) {
-		return GJSLibNeuralNet.reluFunc(x);
-	}
-	
-	static activationDerFunc(x) {
-		return GJSLibNeuralNet.reluDerFunc(x);
+	static sigmoid() {
+		let fce = function(x) {
+			return 1 / (1 + Math.pow(Math.E, -x));
+		};
+		let der = function(x) {
+			return fce(x) * (1 - fce(x));
+		};
+		return {
+			fce: fce,
+			der: der 
+		}
 	}
 
-	constructor(layersSizes) {
+	static smoothReLU() {
+		let fce = function(x) {
+			return Math.log(1 + Math.pow(Math.E, x));
+		};
+		let der = function(x) {
+			return 1 / (1 + Math.pow(Math.E, -x));
+		};
+		return {
+			fce: fce,
+			der: der 
+		}
+	}
+
+	constructor(layersSizes, activationFunc) {
 		this.#layersSizes = layersSizes;
+		this.#activationFunc = activationFunc;
 		
 		// Matice vah -- pro každý neuron vrstvy jsou 
 		// zapsány váhy neuronů (co řádek, to jeden neuron)
@@ -82,7 +86,7 @@ $.GJSLibNeuralNet = class GJSLibNeuralNet {
 			// z^l = w^l . a^(l-1) + b^l
 			potentials[l] = this.#weights[l].multiply(activations[l - 1]).add(this.#biases[l]);
 			// a^l = sigma(z^l)
-			activations[l] = potentials[l].map(GJSLibNeuralNet.activationFunc);
+			activations[l] = potentials[l].map(this.#activationFunc.fce);
 		}
 		return activations[L];
 	}
@@ -115,18 +119,18 @@ $.GJSLibNeuralNet = class GJSLibNeuralNet {
 				// z^l = w^l . a^(l-1) + b^l
 				potentials[l] = this.#weights[l].multiply(activations[b][l - 1]).add(this.#biases[l]);
 				// a^l = sigma(z^l)
-				activations[b][l] = potentials[l].map(GJSLibNeuralNet.activationFunc);
+				activations[b][l] = potentials[l].map(this.#activationFunc.fce);
 			}				
 			
 			// chyba výsledné vrstvy
 			// delta^L = (a^L - y) o sigma'(z^L)
-			errors[b][L] = activations[b][L].subtract(target).multiplyHadamard(potentials[L].map(GJSLibNeuralNet.activationDerFunc));
+			errors[b][L] = activations[b][L].subtract(target).multiplyHadamard(potentials[L].map(this.#activationFunc.der));
 			
 			// chyby vnitřních vrstev
 			for (let l = L - 1; l > 0; l--) {
 				// l = L - 1, L - 2, ..., 2 (1. je vstup)
 				// delta^l = ((w^(l+1))^T . delta^(l+1)) o sigma'(z^l)
-				errors[b][l] = this.#weights[l+1].transpose().multiply(errors[b][l+1]).multiplyHadamard(potentials[l].map(GJSLibNeuralNet.activationDerFunc));
+				errors[b][l] = this.#weights[l+1].transpose().multiply(errors[b][l+1]).multiplyHadamard(potentials[l].map(this.#activationFunc.der));
 			}
 			
 			this.#triesCount++;
