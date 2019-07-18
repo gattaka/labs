@@ -1,0 +1,259 @@
+<head>
+	<script type="text/javascript" src="../libs/colors.js"></script>
+</head>
+
+[N1]Demo[/N1]
+[HTML]<div style="margin: 10px 0;display: inline-block;">
+	<canvas id="myCanvas" width="700" height="500"></canvas>
+</div>
+[/HTML]
+<script>
+var $ = $ || {};
+$.arkanoid = (function() {
+
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let halfWidth = width / 2;
+	let halfHeight = height / 2;
+
+	let interval = 1;
+	let innerIntervalCallback;
+
+	let timeStep = 1;
+	
+	let ball;
+	let startSpeed = 2;
+	let ballInitRadius = 10;
+	
+	let bed;
+	let bedWidth = 100;
+	let bedHeight = 20;
+	let bedOffset = 10;
+	
+	let bricks = [];
+	let startY = 40;
+	let brickWidth = 50;
+	let brickHeight = 20;
+	let brickOffset = 5;
+		
+	let traceStep = 1;
+	let hitObjects = [];
+	
+	let hasCollisionWith = function(x, y, ht) {
+		return x >= ht.x && x <= ht.x + ht.w && y >= ht.y && y <= ht.y + ht.h;
+	};
+		
+	let hasCollision = function (x, y) {
+		for (let i = 0; i < hitObjects.length; i++) {
+			let ht = hitObjects[i];
+			if (hasCollisionWith(x, y, ht))
+				return true;
+		}
+		return false;
+	};
+		
+	let process = function(timeDelta) {
+		let deltaX = ball.sx * timeDelta;
+		let deltaY = ball.sy * timeDelta;		
+		let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+		
+		if (distance == 0)
+			return;
+		
+		let traceSteps = Math.max(1, distance / traceStep);
+		let xStep = deltaX / distance * traceStep;		
+		let yStep = deltaY / distance * traceStep;		
+		
+		let newX = ball.x;
+		let newY = ball.y;
+		
+		for (let s = 0; s < traceSteps; s++) {
+			if (hasCollision(newX + xStep, newY + yStep)) {				
+				if (!hasCollision(newX - xStep, newY + yStep)) {
+					// nemá kolizi v opačném směru X
+					xStep *= -1;
+					ball.sx *= -1;
+				} else if (!hasCollision(newX + xStep, newY - yStep)) {
+					// nemá kolizi v opačném směru Y
+					yStep *= -1;
+					ball.sy *= -1;
+				} else {
+					// má kolizi všude kolem
+					xStep *= -1;
+					yStep *= -1;
+					ball.sx *= -1;
+					ball.sy *= -1;
+				}
+			}
+			newX += xStep;
+			newY += yStep;
+		}
+		
+		ball.x = newX;
+		ball.y = newY;
+	};
+			
+	let step = function() {
+		// clear
+		ctx.clearRect(0, 0, width, height);			
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.strokeRect(0, 0, width, height);
+	
+		// bricks
+		for (let b = 0; b < bricks.length; b++) {
+			let brick = bricks[b];
+			ctx.strokeStyle = "black";
+			ctx.fillStyle = brick.c;
+			ctx.strokeRect(brick.x, brick.y, brickWidth, brickHeight);			
+			ctx.fillRect(brick.x, brick.y, brickWidth, brickHeight);
+		}
+	
+		// position
+		process(timeStep);
+		
+		// ball
+		ctx.fillStyle = "white";
+		ctx.strokeStyle = "black";
+		ctx.beginPath();
+		ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2);
+		ctx.fill();
+		ctx.stroke();
+		
+		// bed
+		ctx.strokeRect(bed.x, bed.y, bedWidth, bedHeight);
+	};
+
+	let resetBall = function() {
+		ball.x = halfWidth;
+		ball.y = bed.y - ball.r;
+		ball.ready = true;
+	};
+
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};
+
+	let init = function() {	
+		ctx.clearRect(0, 0, width, height);			
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.strokeRect(0, 0, width, height);
+		ctx.lineWidth = 1;
+	
+		let level = [
+			[1,1,1,1,1,1],
+			[1,1,1,1,1,1],
+			[1,1,1,1,1,1]
+		];
+		
+		for (let y = 0; y < level.length; y++) {
+			let row = level[y];
+			let startX = halfWidth - (row.length * (brickWidth + brickOffset) - brickOffset) / 2 ;
+			for (let x = 0; x < row.length; x++) {
+				if (row[x] > 0) {
+					bricks.push({
+						str: row[x], // strength
+						c: $.GJSLibColors.hslToRGB(Math.random(), 1, 0.5),
+						x: startX + x * (brickWidth + brickOffset),
+						y: startY + y * (brickHeight + brickOffset),
+						w: brickWidth,
+						h: brickHeight
+					});
+				}
+			}
+		}
+	
+		bed = {
+			tag: "bed",
+			x: halfWidth - bedWidth / 2, 
+			y: height - bedHeight - bedOffset,
+			w: bedWidth,
+			h: bedHeight,
+		};
+	
+		let wallThick = 20;
+		let leftWall = {
+			x: -wallThick,
+			y: -wallThick,
+			w: wallThick,
+			h: height + wallThick
+		};
+		let topWall = {
+			x: 0,
+			y: -wallThick,
+			w: width + wallThick,
+			h: wallThick
+		};
+		let rightWall = {
+			x: width,
+			y: 0,
+			w: wallThick,
+			h: height + wallThick
+		};
+		let bottomWall = {
+			x: -wallThick,
+			y: height,
+			w: width + wallThick,
+			h: wallThick
+		};
+		
+		hitObjects = bricks.concat([bed, leftWall, topWall, rightWall, bottomWall]);
+	
+		ball = {
+			ready: true,
+			r: ballInitRadius,
+			x: 0,
+			y: 0,
+			sx: 0,
+			sy: 0
+		};
+		resetBall();
+	
+		innnerChangeInterval(interval);	
+	};
+	
+	canvas.addEventListener("click", function (e) {		
+		if (ball.ready) {
+			ball.sx = -startSpeed; 
+			ball.sy = -startSpeed; 
+			ball.ready = false;
+		}
+	}, false);
+	
+	canvas.addEventListener("mousemove", function (e) {
+		let bound = canvas.getBoundingClientRect();
+		let x = e.clientX - bound.x;		
+		bed.x = x - bedWidth / 2;
+		if (bed.x < 0)
+			bed.x = 0;
+		if (bed.x + bedWidth > width)
+			bed.x = width - bedWidth;	
+	}, false);
+
+	return {
+	
+		start: function() {	
+			init();
+		},
+	};
+
+})();
+
+$.arkanoid.start();
+</script>
