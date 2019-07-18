@@ -24,7 +24,7 @@ $.arkanoid = (function() {
 	let timeStep = 1;
 	
 	let ball;
-	let startSpeed = 2;
+	let startSpeed = 1;
 	let ballInitRadius = 10;
 	
 	let bed;
@@ -49,10 +49,14 @@ $.arkanoid = (function() {
 		for (let i = 0; i < hitObjects.length; i++) {
 			let ht = hitObjects[i];
 			if (hasCollisionWith(x, y, ht))
-				return true;
+				return ht;
 		}
 		return false;
 	};
+	
+	let getBallEdge = function(step, d) {
+		return step > 0 ? (d + ball.r) : (d - ball.r);
+	}
 		
 	let process = function(timeDelta) {
 		let deltaX = ball.sx * timeDelta;
@@ -63,28 +67,51 @@ $.arkanoid = (function() {
 			return;
 		
 		let traceSteps = Math.max(1, distance / traceStep);
-		let xStep = deltaX / distance * traceStep;		
-		let yStep = deltaY / distance * traceStep;		
+		let ratio = traceStep / distance;
+		let xStep = deltaX * ratio;		
+		let yStep = deltaY * ratio;
 		
 		let newX = ball.x;
 		let newY = ball.y;
 		
 		for (let s = 0; s < traceSteps; s++) {
-			if (hasCollision(newX + xStep, newY + yStep)) {				
-				if (!hasCollision(newX - xStep, newY + yStep)) {
-					// nemá kolizi v opačném směru X
-					xStep *= -1;
-					ball.sx *= -1;
-				} else if (!hasCollision(newX + xStep, newY - yStep)) {
-					// nemá kolizi v opačném směru Y
-					yStep *= -1;
+			let ht = hasCollision(getBallEdge(xStep, newX), getBallEdge(yStep, newY));
+			if (ht) {
+				if (ht.tag == "bottom") {
+					resetBall();
+					return;
+				} else if (ht.tag == "bed") {
+					let xd = (ball.x + xStep) - (bed.x + bed.w / 2);
+					let angleKoef = Math.abs(xd / (bed.w / 2)) * (xStep > 0 ? 1 : -1);
+					let origSpeed = xStep * xStep + yStep * yStep;
+					ball.sx = angleKoef * Math.abs(ball.sy);					
+					xStep = angleKoef * Math.abs(yStep);
 					ball.sy *= -1;
+					yStep *= -1;
+					// změnou poměru rychlostí se změnila celková rychlost
+					// je potřeba vůči tomu udělat kompenzaci
+					let newSpeed = xStep * xStep + yStep * yStep;
+					let speedMult = origSpeed / newSpeed;
+					ball.sx *= speedMult;
+					xStep *= speedMult;
+					ball.sy *= speedMult;
+					yStep *= speedMult;
 				} else {
-					// má kolizi všude kolem
-					xStep *= -1;
-					yStep *= -1;
-					ball.sx *= -1;
-					ball.sy *= -1;
+					if (!hasCollision(getBallEdge(-xStep, newX), getBallEdge(yStep, newY))) {
+						// nemá kolizi v opačném směru X
+						xStep *= -1;
+						ball.sx *= -1;
+					} else if (!hasCollision(getBallEdge(xStep, newX), getBallEdge(-yStep, newY))) {
+						// nemá kolizi v opačném směru Y
+						yStep *= -1;
+						ball.sy *= -1;
+					} else {
+						// má kolizi všude kolem
+						xStep *= -1;
+						yStep *= -1;
+						ball.sx *= -1;
+						ball.sy *= -1;
+					}
 				}
 			}
 			newX += xStep;
@@ -127,8 +154,10 @@ $.arkanoid = (function() {
 	};
 
 	let resetBall = function() {
-		ball.x = halfWidth;
+		ball.x = bed.x + bedWidth / 2;;
 		ball.y = bed.y - ball.r;
+		ball.sx = 0;
+		ball.sy = 0;
 		ball.ready = true;
 	};
 
@@ -207,6 +236,7 @@ $.arkanoid = (function() {
 			h: height + wallThick
 		};
 		let bottomWall = {
+			tag: "bottom",
 			x: -wallThick,
 			y: height,
 			w: width + wallThick,
@@ -216,12 +246,7 @@ $.arkanoid = (function() {
 		hitObjects = bricks.concat([bed, leftWall, topWall, rightWall, bottomWall]);
 	
 		ball = {
-			ready: true,
 			r: ballInitRadius,
-			x: 0,
-			y: 0,
-			sx: 0,
-			sy: 0
 		};
 		resetBall();
 	
@@ -229,8 +254,7 @@ $.arkanoid = (function() {
 	};
 	
 	canvas.addEventListener("click", function (e) {		
-		if (ball.ready) {
-			ball.sx = -startSpeed; 
+		if (ball.ready) {			
 			ball.sy = -startSpeed; 
 			ball.ready = false;
 		}
@@ -243,7 +267,10 @@ $.arkanoid = (function() {
 		if (bed.x < 0)
 			bed.x = 0;
 		if (bed.x + bedWidth > width)
-			bed.x = width - bedWidth;	
+			bed.x = width - bedWidth;
+		if (ball.ready) {
+			ball.x = bed.x + bedWidth / 2;
+		}
 	}, false);
 
 	return {
