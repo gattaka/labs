@@ -45,34 +45,38 @@ $.arkanoid = (function() {
 		return x >= ht.x && x <= ht.x + ht.w && y >= ht.y && y <= ht.y + ht.h;
 	};
 		
+	let hasTLCol = function(x, y, stepX, stepY, ht) {
+		return hasCollisionWith(x - ball.r + stepX, y - ball.r + stepY, ht);
+	}
+	
+	let hasTRCol = function(x, y, stepX, stepY, ht) {
+		return hasCollisionWith(x + ball.r + stepX, y - ball.r + stepY, ht);
+	}
+	
+	let hasBLCol = function(x, y, stepX, stepY, ht) {
+		return hasCollisionWith(x - ball.r + stepX, y + ball.r + stepY, ht);
+	}
+	
+	let hasBRCol = function(x, y, stepX, stepY, ht) {
+		return hasCollisionWith(x + ball.r + stepX, y + ball.r + stepY, ht);
+	}
+		
 	let hasCollision = function (x, y, stepX, stepY) {
 		for (let i = 0; i < hitObjects.length; i++) {
 			let ht = hitObjects[i];
+			if (ht.tag == "wall" && ht.str <= 0)
+				continue;
 			let hit = false;
 			if (stepY < 0) {
-				if (stepX < 0) {
-					// top-left
-					hit = hasCollisionWith(x - ball.r + stepX, y + ball.r + stepY, ht)
-						|| hasCollisionWith(x - ball.r + stepX, y - ball.r + stepY, ht)
-						|| hasCollisionWith(x + ball.r + stepX, y - ball.r + stepY, ht);
-				} else {
-					// top-right
-					hit = hasCollisionWith(x - ball.r + stepX, y - ball.r + stepY, ht)
-						|| hasCollisionWith(x + ball.r + stepX, y - ball.r + stepY, ht)
-						|| hasCollisionWith(x + ball.r + stepX, y + ball.r + stepY, ht);					
-				}
+				if (stepX < 0) // top-left directon
+					hit = hasBLCol(x, y, stepX, stepY, ht) || hasTLCol(x, y, stepX, stepY, ht) || hasTRCol(x, y, stepX, stepY, ht);
+				else // top-right directon
+					hit = hasTLCol(x, y, stepX, stepY, ht) || hasTRCol(x, y, stepX, stepY, ht) || hasBRCol(x, y, stepX, stepY, ht);									
 			} else {
-				if (stepX < 0) {
-					// bottom-left
-					hit = hasCollisionWith(x - ball.r + stepX, y - ball.r + stepY, ht)
-						|| hasCollisionWith(x - ball.r + stepX, y + ball.r + stepY, ht)
-						|| hasCollisionWith(x + ball.r + stepX, y + ball.r + stepY, ht);					
-				} else {
-					// bottom-right
-					hit = hasCollisionWith(x - ball.r + stepX, y + ball.r + stepY, ht)
-						|| hasCollisionWith(x + ball.r + stepX, y + ball.r + stepY, ht)
-						|| hasCollisionWith(x + ball.r + stepX, y - ball.r + stepY, ht);					
-				}
+				if (stepX < 0) // bottom-left directon
+					hit = hasTLCol(x, y, stepX, stepY, ht) || hasBLCol(x, y, stepX, stepY, ht) || hasBRCol(x, y, stepX, stepY, ht);					
+				else // bottom-right directon
+					hit = hasBLCol(x, y, stepX, stepY, ht) || hasBRCol(x, y, stepX, stepY, ht) || hasTRCol(x, y, stepX, stepY, ht);									
 			}
 			if (hit)
 				return ht;
@@ -80,6 +84,24 @@ $.arkanoid = (function() {
 		return false;
 	};
 		
+	let changeAngle = function(xStep, yStep, origSpeed) {
+		let xd = (ball.x + xStep) - (bed.x + bed.w / 2);
+		let angleKoef = Math.abs(xd / (bed.w / 2)) * (xStep > 0 ? 1 : -1);		
+		ball.sx = angleKoef * Math.abs(ball.sy);					
+		xStep = angleKoef * Math.abs(yStep);
+		ball.sy *= -1;
+		yStep *= -1;
+		// změnou poměru rychlostí se změnila celková rychlost
+		// je potřeba vůči tomu udělat kompenzaci
+		let newSpeed = xStep * xStep + yStep * yStep;
+		let speedMult = origSpeed / newSpeed;
+		ball.sx *= speedMult;
+		xStep *= speedMult;
+		ball.sy *= speedMult;
+		yStep *= speedMult;
+		return {x: xStep, y: yStep};
+	}	
+	
 	let process = function(timeDelta) {
 		let deltaX = ball.sx * timeDelta;
 		let deltaY = ball.sy * timeDelta;		
@@ -92,6 +114,8 @@ $.arkanoid = (function() {
 		let ratio = traceStep / distance;
 		let xStep = deltaX * ratio;		
 		let yStep = deltaY * ratio;
+		
+		let origSpeed = xStep * xStep + yStep * yStep;
 		
 		let newX = ball.x;
 		let newY = ball.y;
@@ -111,21 +135,9 @@ $.arkanoid = (function() {
 						// nemá kolizi v opačném směru Y						
 						// byl to zásah trampolíny?
 						if (ht.tag == "bed") {
-							let xd = (ball.x + xStep) - (bed.x + bed.w / 2);
-							let angleKoef = Math.abs(xd / (bed.w / 2)) * (xStep > 0 ? 1 : -1);
-							let origSpeed = xStep * xStep + yStep * yStep;
-							ball.sx = angleKoef * Math.abs(ball.sy);					
-							xStep = angleKoef * Math.abs(yStep);
-							ball.sy *= -1;
-							yStep *= -1;
-							// změnou poměru rychlostí se změnila celková rychlost
-							// je potřeba vůči tomu udělat kompenzaci
-							let newSpeed = xStep * xStep + yStep * yStep;
-							let speedMult = origSpeed / newSpeed;
-							ball.sx *= speedMult;
-							xStep *= speedMult;
-							ball.sy *= speedMult;
-							yStep *= speedMult;
+							let ar = changeAngle(xStep, yStep, origSpeed);
+							xStep = ar.x;
+							yStep = ar.y;
 						} else {					
 							// nemá kolizi v opačném směru Y
 							yStep *= -1;
@@ -138,6 +150,8 @@ $.arkanoid = (function() {
 						ball.sx *= -1;
 						ball.sy *= -1;
 					}
+					if (ht.tag == "wall") 
+						ht.str--;
 				}
 			}
 			newX += xStep;
@@ -162,6 +176,8 @@ $.arkanoid = (function() {
 		// bricks
 		for (let b = 0; b < bricks.length; b++) {
 			let brick = bricks[b];
+			if (brick.str <= 0)
+				continue;
 			ctx.strokeStyle = "black";
 			ctx.fillStyle = brick.c;
 			ctx.strokeRect(brick.x, brick.y, brickWidth, brickHeight);			
@@ -224,6 +240,7 @@ $.arkanoid = (function() {
 			for (let x = 0; x < row.length; x++) {
 				if (row[x] > 0) {
 					bricks.push({
+						tag: "wall",
 						str: row[x], // strength
 						c: $.GJSLibColors.hslToRGB(Math.random(), 1, 0.5),
 						x: startX + x * (brickWidth + brickOffset),
