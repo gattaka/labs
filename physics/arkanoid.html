@@ -3,8 +3,16 @@
 </head>
 
 [N1]Demo[/N1]
-[HTML]<div style="margin: 10px 0;display: inline-block;">
-	<canvas id="myCanvas" width="700" height="500"></canvas>
+[HTML]<div>
+	<table>
+		<tbody>
+			<tr>				
+				<td><input id="cheatInput" type="checkbox" onclick="$.arkanoid.cheat(this.checked)" >Cheat?</input></td>				
+			</tr>
+		</tbody>
+	</table>
+</div><div style="margin: 10px 0;display: inline-block;">
+	<canvas id="myCanvas" width="700" height="600"></canvas>
 </div>
 [/HTML]
 <script>
@@ -25,7 +33,8 @@ $.arkanoid = (function() {
 	
 	let ball;
 	let startSpeed = 1.2;
-	let speedStep = 0.01;	
+	let defaultSpeedStep = 0.0001;
+	let speedStep = defaultSpeedStep;	
 	let ballInitRadius = 10;
 	
 	let walls;
@@ -40,9 +49,11 @@ $.arkanoid = (function() {
 	let bricks;
 	let brickTag = "brick";
 	let startY = 40;
-	let brickWidth = 50;
+	let innerMargin = 5;
+	let bricksInLine = 10;
+	let brickWidth = width / bricksInLine; 
 	let brickHeight = 20;
-	let brickOffset = 5;
+	let brickOffset = 4;
 		
 	let traceStep = 1;
 	let hitObjects;
@@ -54,13 +65,6 @@ $.arkanoid = (function() {
 	let cheat = true;
 	
 	let levels = [
-		[
-			[1,1,1,1,1,1,1,1,1],
-			[2,2,2,2,2,2,2,2,2],
-			[1,1,1,1,1,1,1,1,1],
-			[2,2,2,2,2,2,2,2,2],
-			[1,1,1,1,1,1,1,1,1]
-		],
 		[
 			[1,1,1,1,1,1,1,1,1],
 			[1,1,1,1,1,1,1,1,1],
@@ -94,6 +98,13 @@ $.arkanoid = (function() {
 			[1,1,0,0,0,0,0,1,1],
 			[1,1,1,1,1,1,1,1,1],
 			[1,1,1,1,1,1,1,1,1],
+		],
+		[
+			[1,1,1,1,1,1,1,1,1],
+			[2,2,2,2,2,2,2,2,2],
+			[1,1,1,1,1,1,1,1,1],
+			[2,2,2,2,2,2,2,2,2],
+			[1,1,1,1,1,1,1,1,1]
 		],
 	];
 	
@@ -239,7 +250,7 @@ $.arkanoid = (function() {
 	};
 			
 	let step = function() {
-		
+				
 		// position
 		process(timeStep);
 	
@@ -251,21 +262,23 @@ $.arkanoid = (function() {
 		
 		// Texts
 		ctx.fillText("Level: " + (levelNumber + 1) + "/" + levels.length, 10, 20);	
-		ctx.fillText("Lives: " + lives, 10, 40);	
-		ctx.fillText("Speed: " + Math.sqrt(ball.sx * ball.sx + ball.sy * ball.sy).toPrecision(2), 10, 60);	
+		ctx.fillText("Lives: " + lives, 120, 20);	
+		ctx.fillText("Speed: " + Math.sqrt(ball.sx * ball.sx + ball.sy * ball.sy).toPrecision(2), 220, 20);	
 	
 		// bricks
 		for (let b = 0; b < bricks.length; b++) {
 			let brick = bricks[b];
 			if (brick.str <= 0)
 				continue;
-			ctx.strokeStyle = "black";
 			ctx.fillStyle = brick.c;
 			if (brick.str == 2)
 				ctx.setLineDash([5]);
 			if (brick.str == 1)
 				ctx.setLineDash([]);
+			ctx.fillStyle = $.GJSLibColors.hslToRGB(brick.c, 0.5, 0.5);
 			ctx.fillRect(brick.x, brick.y, brickWidth, brickHeight);
+			ctx.fillStyle = $.GJSLibColors.hslToRGB(brick.c, 1, 0.5);
+			ctx.fillRect(brick.x + innerMargin, brick.y + innerMargin, brickWidth - innerMargin * 2, brickHeight - innerMargin * 2);
 			ctx.strokeRect(brick.x, brick.y, brickWidth, brickHeight);			
 		}
 		ctx.setLineDash([]);
@@ -303,7 +316,7 @@ $.arkanoid = (function() {
 					bricks.push({
 						tag: brickTag,
 						str: row[x], // strength
-						c: $.GJSLibColors.hslToRGB(Math.random(), 1, 0.5),
+						c: Math.random(),
 						x: startX + x * (brickWidth + brickOffset),
 						y: startY + y * (brickHeight + brickOffset),
 						w: brickWidth,
@@ -414,6 +427,11 @@ $.arkanoid = (function() {
 	
 		start: function() {	
 			init();
+		},
+		
+		cheat: function(value) {
+			cheat = value;
+			speedStep = cheat ? 0.01 : defaultSpeedStep;				
 		},
 	};
 
