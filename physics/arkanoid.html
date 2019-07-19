@@ -24,22 +24,78 @@ $.arkanoid = (function() {
 	let timeStep = 1;
 	
 	let ball;
-	let startSpeed = 1;
+	let startSpeed = 1.2;
+	let speedStep = 0.01;	
 	let ballInitRadius = 10;
 	
+	let walls;
+	let bottomTag = "bottom";
+	
 	let bed;
+	let bedTag = "bed";
 	let bedWidth = 100;
-	let bedHeight = 20;
+	let bedHeight = 10;
 	let bedOffset = 10;
 	
-	let bricks = [];
+	let bricks;
+	let brickTag = "brick";
 	let startY = 40;
 	let brickWidth = 50;
 	let brickHeight = 20;
 	let brickOffset = 5;
 		
 	let traceStep = 1;
-	let hitObjects = [];
+	let hitObjects;
+	
+	let lives = 3;
+	let levelNumber = 0;
+	let bricksLeft = 0;
+	
+	let cheat = true;
+	
+	let levels = [
+		[
+			[1,1,1,1,1,1,1,1,1],
+			[2,2,2,2,2,2,2,2,2],
+			[1,1,1,1,1,1,1,1,1],
+			[2,2,2,2,2,2,2,2,2],
+			[1,1,1,1,1,1,1,1,1]
+		],
+		[
+			[1,1,1,1,1,1,1,1,1],
+			[1,1,1,1,1,1,1,1,1],
+			[1,1,1,1,1,1,1,1,1],
+			[1,1,1,1,1,1,1,1,1],
+			[1,1,1,1,1,1,1,1,1]
+		],
+		[
+			[1,0,0,0,0,0,0,0,0],
+			[1,1,0,0,0,0,0,0,0],
+			[1,1,1,0,0,0,0,0,0],
+			[1,1,1,1,0,0,0,0,0],
+			[1,1,1,1,1,0,0,0,0],
+			[1,1,1,1,1,1,0,0,0],
+			[1,1,1,1,1,1,1,0,0],
+			[1,1,1,1,1,1,1,1,0],
+			[1,1,1,1,1,1,1,1,1]
+		],
+		[
+			[1,0,1,0,1,0,1,0,1],
+			[0,1,0,1,0,1,0,1,0],
+			[1,0,1,0,1,0,1,0,1],
+			[0,1,0,1,0,1,0,1,0],
+			[1,0,1,0,1,0,1,0,1],
+			[0,1,0,1,0,1,0,1,0],
+		],
+		[
+			[1,1,1,1,1,1,1,1,1],
+			[1,1,1,1,1,1,1,1,1],
+			[1,1,0,0,0,0,0,1,1],
+			[1,1,0,0,0,0,0,1,1],
+			[1,1,1,1,1,1,1,1,1],
+			[1,1,1,1,1,1,1,1,1],
+		],
+	];
 	
 	let hasCollisionWith = function(x, y, ht) {
 		return x >= ht.x && x <= ht.x + ht.w && y >= ht.y && y <= ht.y + ht.h;
@@ -64,7 +120,7 @@ $.arkanoid = (function() {
 	let hasCollision = function (x, y, stepX, stepY) {
 		for (let i = 0; i < hitObjects.length; i++) {
 			let ht = hitObjects[i];
-			if (ht.tag == "wall" && ht.str <= 0)
+			if (ht.tag == brickTag && ht.str <= 0)
 				continue;
 			let hit = false;
 			if (stepY < 0) {
@@ -84,38 +140,36 @@ $.arkanoid = (function() {
 		return false;
 	};
 		
-	let changeAngle = function(xStep, yStep, origSpeed) {
+	// d = timeDelta
+	// zachovává výslednou rychlost
+	// (d.sx)^2 + (d.sy)^2 = (d.a.sy.k)^2 + (d.sy.k)^2
+	// sx^2 + sy^2 = (a.sy.k)^2 + (sy.k)^2
+	// k^2 = (sx^2 + sy^2) / ((a.sy)^2 + sy^2)
+	// k^2 = (sx^2 + sy^2) / (sy^2.(a^2 + 1))
+	let changeSpeedAngle = function(xStep, yStep) {
 		let xd = (ball.x + xStep) - (bed.x + bed.w / 2);
-		let angleKoef = Math.abs(xd / (bed.w / 2)) * (xStep > 0 ? 1 : -1);		
-		ball.sx = angleKoef * Math.abs(ball.sy);					
-		xStep = angleKoef * Math.abs(yStep);
-		ball.sy *= -1;
-		yStep *= -1;
-		// změnou poměru rychlostí se změnila celková rychlost
-		// je potřeba vůči tomu udělat kompenzaci
-		let newSpeed = xStep * xStep + yStep * yStep;
-		let speedMult = origSpeed / newSpeed;
-		ball.sx *= speedMult;
-		xStep *= speedMult;
-		ball.sy *= speedMult;
-		yStep *= speedMult;
-		return {x: xStep, y: yStep};
+		// změna úhlu
+		let a = Math.abs(xd / (bed.w / 2)) * (xStep > 0 ? 1 : -1);		
+		// koeficient zachování výsledné rychlosti
+		let k = Math.sqrt((xStep * xStep + yStep * yStep) / ((a * a + 1) * (yStep * yStep)));
+		// nové rychlosti
+		ball.sx = k * a * Math.abs(ball.sy);					
+		ball.sy *= -k;
 	}	
 	
-	let process = function(timeDelta) {
+	let process = function(timeDelta) {			
 		let deltaX = ball.sx * timeDelta;
-		let deltaY = ball.sy * timeDelta;		
-		let distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+		let deltaY = ball.sy * timeDelta;	
+		let squareDist = deltaX * deltaX + deltaY * deltaY;
+		let distance = Math.sqrt(squareDist);
 		
 		if (distance == 0)
 			return;
 		
-		let traceSteps = Math.max(0.1, distance / traceStep);
+		let traceSteps = Math.max(1, distance / traceStep);
 		let ratio = traceStep / distance;
 		let xStep = deltaX * ratio;		
-		let yStep = deltaY * ratio;
-		
-		let origSpeed = xStep * xStep + yStep * yStep;
+		let yStep = deltaY * ratio;		
 		
 		let newX = ball.x;
 		let newY = ball.y;
@@ -123,21 +177,32 @@ $.arkanoid = (function() {
 		for (let s = 0; s < traceSteps; s++) {
 			let ht = hasCollision(newX, newY, xStep, yStep);
 			if (ht) {
-				if (ht.tag == "bottom") {
+				if (!cheat && ht.tag == bottomTag) {
 					resetBall();
+					lives--;
+					if (lives == 0)
+						init();
 					return;				
 				} else {
 					if (!hasCollision(newX, newY, -xStep, yStep)) {
 						// nemá kolizi v opačném směru X
 						xStep *= -1;
 						ball.sx *= -1;
+						if (ht.tag == "bed") {
+							yStep *= -1;
+							ball.sy *= -1;
+						}
 					} else if (!hasCollision(newX, newY, xStep, -yStep)) {
 						// nemá kolizi v opačném směru Y						
 						// byl to zásah trampolíny?
-						if (ht.tag == "bed") {
-							let ar = changeAngle(xStep, yStep, origSpeed);
-							xStep = ar.x;
-							yStep = ar.y;
+						if (ht.tag == bedTag) {
+							changeSpeedAngle(xStep, yStep);
+							// distance je stejný (zachovává se kompenzací)
+							// takže i ratio je stejné
+							deltaX = ball.sx * timeDelta;
+							deltaY = ball.sy * timeDelta
+							xStep = deltaX * ratio;		
+							yStep = deltaY * ratio;
 						} else {					
 							// nemá kolizi v opačném směru Y
 							yStep *= -1;
@@ -150,8 +215,16 @@ $.arkanoid = (function() {
 						ball.sx *= -1;
 						ball.sy *= -1;
 					}
-					if (ht.tag == "wall") 
+					if (ht.tag == brickTag) {
 						ht.str--;
+						if (ht.str == 0)
+							bricksLeft--;
+						if (bricksLeft == 0) {
+							levelNumber = (levelNumber + 1) % levels.length;
+							loadLevel();
+							return;
+						}
+					}
 				}
 			}
 			newX += xStep;
@@ -160,6 +233,9 @@ $.arkanoid = (function() {
 		
 		ball.x = newX;
 		ball.y = newY;
+		
+		// zvyšování rychlosti		
+		ball.sy += Math.sign(ball.sy) * speedStep;
 	};
 			
 	let step = function() {
@@ -169,9 +245,14 @@ $.arkanoid = (function() {
 	
 		// clear
 		ctx.clearRect(0, 0, width, height);			
-		ctx.strokeStyle = "grey";
-		ctx.fillStyle = "grey";
+		ctx.strokeStyle = "black";
+		ctx.fillStyle = "black";
 		ctx.strokeRect(0, 0, width, height);
+		
+		// Texts
+		ctx.fillText("Level: " + (levelNumber + 1) + "/" + levels.length, 10, 20);	
+		ctx.fillText("Lives: " + lives, 10, 40);	
+		ctx.fillText("Speed: " + Math.sqrt(ball.sx * ball.sx + ball.sy * ball.sy).toPrecision(2), 10, 60);	
 	
 		// bricks
 		for (let b = 0; b < bricks.length; b++) {
@@ -180,9 +261,14 @@ $.arkanoid = (function() {
 				continue;
 			ctx.strokeStyle = "black";
 			ctx.fillStyle = brick.c;
-			ctx.strokeRect(brick.x, brick.y, brickWidth, brickHeight);			
+			if (brick.str == 2)
+				ctx.setLineDash([5]);
+			if (brick.str == 1)
+				ctx.setLineDash([]);
 			ctx.fillRect(brick.x, brick.y, brickWidth, brickHeight);
+			ctx.strokeRect(brick.x, brick.y, brickWidth, brickHeight);			
 		}
+		ctx.setLineDash([]);
 			
 		// ball
 		ctx.fillStyle = "white";
@@ -193,7 +279,8 @@ $.arkanoid = (function() {
 		ctx.stroke();
 		
 		// bed
-		ctx.strokeRect(bed.x, bed.y, bedWidth, bedHeight);
+		ctx.fillStyle = "black";
+		ctx.fillRect(bed.x, bed.y, bedWidth, bedHeight);
 	};
 
 	let resetBall = function() {
@@ -202,6 +289,33 @@ $.arkanoid = (function() {
 		ball.sx = 0;
 		ball.sy = 0;
 		ball.ready = true;
+	};
+	
+	let loadLevel = function() {
+		let lvl = levels[levelNumber];
+		bricks = [];
+		for (let y = 0; y < lvl.length; y++) {
+			let row = lvl[y];
+			let startX = halfWidth - (row.length * (brickWidth + brickOffset) - brickOffset) / 2 ;
+			for (let x = 0; x < row.length; x++) {
+				if (row[x] > 0) {
+					bricksLeft++;
+					bricks.push({
+						tag: brickTag,
+						str: row[x], // strength
+						c: $.GJSLibColors.hslToRGB(Math.random(), 1, 0.5),
+						x: startX + x * (brickWidth + brickOffset),
+						y: startY + y * (brickHeight + brickOffset),
+						w: brickWidth,
+						h: brickHeight
+					});
+				}
+			}
+		}
+		
+		hitObjects = bricks.concat(walls).concat(bed);
+		
+		resetBall();
 	};
 
 	let innnerChangeInterval = function(value) {
@@ -227,40 +341,22 @@ $.arkanoid = (function() {
 		ctx.fillStyle = "grey";
 		ctx.strokeRect(0, 0, width, height);
 		ctx.lineWidth = 1;
-	
-		let level = [
-			[1,1,1,1,1,1],
-			[1,1,1,1,1,1],
-			[1,1,1,1,1,1]
-		];
-		
-		for (let y = 0; y < level.length; y++) {
-			let row = level[y];
-			let startX = halfWidth - (row.length * (brickWidth + brickOffset) - brickOffset) / 2 ;
-			for (let x = 0; x < row.length; x++) {
-				if (row[x] > 0) {
-					bricks.push({
-						tag: "wall",
-						str: row[x], // strength
-						c: $.GJSLibColors.hslToRGB(Math.random(), 1, 0.5),
-						x: startX + x * (brickWidth + brickOffset),
-						y: startY + y * (brickHeight + brickOffset),
-						w: brickWidth,
-						h: brickHeight
-					});
-				}
-			}
-		}
-	
+		ctx.textAlign = "left";
+		ctx.font = "15px Monospace";		
+			
 		bed = {
-			tag: "bed",
+			tag: bedTag,
 			x: halfWidth - bedWidth / 2, 
 			y: height - bedHeight - bedOffset,
 			w: bedWidth,
 			h: bedHeight,
 		};
 	
-		let wallThick = 20;
+		ball = {
+			r: ballInitRadius,
+		};
+		
+		let wallThick = 20;		
 		let leftWall = {
 			x: -wallThick,
 			y: -wallThick,
@@ -280,19 +376,16 @@ $.arkanoid = (function() {
 			h: height + wallThick
 		};
 		let bottomWall = {
-			tag: "bottom",
+			tag: bottomTag,
 			x: -wallThick,
 			y: height,
 			w: width + wallThick,
 			h: wallThick
 		};
+		walls = [leftWall, topWall, rightWall, bottomWall];
 		
-		hitObjects = bricks.concat([bed, leftWall, topWall, rightWall, bottomWall]);
-	
-		ball = {
-			r: ballInitRadius,
-		};
-		resetBall();
+		levelNumber = 0;
+		loadLevel();
 	
 		innnerChangeInterval(interval);	
 	};
