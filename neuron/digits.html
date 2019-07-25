@@ -25,7 +25,8 @@
 	let xOffset = 20;
 	let yOffset = 20;
 	let side = 28;
-	let cellHeight = (height - yOffset * 2) / side;
+	let gridHeight = (height - yOffset * 2);
+	let cellHeight = gridHeight / side;
 	let cellWidth = cellHeight;
 	let dragged;
 	let changed;
@@ -42,21 +43,30 @@
 		ctx.clearRect(0, 0, width, height);
 		ctx.strokeRect(0, 0, width, height);
 	
-		for (let y = 0; y < side; y++) {
-			let row = data[y];			
-			for (let x = 0; x < side; x++) {
+		for (let y = 0; y < side; y++) {		
+			for (let x = 0; x < side; x++) {		
+				let index = y * side + x;			
 				let cx = xOffset + x * cellWidth;
 				let cy = yOffset + y * cellHeight;
 				ctx.strokeRect(cx, cy, cellWidth, cellHeight);
-				if (row[x] == 1)
+				if (data[index] == 1)
 					ctx.fillRect(cx, cy, cellWidth, cellHeight);
 			}
 		}
 			
 		ctx.textAlign = "left";
-		let textX = xOffset * 2 + side * cellWidth;
+		let xStart = xOffset * 2 + side * cellWidth;
+		let textOffset = 38;
+		let barXOffset = 25;
+		let barHeight = 20;
+		let barYStep = (gridHeight / 19) * 2;
+		let maxBarWidth = width - (side * cellWidth + xOffset * 2 + barXOffset * 2);
 		for (let i = 0; i < 10; i++) {
-			ctx.fillText(i, textX, yOffset + (i + 10) * 20);	
+			let barX = xStart + barXOffset;
+			let barY = yOffset + barYStep * i;
+			ctx.fillRect(barX, barY, maxBarWidth * guess[i], barHeight);
+			ctx.strokeRect(barX, barY, maxBarWidth, barHeight);
+			ctx.fillText(i, xStart, barY + 14);	
 		}
 	
 	};
@@ -83,10 +93,9 @@
 	
 		// init pole
 		for (let y = 0; y < side; y++) {
-			let row = [];
-			data[y] = row;
 			for (let x = 0; x < side; x++) {
-				row[x] = 0;
+				let index = y * side + x;
+				data[index] = 0;
 			}
 		}
 	
@@ -124,13 +133,16 @@
 		let cy = Math.floor((y - yOffset) / cellHeight);
 		if (cx < 0 || cx >= side || cy < 0 || cy >= side)
 			return;
+		
+		let index = cy * side + cx;
 			
 		if (changed) {
-			mode = data[cy][cx] == 1 ? 0 : 1;
+			mode = data[index] == 1 ? 0 : 1;
 			changed = false;
 		}
 		
-		data[cy][cx] = mode;
+		data[index] = mode;
+		guess = nnet.guess(data);
 	}
 	
 	canvas.addEventListener("mousedown", function (e) {
