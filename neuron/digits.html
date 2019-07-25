@@ -1,0 +1,136 @@
+<head>
+	<script type="text/javascript" src="../libs/matrix.js"></script>
+	<script type="text/javascript" src="../libs/colors.js"></script>
+	<script type="text/javascript" src="../libs/nnet.js"></script>
+</head>
+
+[N1]Demo[/N1]
+[HTML]<div style="margin: 10px 0;display: inline-block">
+	<canvas id="canvas" width="400" height="400"></canvas>
+</div>[/HTML]
+<script>$.nnet = (function() {
+	
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let halfWidth = width / 2;
+	let halfHeight = height / 2;
+	
+	let interval = 1;
+	let innerIntervalCallback;
+	
+	let xOffset = 20;
+	let yOffset = 20;
+	let side = 28;
+	let cellWidth = (width - xOffset * 2) / side;
+	let cellHeight = (height - yOffset * 2) / side;
+	let dragged;
+	let changed;
+	let mode;
+		
+	let data = [];
+		
+	let test = function() {
+		
+		ctx.strokeStyle = "darkgrey";
+		ctx.fillStyle = "black";	
+		ctx.clearRect(0, 0, width, height);
+		ctx.strokeRect(0, 0, width, height);
+	
+		for (let y = 0; y < side; y++) {
+			let row = data[y];			
+			for (let x = 0; x < side; x++) {
+				let cx = xOffset + x * cellWidth;
+				let cy = yOffset + y * cellHeight;
+				ctx.strokeRect(cx, cy, cellWidth, cellHeight);
+				if (row[x] == 1)
+					ctx.fillRect(cx, cy, cellWidth, cellHeight);
+			}
+		}
+			
+	
+	};
+
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			test();
+		}, interval);
+	};
+
+	let innerStart = function() {
+	
+		// init pole
+		for (let y = 0; y < side; y++) {
+			let row = [];
+			data[y] = row;
+			for (let x = 0; x < side; x++) {
+				row[x] = 0;
+			}
+		}
+	
+		//layersSizes = [imgSide * imgSide, imgSide * imgSide, 2];
+		//nnet = new $.GJSLibNeuralNet(layersSizes, 
+		//	sigmoid ? $.GJSLibNeuralNet.sigmoid() : $.GJSLibNeuralNet.smoothReLU());
+		
+		innnerChangeInterval(interval);	
+	};
+	
+	let paint = function(e) {
+		let bound = canvas.getBoundingClientRect();
+		let x = e.clientX - bound.x;
+		let y = e.clientY - bound.y;
+		
+		let cx = Math.floor((x - xOffset) / cellWidth);
+		let cy = Math.floor((y - yOffset) / cellHeight);
+		
+		if (changed) {
+			mode = data[cy][cx] == 1 ? 0 : 1;
+			changed = false;
+		}
+		
+		data[cy][cx] = mode;
+	}
+	
+	canvas.addEventListener("mousedown", function (e) {
+		dragged = true;
+		changed = true;
+		paint(e);
+	}, false);
+ 
+	canvas.addEventListener("mouseup", function (e) {
+		dragged = false;
+	}, false);
+	
+	canvas.addEventListener("mouseleave", function (e) {
+		dragged = false;
+	}, false);
+	
+	canvas.addEventListener("mousemove", function (e) {
+		if (!dragged) 
+			return;
+		paint(e);
+	}, false);
+	
+	return {
+	
+		start: function() {			
+			innerStart();
+		},
+		
+	};
+})();
+
+$.nnet.start();
+</script>
