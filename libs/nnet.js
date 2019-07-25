@@ -74,6 +74,14 @@ $.GJSLibNeuralNet = class GJSLibNeuralNet {
 		}	
 	}	
 	
+	setWeights(layer, weights) {
+		this.#weights[layer] = weights;
+	}
+	
+	setBiases(layer, biases) {
+		this.#biases[layer] = biases;
+	}
+	
 	guess(inputs) {
 		let inputSize = this.#layersSizes[0];
 		let L = this.#layersSizes.length - 1;
