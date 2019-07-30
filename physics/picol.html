@@ -1,0 +1,171 @@
+<head>
+	<script type="text/javascript" src="../libs/colors.js"></script>
+</head>
+
+[N1]Demo[/N1]
+[HTML]
+<button type="button" onclick="$.picol.start()">Start</button>
+<input id="mass" style="width: 60px; border: 1px solid #a8a8a8;" value="20">
+<div style="margin: 10px 0;">
+	<canvas id="myCanvas" width="700" height="300"></canvas>
+</div>
+[/HTML]
+<script>
+var $ = $ || {};
+$.picol = (function() {
+
+	let context;
+	let osc;
+	let gain;
+
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let halfWidth = width / 2;
+	let halfHeight = height / 2;
+
+	let interval = 1;
+	let innerIntervalCallback;
+
+	let timeStep = 1;
+	
+	let side = 100;
+	
+	let ax;
+	let am;
+	let av;
+	
+	let bx;
+	let bm;
+	let bv;
+	
+	let hits;
+	let tolerance = 0.01;
+			
+	let beep = function() {		
+		osc = context.createOscillator();
+		gain = context.createGain();
+		osc.type="sine";
+		osc.connect(gain);
+		osc.frequency.value = 500;
+		gain.connect(context.destination);	
+		osc.start(0);
+		gain.gain.exponentialRampToValueAtTime(0.00001, context.currentTime + 0.1);
+	};
+			
+	let hitIncrease = function(time) {
+		hits++;
+		if (time > 0.001)
+			beep();
+	};
+			
+	let collide = function(time) {
+		// https://en.wikipedia.org/wiki/Elastic_collision
+		let avNew = ((am - bm) / (am + bm)) * av + (2 * bm / (am + bm)) * bv;
+		let bvNew = ((bm - am) / (am + bm)) * bv + (2 * am / (am + bm)) * av;
+		av = avNew;
+		bv = bvNew;
+		hitIncrease(time);
+	};
+	
+	let process = function(time) {
+		let axNew = ax + av * time;
+		let bxNew = bx + bv * time;
+		
+		if (axNew >= 0 && bxNew >= axNew + side) {
+			// nic není v kolizi
+			ax = axNew;
+			bx = bxNew;
+		} else {		
+			if (axNew < 0 && axNew > -tolerance) {
+				hitIncrease();
+				av *= -1;
+			}
+			if (bxNew < axNew + side && bxNew > axNew + side -tolerance) {
+				collide(time);
+			}
+			let fragmentTime = time / 2;
+			process(fragmentTime);
+			process(fragmentTime);
+		}	
+	};
+			
+	let step = function() {
+			
+		process(timeStep);					
+				
+		// clear
+		ctx.clearRect(0, 0, width, height);			
+		ctx.strokeStyle = "black";
+		ctx.fillStyle = "black";
+		ctx.strokeRect(0, 0, width, height);
+		
+		ctx.font = "15px Monospace";
+		ctx.fillText("Collisions: " + hits, 10, 20);
+		ctx.fillText("  Math.PI: " + Math.PI, 10, 40);
+		
+		ctx.strokeStyle = "black";
+		ctx.beginPath();
+		ctx.moveTo(0, 0);
+		ctx.lineTo(0, height);
+		ctx.lineTo(width, height);
+		ctx.stroke();	
+				
+		ctx.strokeRect(ax, height - side, side, side);
+		ctx.fillText(am, ax + 10 , height - side + 50);
+		ctx.strokeRect(bx, height - side, side, side);
+		ctx.fillText(bm, bx + 10 , height - side + 50);		
+	};
+
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};
+
+	let init = function() {	
+		ctx.clearRect(0, 0, width, height);			
+		ctx.strokeStyle = "grey";
+		ctx.fillStyle = "grey";
+		ctx.strokeRect(0, 0, width, height);
+		ctx.lineWidth = 1;
+		ctx.textAlign = "left";
+		ctx.font = "15px Monospace";		
+				
+		ax = 200;
+		am = 1;
+		av = 0;
+	
+		bx = 500;
+		bm = Number(document.getElementById("mass").value);
+		bv = -1;
+		
+		hits = 0;
+				
+		innnerChangeInterval(interval);	
+		
+		context = new AudioContext();			
+	};
+
+	return {
+	
+		start: function() {	
+			init();			
+		},
+
+	};
+
+})();
+</script>
