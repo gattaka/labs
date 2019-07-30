@@ -1,11 +1,7 @@
 var $ = $ || {};
 // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Classes
 // https://stackoverflow.com/questions/32647215/declaring-static-constants-in-es6-classes
-$.GJSLibMatrix = class GJSLibMatrix {
-
-	#rows = 0;
-	#cols = 0;
-	#data = [];
+$.GJSLibMatrix = class GJSLibMatrix {	
 	
 	static checkDefined(o, err) {
 		if (typeof o === 'undefined')
@@ -54,14 +50,15 @@ $.GJSLibMatrix = class GJSLibMatrix {
 	}
 	
 	constructor(rows, cols) {
+		this.data = [];	
 		GJSLibMatrix.checkDefinedPositiveInteger(rows, "rows");
 		GJSLibMatrix.checkDefinedPositiveInteger(cols, "cols");	
-		this.#rows = rows;
-		this.#cols = cols;
+		this.rows = rows;
+		this.cols = cols;
 		// indexově jsou nejprve řádky, pak sloupce		
 		for (let r = 0; r < rows; r++) {
 			let row = [];
-			this.#data[r] = row;
+			this.data[r] = row;
 			for (let c = 0; c < cols; c++) 
 				row[c] = 0;
 		}
@@ -70,19 +67,19 @@ $.GJSLibMatrix = class GJSLibMatrix {
 	checkDimensions(row, col) {
 		GJSLibMatrix.checkDefinedPositiveInteger(row, "row");
 		GJSLibMatrix.checkDefinedPositiveInteger(col, "col");
-		if (row > this.#rows - 1 || row < 0) throw "Invalid row number (0-" + (this.#rows - 1) + ")";
-		if (col > this.#cols - 1 || col < 0) throw "Invalid col number (0-" + (this.#cols - 1) + ")";
+		if (row > this.rows - 1 || row < 0) throw "Invalid row number (0-" + (this.rows - 1) + ")";
+		if (col > this.cols - 1 || col < 0) throw "Invalid col number (0-" + (this.cols - 1) + ")";
 	}
 	
 	print() {
-		//console.table(this.#data);
+		//console.table(this.data);
 		let line = '';
-		for (let r = 0; r < this.#rows; r++) {
-			line += r == 0 ? '┌\t' : (r == this.#rows - 1 ? '└\t' : '│\t');
-			for (let c = 0; c < this.#cols; c++) {
+		for (let r = 0; r < this.rows; r++) {
+			line += r == 0 ? '┌\t' : (r == this.rows - 1 ? '└\t' : '│\t');
+			for (let c = 0; c < this.cols; c++) {
 				line += this.get(r,c) + '\t';
-				if (c == this.#cols - 1) {
-					line += r == 0 ? '┐' : (r == this.#rows - 1 ? '┘' : '│');
+				if (c == this.cols - 1) {
+					line += r == 0 ? '┐' : (r == this.rows - 1 ? '┘' : '│');
 					console.log(line);
 					line = '';
 				}
@@ -92,40 +89,40 @@ $.GJSLibMatrix = class GJSLibMatrix {
 	
 	toArray() {
 		let result = [];
-		for (let r = 0; r < this.#rows; r++)
-			for (let c = 0; c < this.#cols; c++)
+		for (let r = 0; r < this.rows; r++)
+			for (let c = 0; c < this.cols; c++)
 				result.push(this.get(r,c));
 		return result;
 	}
 	
 	getRows() {
-		return this.#rows;
+		return this.rows;
 	}
 	
 	getCols() {
-		return this.#cols;
+		return this.cols;
 	}
 		
 	get(row, col) {
 		this.checkDimensions(row, col);		
-		return this.#data[row][col];
+		return this.data[row][col];
 	}
 	
 	set(row, col, value) {
 		this.checkDimensions(row, col);	
 		GJSLibMatrix.checkDefinedNumber(value, "value");
-		this.#data[row][col] = value;
+		this.data[row][col] = value;
 	}
 	
 	add(m) {
 		GJSLibMatrix.checkMatrixInstance(m);		
-		if (m.getRows() != this.#rows)
+		if (m.getRows() != this.rows)
 			throw "A and B has different number of rows";
-		if (m.getCols() != this.#cols)
+		if (m.getCols() != this.cols)
 			throw "A and B has different number of rows";
-		let result = new GJSLibMatrix(this.#rows, this.#cols);
-		for (let r = 0; r < this.#rows; r++)			
-			for (let c = 0; c < this.#cols; c++)
+		let result = new GJSLibMatrix(this.rows, this.cols);
+		for (let r = 0; r < this.rows; r++)			
+			for (let c = 0; c < this.cols; c++)
 				result.set(r, c, this.get(r, c) + m.get(r, c));
 		return result;				
 	}
@@ -137,9 +134,9 @@ $.GJSLibMatrix = class GJSLibMatrix {
 	
 	addScalar(n) {
 		GJSLibMatrix.checkDefinedNumber(n, "value");
-		let result = new GJSLibMatrix(this.#rows, this.#cols);
-		for (let r = 0; r < this.#rows; r++)			
-			for (let c = 0; c < this.#cols; c++)
+		let result = new GJSLibMatrix(this.rows, this.cols);
+		for (let r = 0; r < this.rows; r++)			
+			for (let c = 0; c < this.cols; c++)
 				result.set(r, c, this.get(r, c) + n);
 		return result;				
 	}
@@ -175,17 +172,17 @@ $.GJSLibMatrix = class GJSLibMatrix {
 	
 	multiplyByScalar(n) {
 		GJSLibMatrix.checkDefinedNumber(n, "value");
-		let result = new GJSLibMatrix(this.#rows, this.#cols);
-		for (let r = 0; r < this.#rows; r++)			
-			for (let c = 0; c < this.#cols; c++)
+		let result = new GJSLibMatrix(this.rows, this.cols);
+		for (let r = 0; r < this.rows; r++)			
+			for (let c = 0; c < this.cols; c++)
 				result.set(r, c, this.get(r, c) * n);
 		return result;				
 	}
 	
 	map(func) {
-		let result = new GJSLibMatrix(this.#rows, this.#cols);
-		for (let r = 0; r < this.#rows; r++)			
-			for (let c = 0; c < this.#cols; c++)
+		let result = new GJSLibMatrix(this.rows, this.cols);
+		for (let r = 0; r < this.rows; r++)			
+			for (let c = 0; c < this.cols; c++)
 				result.set(r, c, func(this.get(r, c)));
 		return result;
 	}

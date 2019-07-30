@@ -1,12 +1,12 @@
 var $ = $ || {};
 $.GJSLibPlotter = class GJSLibPlotter {
 	
-	#points = [];
-	#functions = [];	
-	
-	#refreshCallback;
-	
 	constructor(canvas, xUnit, yUnit, xCenter, yCenter) {
+		
+		this.points = [];
+		this.functions = [];	
+	
+		this.refreshCallback;
 		
 		let plotterSelf = this;
 		
@@ -146,8 +146,8 @@ $.GJSLibPlotter = class GJSLibPlotter {
 			// dokresloval u levého kraje skokově
 			ctx.font = "15px Monospace";
 			for (let x = xFromUnit - xUnit; x <= xToUnit; x += stepX) {
-				for (let i = 0; i < plotterSelf.#functions.length; i++) {				
-					let y = plotterSelf.#functions[i](x);
+				for (let i = 0; i < plotterSelf.functions.length; i++) {				
+					let y = plotterSelf.functions[i](x);
 					if (typeof y === 'undefined')
 						continue;
 					let cx = x * xUnitPx + xPxZero;
@@ -157,8 +157,8 @@ $.GJSLibPlotter = class GJSLibPlotter {
 				}
 			}
 			for (let x = xFromUnit - xUnit; x <= xToUnit; x += stepX) {
-				for (let i = 0; i < plotterSelf.#points.length; i++) {	
-					let point = plotterSelf.#points[i];
+				for (let i = 0; i < plotterSelf.points.length; i++) {	
+					let point = plotterSelf.points[i];
 					if (point[0] >= x && point[0] < x + stepX) {
 						let cx = x * xUnitPx + xPxZero;
 						let cy = yPxZero - point[1] * yUnitPx;
@@ -213,7 +213,7 @@ $.GJSLibPlotter = class GJSLibPlotter {
 		}, false);
 		
 		init();
-		plotterSelf.#refreshCallback = paint;
+		plotterSelf.refreshCallback = paint;
 	}	
 	
 	// vektor -- funkce s omezeným definičním oborem
@@ -270,14 +270,14 @@ $.GJSLibPlotter = class GJSLibPlotter {
 	};
 	
 	addFunc(func) {
-		this.#functions.push(func);
+		this.functions.push(func);
 	}
 	
 	addPoint(x, y, label) {
-		this.#points.push([x, y, label]);
+		this.points.push([x, y, label]);
 	}
 	
 	refresh() {
-		this.#refreshCallback();
+		this.refreshCallback();
 	}
 }
