@@ -1,0 +1,190 @@
+<head>
+	<script type="text/javascript" src="../libs/colors.js"></script>
+</head>
+
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Depth <1-8></td>			
+			<td>Speed (ms) <1-200></td>
+			<td>Line batch <1-50></td>
+			<td>Line width <1-10></td>
+			<td>Length <50-500></td>			
+			<td></td>
+		</tr>
+		<tr>
+			<td><input id="depthInput" style="width: 80px;" value="4"></td>			
+			<td><input id="speedInput" style="width: 120px;" value="2"></td>
+			<td><input id="batchInput" style="width: 80px;" value="7"></td>			
+			<td><input id="lineInput" style="width: 80px;" value="2"></td>			
+			<td><input id="lengthInput" style="width: 80px;" value="100"></td>			
+			<td><button type="button" onclick="$.spacefill.start()">Run!</button></td>
+		</tr>
+	</tbody>
+</table>
+<div><canvas id="myCanvas" width="700" height="500"></canvas></div>[/HTML]
+<script>
+var $ = $ || {};
+$.spacefill = (function() {
+
+	// konfigurace
+	let depth;
+	let length;
+	let index;
+	let interval;
+	let batch;
+	
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let halfWidth = width / 2;
+	let halfHeight = height / 2;
+
+	let lines;
+
+	let innerIntervalCallback;
+	let toRad = function(angle) {
+		return Math.PI * angle / 180;
+	};
+
+	let drawStep = function(level, angle, xy, length, reversed) {
+		if (level == depth) {
+			let a = toRad(angle);
+			let line = [];
+			line[0] = xy.x;
+			line[1] = xy.y;
+			xy.x += Math.cos(a) * length, 
+			xy.y += Math.sin(a) * length
+			line[2] = xy.x;
+			line[3] = xy.y;
+			lines.push(line);			
+		} else {
+			drawLevel(level + 1, length / 3, xy, angle, reversed);
+		}		
+	};
+
+	let drawLevel = function(level, length, xy, angle, reversed) {		
+		if (!reversed) {
+			angle += a1;
+			drawStep(level, angle, xy, length);
+			angle -= 60;
+			drawStep(level, angle, xy, length, true);
+			angle -= 120;
+			drawStep(level, angle, xy, length, true);
+			angle += 60;
+			drawStep(level, angle, xy, length);
+			angle += 120;
+			drawStep(level, angle, xy, length);
+			drawStep(level, angle, xy, length);
+			angle += 60;
+			drawStep(level, angle, xy, length, true);		
+		} else {
+			angle += a1 + 60;
+			drawStep(level, angle, xy, length);
+			angle -= 60;
+			drawStep(level, angle, xy, length, true);
+			drawStep(level, angle, xy, length, true);
+			angle -= 120;
+			drawStep(level, angle, xy, length, true);
+			angle -= 60;
+			drawStep(level, angle, xy, length);
+			angle += 120;
+			drawStep(level, angle, xy, length);
+			angle += 60;
+			drawStep(level, angle, xy, length, true);	
+		}
+	};
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		if (interval) 
+			console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		let lw = ctx.lineWidth;
+		ctx.lineWidth = 1;
+		ctx.clearRect(0, 0, width, height);			
+		ctx.strokeStyle = "black";
+		ctx.fillStyle = "black";
+		ctx.strokeRect(0, 0, width, height);		
+		ctx.lineWidth = lw;
+		
+		let s = length;
+		let h = s / 2;
+		let d = Math.sqrt(s * s - h * h, 2) * 3;
+		let r = Math.sqrt(d * d + h * h, 2);
+		
+		a1 = 2 * 180 * Math.acos(d / r) / Math.PI;
+		
+		let xy = {
+			x: (halfWidth - r / 2) * depth * 0.3, 
+			y: halfHeight * depth * 0.2
+		};			
+		lines = [];
+		drawLevel(1, s, xy, 30, false);	
+		
+		ctx.strokeStyle = "black";
+		let hueStep = 1 / lines.length * 2;
+		index = 0;
+		innerIntervalCallback = setInterval(function() {
+			for (let i=0; i < batch; i++) {
+				let line = lines[index];
+				ctx.strokeStyle = $.GJSLibColors.hslToRGB((index * hueStep) % 1, 0.5, 0.5);
+				ctx.beginPath();
+				ctx.moveTo(line[0], line[1]);						
+				ctx.lineTo(line[2], line[3]);	
+				ctx.stroke();				
+				index++;
+				if (index == lines.length) {
+					clearInterval(innerIntervalCallback);
+					break;
+				}
+			}
+		}, interval);		
+	};
+
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+
+	return {
+		start: function() {		
+			let depthParam = validate("Invalid depth", "depthInput", 1, 8);			
+			let speedParam = validate("Invalid speed", "speedInput", 1, 200);
+			let batchParam = validate("Invalid batch", "batchInput", 1, 50);			
+			let lineParam = validate("Invalid line width", "lineInput", 1, 10);
+			let lengthParam = validate("Invalid length", "lengthInput", 50, 500);
+
+			if (depthParam && speedParam && lengthParam && batchParam && lineParam) {				
+				depth = depthParam;		
+				currentDepth = 0;
+				batch = batchParam;
+				ctx.lineWidth = lineParam;
+				length = lengthParam;				
+				innnerChangeInterval(speedParam);
+			}
+		}
+	};
+
+})();
+
+$.spacefill.start();</script>
