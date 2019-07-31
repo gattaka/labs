@@ -16,9 +16,9 @@
 		<tr>
 			<td><input id="depthInput" style="width: 80px;" value="4"></td>			
 			<td><input id="speedInput" style="width: 120px;" value="2"></td>
-			<td><input id="batchInput" style="width: 80px;" value="7"></td>			
-			<td><input id="lineInput" style="width: 80px;" value="2"></td>			
-			<td><input id="lengthInput" style="width: 80px;" value="100"></td>			
+			<td><input id="batchInput" style="width: 100px;" value="10"></td>			
+			<td><input id="lineInput" style="width: 100px;" value="3"></td>			
+			<td><input id="lengthInput" style="width: 100px;" value="200"></td>			
 			<td><button type="button" onclick="$.spacefill.start()">Run!</button></td>
 		</tr>
 	</tbody>
@@ -126,8 +126,8 @@ $.spacefill = (function() {
 		a1 = 2 * 180 * Math.acos(d / r) / Math.PI;
 		
 		let xy = {
-			x: (halfWidth - r / 2) * depth * 0.3, 
-			y: halfHeight * depth * 0.2
+			x: (halfWidth - r / 2) * 1.3, 
+			y: halfHeight * 0.85
 		};			
 		lines = [];
 		drawLevel(1, s, xy, 30, false);	
