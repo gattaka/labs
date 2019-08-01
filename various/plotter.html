@@ -12,15 +12,23 @@
 	
 	let canvas = document.getElementById("can");
 	let plotter = new $.GJSLibPlotter(canvas, 1, 1, 0, 0);
-		
-	plotter.addFunc($.GJSLibPlotter.createVectorFunc(0, 0, 3, 2));
-	plotter.addFunc($.GJSLibPlotter.createVectorFunc(0, 0, 3, 1));
-	plotter.addFunc($.GJSLibPlotter.createVectorFunc(0, 0, 2, 0));
-	plotter.addPoint(3, 2, "A[3,2] = cos(33.690) * sqrt(9+4) * 2 = 6 = 3*2 + 2*0");
-	plotter.addPoint(3, 1, "B[3,1] = cos(18.435) * sqrt(9+1) * 2 = 6 = 3*2 + 1*0");
-	plotter.addPoint(2, 0, "V[2,0]");
 	
-	plotter.refresh();
+	let r = 3;
+	plotter.addFunc(function(x) {		
+		return Math.sqrt(r*r - x*x);
+	});
+	plotter.addFunc(function(x) {		
+		return -x / Math.sqrt(r*r - x*x);
+	});
+	plotter.addFunc(function(x) {		
+		return r*r - x*x;
+	});
+	plotter.addFunc(function(x) {		
+		return 1/r * (r*r - x*x);
+	});
+	//plotter.addPoint(2, 0, "V[2,0]");
+	
+	plotter.refresh();	
 		
 })();
 </script>

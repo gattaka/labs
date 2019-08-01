@@ -1,0 +1,161 @@
+<head>	
+	<script type="text/javascript" src="../libs/colors.js"></script>
+</head>
+[N1]Demo[/N1]
+[HTML]
+<table>
+	<tr><td>Math.PI</td><td><input id="pi" style="width: 100%;" value="150"></td></tr>
+	<tr><td>Gregory-Leibniz series</td><td><input id="gregory" style="width: 100%;"></td><tr>
+	<tr><td>Nilakantha series</td><td><input id="nilakantha" style="width: 100%;"></td><tr>
+	<tr><td>Buffon's Needle Problem</td><td><input id="buffon" style="width: 100%;"></td><tr>
+	<tr><td></td><td><canvas id="canvas" width="700" height="300"></canvas></td><tr>	
+</table>[/HTML][GJSLibColors][/GJSLibColors]
+<script>var $ = $ || {};
+$.pi = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+
+	let interval = 1;
+	let innerIntervalCallback;
+
+	let gregory = {
+		pi: 0,
+		i: 0,
+		negate: false
+	};
+	
+	let nilakantha = {
+		pi: 3,
+		i: 1,
+		negate: false
+	};
+	
+	let buffon = {
+		linesCount: 10,		
+		x: 1/3,
+		xStep: 0,
+		throwCount: 0,
+		hitCount: 0,
+		lines: []
+	};
+	
+	let gregoryProcess = function() {
+		// Gregory-Leibniz series
+		// (4/1) - (4/3) + (4/5) - (4/7) + (4/9) - (4/11) + (4/13) - (4/15)
+		let a = gregory.i * 2 + 1;					
+		gregory.i++;
+		gregory.pi += 4/a * (gregory.negate ? -1 : 1);
+		gregory.negate = !gregory.negate;		
+		document.getElementById("gregory").value = gregory.pi;
+	};
+	
+	let nilakanthaProcess = function() {
+		// Nilakantha series
+		// 3 + 4/(2*3*4) - 4/(4*5*6) + 4/(6*7*8) - 4/(8*9*10) + 4/(10*11*12) - 4/(12*13*14) 
+		let a = nilakantha.i * 2;					
+		nilakantha.i++;
+		nilakantha.pi += 4/(a*(a+1)*(a+2)) * (nilakantha.negate ? -1 : 1);
+		nilakantha.negate = !nilakantha.negate;		
+		document.getElementById("nilakantha").value = nilakantha.pi;
+	};
+	
+	let buffonProcess = function() {
+		// http://mathworld.wolfram.com/BuffonsNeedleProblem.html
+		
+		buffon.throwCount++;
+		
+		let s = buffon.xStep * buffon.x / 2;
+		let cx = Math.random() * width;
+		let cy = 20 + Math.random() * (height - 40);
+		let angle = Math.random() * Math.PI * 2;
+		let dx = s * Math.cos(angle);
+		let dy = s * Math.sin(angle);
+		
+		let x1 = cx - dx;
+		let y1 = cy - dy;
+		let x2 = cx + dx;
+		let y2 = cy + dy;
+		
+		let hit = false;
+		for (let i=0; i < buffon.lines.length; i++) {			
+			if (Math.min(x1, x2) <= buffon.lines[i] && Math.max(x1, x2) >= buffon.lines[i]) {
+				hit = true;
+				break;
+			}
+		}
+		if (hit) {
+			ctx.strokeStyle = "red";
+			buffon.hitCount++;
+		} else {
+			ctx.strokeStyle = "green";
+		}
+		
+		ctx.beginPath();
+		ctx.moveTo(x1, y1);
+		ctx.lineTo(x2, y2);
+		ctx.stroke();
+		
+		ctx.strokeRect(cx - 2, cy - 2, 4, 4);
+		
+		document.getElementById("buffon").value = 2 * buffon.x * buffon.throwCount / buffon.hitCount;
+	};
+	
+	let step = function() {
+		// https://www.wikihow.com/Calculate-Pi
+		gregoryProcess();
+		nilakanthaProcess();
+		buffonProcess();
+	}
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};
+	
+	let init = function() {	
+		document.getElementById("pi").value = Math.PI;
+		innnerChangeInterval(interval);	
+		
+		ctx.strokeStyle = "black";
+		
+		ctx.clearRect(0, 0, width, height);
+		ctx.strokeRect(0, 0, width, height);
+
+		buffon.xStep = width / buffon.linesCount;
+		for (let i=0; i <= buffon.linesCount; i++) {
+			let x = i * buffon.xStep;
+			buffon.lines.push(x);
+			ctx.beginPath();
+			ctx.moveTo(x, 20);
+			ctx.lineTo(x, height - 20);
+			ctx.stroke();
+		}
+
+	};	
+		
+	return {
+
+		start: function() {					
+			init();						
+		},
+		
+	};
+
+})();
+
+$.pi.start();</script>

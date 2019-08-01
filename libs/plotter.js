@@ -243,7 +243,7 @@ $.GJSLibPlotter = class GJSLibPlotter {
 	static createNormalFunc(a, b, xk) {
 		let ak = -1 / a;
 		let bk = xk * (a + 1/a) + b;
-		return function(x, y) {	
+		return function(x) {	
 			return ak * x + bk;
 		};
 	}
@@ -252,7 +252,7 @@ $.GJSLibPlotter = class GJSLibPlotter {
 	// je paralelní k funkci dle 'a', 'b'
 	static createParallelFunc(a, b, xp, yp) {
 		let c = yp - a * xp - b;
-		return function(x, y) {	
+		return function(x) {	
 			return a * x + b + c;
 		};
 	};
