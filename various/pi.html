@@ -1,15 +1,11 @@
-<head>	
-	<script type="text/javascript" src="../libs/colors.js"></script>
-</head>
 [N1]Demo[/N1]
-[HTML]
-<table>
-	<tr><td>Math.PI</td><td><input id="pi" style="width: 100%;" value="150"></td></tr>
-	<tr><td>Gregory-Leibniz series</td><td><input id="gregory" style="width: 100%;"></td><tr>
-	<tr><td>Nilakantha series</td><td><input id="nilakantha" style="width: 100%;"></td><tr>
-	<tr><td>Buffon's Needle Problem</td><td><input id="buffon" style="width: 100%;"></td><tr>
-	<tr><td></td><td><canvas id="canvas" width="700" height="300"></canvas></td><tr>	
-</table>[/HTML][GJSLibColors][/GJSLibColors]
+[HTML]<table>
+	<tr><td>Math.PI</td><td><input id="pi" style="width: 550px;" value="150"></td></tr>
+	<tr><td>Gregory-Leibniz series</td><td><input id="gregory" style="width: 550px;"></td><tr>
+	<tr><td>Nilakantha series</td><td><input id="nilakantha" style="width: 550px;"></td><tr>
+	<tr><td>Buffon's Needle Problem</td><td><input id="buffon" style="width: 550px;"></td><tr>
+	<tr><td></td><td><canvas id="canvas" width="550" height="300"></canvas></td><tr>	
+</table>[/HTML]
 <script>var $ = $ || {};
 $.pi = (function() {
 
@@ -68,9 +64,9 @@ $.pi = (function() {
 		buffon.throwCount++;
 		
 		let s = buffon.xStep * buffon.x / 2;
-		let cx = Math.random() * width;
+		let cx = 20 + Math.random() * (width - 40);
 		let cy = 20 + Math.random() * (height - 40);
-		let angle = Math.random() * Math.PI * 2;
+		let angle = Math.random() * Math.PI;
 		let dx = s * Math.cos(angle);
 		let dy = s * Math.sin(angle);
 		
@@ -136,9 +132,9 @@ $.pi = (function() {
 		ctx.clearRect(0, 0, width, height);
 		ctx.strokeRect(0, 0, width, height);
 
-		buffon.xStep = width / buffon.linesCount;
+		buffon.xStep = (width - 40) / buffon.linesCount;
 		for (let i=0; i <= buffon.linesCount; i++) {
-			let x = i * buffon.xStep;
+			let x = i * buffon.xStep + 20;
 			buffon.lines.push(x);
 			ctx.beginPath();
 			ctx.moveTo(x, 20);
@@ -159,3 +155,9 @@ $.pi = (function() {
 })();
 
 $.pi.start();</script>
+[SOURCES]https://www.wolframalpha.com/input/?i=sqrt(r%5E2-x%5E2)
+https://www.wikihow.com/Calculate-Pi
+http://mathworld.wolfram.com/BuffonsNeedleProblem.html
+https://en.wikipedia.org/wiki/Leibniz_formula_for_%CF%80
+https://en.wikipedia.org/wiki/Pi
+http://mathworld.wolfram.com/PiFormulas.html[/SOURCES]

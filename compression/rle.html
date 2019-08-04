@@ -1,0 +1,145 @@
+[N1]Demo[/N1]
+[HTML]<span id="rawspan"></span>
+<div><canvas id="rawCanvas" width="700" height="100"></canvas></div>
+<br/>
+<span id="comspan"></span>
+<div><canvas id="comCanvas" width="700" height="100"></canvas></div>
+<br/>
+<span id="decspan"></span>
+<div><canvas id="decCanvas" width="700" height="100"></canvas></div>[/HTML]
+<script>var $ = $ || {};
+$.zip = (function() {
+
+	let size = 10;
+	let width = 700;
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};
+	
+	let toBinary = function(number) {
+		if (number == 0)
+			return [0];
+		let pow = Math.pow(2, Math.floor(Math.log(number) / Math.log(2)));
+		let result = [];
+		while (pow > 0) {
+			result.push((number & pow) >= 1 ? 1 : 0);			
+			pow = pow >> 1;
+		}
+		return result;
+	};
+	
+	let toDecimal = function(binary) {
+		let result = 0;
+		let pow = 1 << (binary.length - 1);
+		for (let i = 0; i < binary.length; i++) {
+			if (binary[i] == 1)
+				result += pow;
+			pow = pow >> 1;
+		}
+		return result;
+	}
+	
+	let encodeElias = function(number) {
+		let binary = toBinary(number);
+		let result = [];
+		for (let i = 0; i < binary.length - 1; i++)
+			result[i] = 0;
+		return result.concat(binary);
+	};
+	
+	let draw = function(canvasId, data) {
+		let canvas = document.getElementById(canvasId);
+		let ctx = canvas.getContext("2d");		
+		let height = Math.ceil(data.length / (width / size)) * size; 
+		canvas.height = height;
+				
+		ctx.strokeStyle = "#333";
+		ctx.clearRect(0, 0, width, height);
+		ctx.strokeRect(0, 0, width, height);		
+		
+		let x = 0;
+		let y = 0;
+		for (let i = 0; i < data.length; i++) {			
+			ctx.fillStyle = data[i] == 1 ? "#888" : "white";	
+			ctx.fillRect(x, y, size, size);
+			ctx.strokeRect(x, y, size, size);
+			x += size;
+			if (x >= width) {
+				x = 0;
+				y += size;
+			}
+		}	
+	};
+	
+	let init = function() {			
+		let data = [];
+		for (let i = 0; i < 1400; i++) 
+			data.push(Math.random() > 0.5 ? 1 : 0);			
+		draw("rawCanvas", data);
+		document.getElementById("rawspan").innerText = "Input " + data.length + " bits";
+		
+		// https://en.wikipedia.org/wiki/Run-length_encoding
+		// https://stackoverflow.com/questions/7598705/binary-run-length-encoding
+		// https://en.wikipedia.org/wiki/Elias_gamma_coding
+		
+		// první znak musí být znak dat, aby bylo dáno čím se začíná
+		// jestli 0 nebo 1 -- zbytek už bude jenom přepínání
+		let compressed = [data[0]];			
+		let last = 0;
+		for (let i = 1; i < data.length; i++) {
+			if (data[last] != data[i]) {
+				compressed = compressed.concat(encodeElias(i - last));
+				last = i;
+			}
+		}
+		compressed = compressed.concat(encodeElias(data.length - last));
+		draw("comCanvas", compressed);
+		let ratio = compressed.length / data.length * 100;
+		document.getElementById("comspan").innerText = "Compressed " + compressed.length + " bits (" + ratio.toPrecision(4) + "%)";
+		
+		let decompressed = [];
+		// jakým znakem se začíná
+		let current = compressed[0];
+		for (let i = 1; i < compressed.length;) {
+			let places = 1;
+			while (compressed[i] == 0) {
+				places++;
+				i++;				
+			}
+			let binary = [];
+			for (let b = 0; b < places; b++)
+				binary.push(compressed[i++]);							
+			let count = toDecimal(binary);
+			for (let b = 0; b < count; b++)
+				decompressed.push(current);							
+			current = current == 1 ? 0 : 1;
+		}
+		draw("decCanvas", decompressed);
+		document.getElementById("decspan").innerText = "Decompressed " + decompressed.length + " bits";
+	};	
+		
+	return {
+
+		start: function() {					
+			init();						
+		},
+		
+	};
+
+})();
+
+$.zip.start();</script>
