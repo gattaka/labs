@@ -1,19 +1,27 @@
-[N1]Demo[/N1]
-[HTML]<div><canvas id="imgCanvas" width="700" height="100"></canvas></div>
+[N1]Popis[/N1]
+Run-length encoding (RLE) je jedním z nejjednodušších způsobů, jak komprimovat obsah. Během komprese se přepisuje původní posloupnost položek obsahu jako jejich počet a typ položky. Aby byla komprese efektivní, je potřeba, aby obsah měl dostatek "skupin" -- tedy více položek stejného typu za sebou. Pokud má každá položka jiný typ, komprese se moc neprojeví nebo může v krajním případě mít i opačný efekt -- výsledný soubor bude větší než originál.
+
+Jako příklad jde vzít bitmapu -- každý pixel je dán RGB hodnotou, takže jde o 3x8 bitů na pixel. Pokud budu mít bitmapu s rozlišením 8x8, mám hrubý záznam o 1536 bitů.
+
+[HTML]<div style="text-align:center"><canvas id="imgCanvas" width="700" height="100"></canvas></div>
 <br/>
 <span id="rawSpan"></span>
-<div><canvas id="rawCanvas" width="700" height="100"></canvas></div>
-<br/>
-<span id="comBitSpan"></span>
-<div><canvas id="comBitCanvas" width="700" height="100"></canvas></div>
+<div style="text-align:center"><canvas id="rawCanvas" width="700" height="100"></canvas></div>[/HTML]
+
+Pokud by se RLE použilo přímo na komprimování souboru bitů (bez dalších informací) a pro zápis počtu stejných bitů za sebou by se použil například Elias gamma kódování, byl by výsledek dost na nic, protože by se objem souboru zvětšil:
+
+[HTML]<span id="comBitSpan"></span>
+<div style="text-align:center"><canvas id="comBitCanvas" width="700" height="100"></canvas></div>
 <br/>
 <span id="decBitSpan"></span>
-<div><canvas id="decBitCanvas" width="700" height="100"></canvas></div>
+<div style="text-align:center"><canvas id="decBitCanvas" width="700" height="100"></canvas></div>[/HTML]
+
+Proto je potřeba kompresi povádět ve smyslu barev (položek) -- jde tak rozpoznat opakování, na základě kterých se pak uvedou jenom počty. Bitový zápis barev je stejný a jejich počet (pixely) je opět pomocí Elias kódování:
+
+[HTML]<span id="comPxSpan"></span>
+<div style="text-align:center"><canvas id="comPxCanvas" width="700" height="100"></canvas></div>
 <br/>
-<span id="comPxSpan"></span>
-<div><canvas id="comPxCanvas" width="700" height="100"></canvas></div>
-<br/>
-<div><canvas id="decImgCanvas" width="700" height="100"></canvas></div>[/HTML]
+<div style="text-align:center"><canvas id="decImgCanvas" width="700" height="100"></canvas></div>[/HTML]
 <script>var $ = $ || {};
 $.rle = (function() {
 
@@ -284,3 +292,7 @@ $.rle = (function() {
 })();
 
 $.rle.start();</script>
+
+[SOURCES]https://en.wikipedia.org/wiki/Elias_gamma_coding
+https://stackoverflow.com/questions/7598705/binary-run-length-encoding
+https://en.wikipedia.org/wiki/Run-length_encoding[/SOURCES]
