@@ -1,16 +1,26 @@
 [N1]Demo[/N1]
-[HTML]<span id="rawspan"></span>
+[HTML]<div><canvas id="imgCanvas" width="700" height="100"></canvas></div>
+<br/>
+<span id="rawSpan"></span>
 <div><canvas id="rawCanvas" width="700" height="100"></canvas></div>
 <br/>
-<span id="comspan"></span>
-<div><canvas id="comCanvas" width="700" height="100"></canvas></div>
+<span id="comBitSpan"></span>
+<div><canvas id="comBitCanvas" width="700" height="100"></canvas></div>
 <br/>
-<span id="decspan"></span>
-<div><canvas id="decCanvas" width="700" height="100"></canvas></div>[/HTML]
+<span id="decBitSpan"></span>
+<div><canvas id="decBitCanvas" width="700" height="100"></canvas></div>
+<br/>
+<span id="comPxSpan"></span>
+<div><canvas id="comPxCanvas" width="700" height="100"></canvas></div>
+<br/>
+<div><canvas id="decImgCanvas" width="700" height="100"></canvas></div>[/HTML]
 <script>var $ = $ || {};
-$.zip = (function() {
+$.rle = (function() {
 
-	let size = 10;
+	let colors;
+	let size = 8;
+	let bitSize = 5;
+	let pxSize = 10;
 	let width = 700;
 	
 	let innnerChangeInterval = function(value) {
@@ -30,10 +40,8 @@ $.zip = (function() {
 		}, interval);
 	};
 	
-	let toBinary = function(number) {
-		if (number == 0)
-			return [0];
-		let pow = Math.pow(2, Math.floor(Math.log(number) / Math.log(2)));
+	let toBinary = function(number, powStart) {
+		let pow = powStart ? powStart : Math.pow(2, Math.floor(Math.log(number) / Math.log(2)));
 		let result = [];
 		while (pow > 0) {
 			result.push((number & pow) >= 1 ? 1 : 0);			
@@ -64,7 +72,7 @@ $.zip = (function() {
 	let draw = function(canvasId, data) {
 		let canvas = document.getElementById(canvasId);
 		let ctx = canvas.getContext("2d");		
-		let height = Math.ceil(data.length / (width / size)) * size; 
+		let height = Math.ceil(data.length / (width / bitSize)) * bitSize; 
 		canvas.height = height;
 				
 		ctx.strokeStyle = "#333";
@@ -75,27 +83,91 @@ $.zip = (function() {
 		let y = 0;
 		for (let i = 0; i < data.length; i++) {			
 			ctx.fillStyle = data[i] == 1 ? "#888" : "white";	
-			ctx.fillRect(x, y, size, size);
-			ctx.strokeRect(x, y, size, size);
-			x += size;
+			ctx.fillRect(x, y, bitSize, bitSize);
+			ctx.strokeRect(x, y, bitSize, bitSize);
+			x += bitSize;
 			if (x >= width) {
 				x = 0;
-				y += size;
+				y += bitSize;
 			}
 		}	
 	};
 	
-	let init = function() {			
-		let data = [];
-		for (let i = 0; i < 1400; i++) 
-			data.push(Math.random() > 0.5 ? 1 : 0);			
-		draw("rawCanvas", data);
-		document.getElementById("rawspan").innerText = "Input " + data.length + " bits";
+	let randomColor = function() {
+		return colors[Math.floor(Math.random() * colors.length)];
+	};
 		
-		// https://en.wikipedia.org/wiki/Run-length_encoding
-		// https://stackoverflow.com/questions/7598705/binary-run-length-encoding
-		// https://en.wikipedia.org/wiki/Elias_gamma_coding
+	let drawImg = function(canvasId, img) {
+		let canvas = document.getElementById(canvasId);
+		let ctx = canvas.getContext("2d");		
+		let width = size * pxSize; 
+		canvas.width = width;
+		let height = size * pxSize; 
+		canvas.height = height;
+				
+		ctx.strokeStyle = "#333";
+		ctx.clearRect(0, 0, width, height);
+		ctx.strokeRect(0, 0, width, height);		
 		
+		let x = 0;
+		let y = 0;
+		for (let i = 0; i < img.length; i++) {			
+			// https://www.w3schools.com/cssref/css_colors_legal.asp
+			ctx.fillStyle = "rgb(" + img[i][0] + ", " + img[i][1] + ", " + img[i][2] + ")";
+			ctx.fillRect(x, y, pxSize, pxSize);
+			ctx.strokeRect(x, y, pxSize, pxSize);
+			x += pxSize;
+			if (x >= width) {
+				x = 0;
+				y += pxSize;
+			}
+		}	
+	};
+		
+	let createImg = function() {
+		// init colors
+		colors = [];
+		for (let c = 0; c < 10; c++)
+			colors.push([
+				Math.floor(Math.random() * 256),
+				Math.floor(Math.random() * 256),
+				Math.floor(Math.random() * 256)
+			]);
+	
+		let img = [];
+		let lastColor = randomColor();
+		for (let i = 0; i < size * size; i++) {
+			if (Math.random() > 0.8)
+				lastColor = randomColor();
+			img.push(lastColor);
+		}
+	
+		drawImg("imgCanvas", img);
+		return img;
+	};
+	
+	let serializeColor = function(color) {
+		let result = [];
+		for (let p = 0; p < 3; p++)
+			result = result.concat(toBinary(color[p], 128));
+		return result;
+	};
+	
+	let deserializeColor = function(rgbBits) {
+		let result = [];
+		for (let i = 0; i < 3; i++) {
+			result[i] = 0;
+			let pow = 128;
+			for (let p = 0; p < 8; p++) {
+				if (rgbBits[i][p] == 1)
+					result[i] += pow;
+				pow = pow >> 1;
+			}
+		}
+		return result;
+	};
+	
+	let compressBitwise = function(data) {
 		// první znak musí být znak dat, aby bylo dáno čím se začíná
 		// jestli 0 nebo 1 -- zbytek už bude jenom přepínání
 		let compressed = [data[0]];			
@@ -107,10 +179,13 @@ $.zip = (function() {
 			}
 		}
 		compressed = compressed.concat(encodeElias(data.length - last));
-		draw("comCanvas", compressed);
+		draw("comBitCanvas", compressed);
 		let ratio = compressed.length / data.length * 100;
-		document.getElementById("comspan").innerText = "Compressed " + compressed.length + " bits (" + ratio.toPrecision(4) + "%)";
-		
+		document.getElementById("comBitSpan").innerText = "Compressed (bitwise) " + compressed.length + " bits (" + ratio.toPrecision(4) + "%)";
+		return compressed;
+	};
+	
+	let decompressBitwise = function(compressed) {
 		let decompressed = [];
 		// jakým znakem se začíná
 		let current = compressed[0];
@@ -128,8 +203,74 @@ $.zip = (function() {
 				decompressed.push(current);							
 			current = current == 1 ? 0 : 1;
 		}
-		draw("decCanvas", decompressed);
-		document.getElementById("decspan").innerText = "Decompressed " + decompressed.length + " bits";
+		draw("decBitCanvas", decompressed);
+		document.getElementById("decBitSpan").innerText = "Decompressed (bitwise) " + decompressed.length + " bits";		
+	};
+	
+	let compressPixelwise = function(img, dataLen) {
+		let pxCompressed = [];			
+		let last = 0;
+		for (let i = 1; i < img.length; i++) {
+			if (img[last][0] != img[i][0] 
+				|| img[last][1] != img[i][1] 
+				|| img[last][2] != img[i][2]) {
+				pxCompressed = pxCompressed.concat(encodeElias(i - last)).concat(serializeColor(img[last]));
+				last = i;
+			}
+		}
+		pxCompressed = pxCompressed.concat(encodeElias(img.length - last)).concat(serializeColor(img[last]));
+		draw("comPxCanvas", pxCompressed);
+		let ratio = pxCompressed.length / dataLen * 100;
+		document.getElementById("comPxSpan").innerText = "Compressed (pixelwise) " + pxCompressed.length + " bits (" + ratio.toPrecision(4) + "%)";
+		return pxCompressed;
+	};
+
+	let decompressPixelwise = function(compressed) {
+		let decompressed = [];
+		let current = [];
+		for (let i = 0; i < compressed.length;) {
+			let places = 1;
+			while (compressed[i] == 0) {
+				places++;
+				i++;				
+			}
+			let binary = [];
+			for (let b = 0; b < places; b++)
+				binary.push(compressed[i++]);							
+			let count = toDecimal(binary);
+			let rgbBits = [];
+			for (let p = 0; p < 3; p++) {
+				rgbBits[p] = [];
+				for (let b = 0; b < 8; b++)
+					rgbBits[p].push(compressed[i++]);							
+			}
+			let color = deserializeColor(rgbBits);
+			for (let b = 0; b < count; b++)
+				decompressed.push(color);
+		}
+		drawImg("decImgCanvas", decompressed);
+	};
+	
+	let init = function() {	
+		// test
+		serializeColor([0, 2, 255]);
+	
+		let img = createImg();
+		let data = [];
+		for (let i = 0; i < img.length; i++)			
+			data = data.concat(serializeColor(img[i]));
+		draw("rawCanvas", data);
+		document.getElementById("rawSpan").innerText = "Input " + data.length + " bits";
+		
+		// https://en.wikipedia.org/wiki/Run-length_encoding
+		// https://stackoverflow.com/questions/7598705/binary-run-length-encoding
+		// https://en.wikipedia.org/wiki/Elias_gamma_coding
+		
+		let bitCompressed = compressBitwise(data);	
+		decompressBitwise(bitCompressed);
+		
+		let pxCompressed = compressPixelwise(img, data.length);
+		decompressPixelwise(pxCompressed);		
 	};	
 		
 	return {
@@ -142,4 +283,4 @@ $.zip = (function() {
 
 })();
 
-$.zip.start();</script>
+$.rle.start();</script>
