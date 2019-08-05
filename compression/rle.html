@@ -1,28 +1,51 @@
+<head>
+	<script type="text/javascript" src="../libs/numbers.js"></script>
+</head>
+
 [N1]Popis[/N1]
 Run-length encoding (RLE) je jedním z nejjednodušších způsobů, jak komprimovat obsah. Během komprese se přepisuje původní posloupnost položek obsahu jako jejich počet a typ položky. Aby byla komprese efektivní, je potřeba, aby obsah měl dostatek "skupin" -- tedy více položek stejného typu za sebou. Pokud má každá položka jiný typ, komprese se moc neprojeví nebo může v krajním případě mít i opačný efekt -- výsledný soubor bude větší než originál.
 
 Jako příklad jde vzít bitmapu -- každý pixel je dán RGB hodnotou, takže jde o 3x8 bitů na pixel. Pokud budu mít bitmapu s rozlišením 8x8, mám hrubý záznam o 1536 bitů.
+[HTML]<div style="text-align:center"><canvas id="imgCanvas" width="700" height="100"></canvas></div>[/HTML]
+[CODE]Pixel1 RGB; Pixel2 RGB; Pixel3 RGB; ...[/CODE]
 
-[HTML]<div style="text-align:center"><canvas id="imgCanvas" width="700" height="100"></canvas></div>
-<br/>
-<span id="rawSpan"></span>
-<div style="text-align:center"><canvas id="rawCanvas" width="700" height="100"></canvas></div>[/HTML]
+[HTML]<span id="rawSpan"></span><div><canvas id="rawCanvas" width="700" height="100"></canvas></div>[/HTML]
 
-Pokud by se RLE použilo přímo na komprimování souboru bitů (bez dalších informací) a pro zápis počtu stejných bitů za sebou by se použil například Elias gamma kódování, byl by výsledek dost na nic, protože by se objem souboru zvětšil:
+Ještě než se pustím do komprimování, je potřeba vyřešit problém, jakým způsobem bude při dekompresi možné rozpoznat kde končí počet a kde začíná položka. Jednou z možností je stanovit pevné délky obou polí, ale to je jednak limitující a jednak to zbytečně plýtvá místem. Alternativou je například Elias gamma kódování, které umožňuje zapisovat jakékoliv číslo, aniž bych věděl, jak je dlouhé. Princip je prostý -- číslo o N bitech předchází N - 1 bitů s hodnotou 0. Při čtení se tak nejprve počtem nul zjistí, jak je číslo velké a pak se načte očekávaný rozsah.
+[HTABLE]číslo	binární tvar	Elias-gamma zápis
+1	1	1
+2	10	010
+10	1010	0001010[/HTABLE]
+
+Z povahy kódování není možné zapsat 0. Proto, jde-li o zápis indexů (které jsou většinou od 0) jsou pro zápis indexy zvýšeny o 1 a při dekompresi se zase 1 odečte.
+
+Pokud by se RLE použilo přímo na komprimování souboru bitů (bez dalších informací), takže by se uváděl počet stejných bitů za sebou, byl by výsledek dost na nic, protože by se objem souboru spíš zvětšil. Výjimkou by byl soubor, který by obsahoval spoustu stejných bitů u sebe, ale to je dost nereálné:
+
+[CODE]Příznak 0/1 počátku souboru; Počet1 (elias); Počet2 (elias) ...[/CODE]
 
 [HTML]<span id="comBitSpan"></span>
-<div style="text-align:center"><canvas id="comBitCanvas" width="700" height="100"></canvas></div>
+<div><canvas id="comBitCanvas" width="700" height="100"></canvas></div>
 <br/>
 <span id="decBitSpan"></span>
-<div style="text-align:center"><canvas id="decBitCanvas" width="700" height="100"></canvas></div>[/HTML]
+<div><canvas id="decBitCanvas" width="700" height="100"></canvas></div>[/HTML]
 
-Proto je potřeba kompresi povádět ve smyslu barev (položek) -- jde tak rozpoznat opakování, na základě kterých se pak uvedou jenom počty. Bitový zápis barev je stejný a jejich počet (pixely) je opět pomocí Elias kódování:
+Praktičtější je tedy RLE kompresi povádět ve smyslu položek (v případě obrázku, barvy pixelu) -- jde tak rozpoznat opakování, na základě kterých se pak uvedou jenom počty. Bitový zápis barev je stejný a jejich počet (pixely) je opět pomocí Elias kódování:
+
+[CODE]Počet1 (elias); Pixel RGB; Počet2 (elias); Pixel RGB; ...[/CODE]
 
 [HTML]<span id="comPxSpan"></span>
-<div style="text-align:center"><canvas id="comPxCanvas" width="700" height="100"></canvas></div>
+<div><canvas id="comPxCanvas" width="700" height="100"></canvas></div>
 <br/>
-<div style="text-align:center"><canvas id="decImgCanvas" width="700" height="100"></canvas></div>[/HTML]
-<script>var $ = $ || {};
+<div style="text-align:center"><canvas id="decPxCanvas" width="700" height="100"></canvas></div>[/HTML]
+
+Tady se už komprese vyplatila. Dalším zlepšením by mohlo být ještě eliminování opakování zápisu barvy napříč obrázkem, protože můžu použitým barvám přiřadit index a sestavit tak v "hlavičce" komprimovaného souboru paletu. V souboru pak budu uvádět akorát index barvy, namísto 3x8 bitů pro RGB pixelu.
+
+[CODE]Počet barev (elias); Barva1 RGB; Barva2 RGB; ... ; Počet1 (elias); Index barvy (elias); Počet2 (elias); Index barvy (elias); ...[/CODE]
+
+[HTML]<span id="comPalSpan"></span>
+<div><canvas id="comPalCanvas" width="700" height="100"></canvas></div>
+<br/>
+<div style="text-align:center"><canvas id="decPalCanvas" width="700" height="100"></canvas></div>[/HTML]<script>var $ = $ || {}; 
 $.rle = (function() {
 
 	let colors;
@@ -47,30 +70,9 @@ $.rle = (function() {
 			step();
 		}, interval);
 	};
-	
-	let toBinary = function(number, powStart) {
-		let pow = powStart ? powStart : Math.pow(2, Math.floor(Math.log(number) / Math.log(2)));
-		let result = [];
-		while (pow > 0) {
-			result.push((number & pow) >= 1 ? 1 : 0);			
-			pow = pow >> 1;
-		}
-		return result;
-	};
-	
-	let toDecimal = function(binary) {
-		let result = 0;
-		let pow = 1 << (binary.length - 1);
-		for (let i = 0; i < binary.length; i++) {
-			if (binary[i] == 1)
-				result += pow;
-			pow = pow >> 1;
-		}
-		return result;
-	}
-	
+		
 	let encodeElias = function(number) {
-		let binary = toBinary(number);
+		let binary = $.GJSLibNumbers.toBinary(number);
 		let result = [];
 		for (let i = 0; i < binary.length - 1; i++)
 			result[i] = 0;
@@ -157,7 +159,7 @@ $.rle = (function() {
 	let serializeColor = function(color) {
 		let result = [];
 		for (let p = 0; p < 3; p++)
-			result = result.concat(toBinary(color[p], 128));
+			result = result.concat($.GJSLibNumbers.toBinary(color[p], 128));
 		return result;
 	};
 	
@@ -206,7 +208,7 @@ $.rle = (function() {
 			let binary = [];
 			for (let b = 0; b < places; b++)
 				binary.push(compressed[i++]);							
-			let count = toDecimal(binary);
+			let count = $.GJSLibNumbers.toDecimal(binary);
 			for (let b = 0; b < count; b++)
 				decompressed.push(current);							
 			current = current == 1 ? 0 : 1;
@@ -245,7 +247,7 @@ $.rle = (function() {
 			let binary = [];
 			for (let b = 0; b < places; b++)
 				binary.push(compressed[i++]);							
-			let count = toDecimal(binary);
+			let count = $.GJSLibNumbers.toDecimal(binary);
 			let rgbBits = [];
 			for (let p = 0; p < 3; p++) {
 				rgbBits[p] = [];
@@ -256,7 +258,100 @@ $.rle = (function() {
 			for (let b = 0; b < count; b++)
 				decompressed.push(color);
 		}
-		drawImg("decImgCanvas", decompressed);
+		drawImg("decPxCanvas", decompressed);
+	};
+	
+	let createColorKey = function(pixel) {
+		return "R" + pixel[0] + "G" + pixel[1] + "B" + pixel[2];
+	};
+	
+	let compressPalettwise = function(img, dataLen) {
+		let indexMap = [];
+		let colorIndex = [];
+		let palImg = [];
+		for (let i = 0; i < img.length; i++) {
+			let pixel = img[i];
+			let key = createColorKey(pixel);
+			let index = indexMap[key];
+			if (typeof index == "undefined") {
+				index = colorIndex.length;
+				indexMap[key] = index;
+				colorIndex[index] = pixel;
+			}
+			// protože 0 se nedá v Elias-gamma zapsat
+			palImg.push(index + 1);
+		}
+		
+		let palCompressed = [];		
+		
+		// počet barev a paleta
+		palCompressed = palCompressed.concat(encodeElias(colorIndex.length));
+		for (let i = 0; i < colorIndex.length; i++)
+			palCompressed = palCompressed.concat(serializeColor(colorIndex[i]));		
+		
+		let last = 0;
+		for (let i = 1; i < palImg.length; i++) {
+			if (palImg[last] != palImg[i]) {
+				palCompressed = palCompressed.concat(encodeElias(i - last)).concat(encodeElias(palImg[last]));
+				last = i;
+			}
+		}
+		palCompressed = palCompressed.concat(encodeElias(palImg.length - last)).concat(encodeElias(palImg[last]));
+		draw("comPalCanvas", palCompressed);
+		let ratio = palCompressed.length / dataLen * 100;
+		document.getElementById("comPalSpan").innerText = "Compressed (palettwise) " + palCompressed.length + " bits (" + ratio.toPrecision(4) + "%)";
+		return palCompressed;
+	};
+	
+	let decodeElias = function(data, i) {
+		let places = 1;
+		while (data[i] == 0) {
+			places++;
+			i++;				
+		}
+		let binary = [];
+		for (let b = 0; b < places; b++)
+			binary.push(data[i++]);							
+		let number = $.GJSLibNumbers.toDecimal(binary);
+		return {
+			number: number, 
+			i: i
+		};
+	};
+
+	let decompressPalettwise = function(compressed) {
+		let decompressed = [];
+		let current = [];
+		let i = 0;
+		let result = decodeElias(compressed, i);
+		i = result.i;
+		let colorsCount = result.number;
+		
+		let colorIndex = [];
+		for (let c = 0; c < colorsCount; c++) {
+			let rgbBits = [];
+			for (let p = 0; p < 3; p++) {
+				rgbBits[p] = [];
+				for (let b = 0; b < 8; b++)
+					rgbBits[p].push(compressed[i++]);							
+			}
+			colorIndex.push(deserializeColor(rgbBits));
+		}
+		
+		while (i < compressed.length) {
+			let countResult = decodeElias(compressed, i);
+			i = countResult.i;
+			let count = countResult.number;
+			
+			let colorResult = decodeElias(compressed, i);
+			i = colorResult.i;
+			// protože 0 se nedá v Elias-gamma zapsat jsou indexy v zápisu barev o 1 větší
+			let color = colorIndex[colorResult.number - 1];
+
+			for (let b = 0; b < count; b++)
+				decompressed.push(color);
+		}
+		drawImg("decPalCanvas", decompressed);
 	};
 	
 	let init = function() {	
@@ -279,6 +374,9 @@ $.rle = (function() {
 		
 		let pxCompressed = compressPixelwise(img, data.length);
 		decompressPixelwise(pxCompressed);		
+		
+		let palCompressed = compressPalettwise(img, data.length);
+		decompressPalettwise(palCompressed);	
 	};	
 		
 	return {
@@ -291,7 +389,8 @@ $.rle = (function() {
 
 })();
 
-$.rle.start();</script>
+$.rle.start();</script>[N1]Závěr[/N1]
+RLE se hodí na kompresi dat, u kterých znám jejich strukturu a význam. Na přímou kompresi bitů se nehodí. Čím větší shluky položek, tím lépe.
 
 [SOURCES]https://en.wikipedia.org/wiki/Elias_gamma_coding
 https://stackoverflow.com/questions/7598705/binary-run-length-encoding
