@@ -279,9 +279,9 @@ $.arkanoid = (function() {
 				ctx.setLineDash([5]);
 			if (brick.str == 1)
 				ctx.setLineDash([]);
-			ctx.fillStyle = $.GJSLibColors.hslToRGB(brick.c, 0.5, 0.5);
+			ctx.fillStyle = $.GJSLibColors.hslToColor(brick.c, 0.5, 0.5);
 			ctx.fillRect(brick.x, brick.y, brickWidth, brickHeight);
-			ctx.fillStyle = $.GJSLibColors.hslToRGB(brick.c, 1, 0.5);
+			ctx.fillStyle = $.GJSLibColors.hslToColor(brick.c, 1, 0.5);
 			ctx.fillRect(brick.x + innerMargin, brick.y + innerMargin, brickWidth - innerMargin * 2, brickHeight - innerMargin * 2);
 			ctx.strokeRect(brick.x, brick.y, brickWidth, brickHeight);			
 		}

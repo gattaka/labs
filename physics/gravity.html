@@ -172,7 +172,7 @@ $.gravity = (function() {
 			let r = ballMinRadius + Math.random() * (ballMaxRadius - ballMinRadius);
 			balls.push({
 				r: r,
-				c: $.GJSLibColors.hslToRGB(i / ballCount, 1, 0.5),
+				c: $.GJSLibColors.hslToColor(i / ballCount, 1, 0.5),
 				x: r + Math.random() * (width - 2 * r),
 				y: r + Math.random() * (height - 2 * r),
 				sx: 5 - Math.random() * 10,

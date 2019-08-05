@@ -51,7 +51,7 @@ $.nnet = (function() {
 		netCtx.strokeStyle = "black";
 		netCtx.lineWidth = 3;
 		for (let l = 1; l < layersSizes.length; l++) {
-			netCtx.strokeStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.4);
+			netCtx.strokeStyle = $.GJSLibColors.hslToColor(l / layersSizes.length, 1, 0.4);
 			let x = layerXOffset * (l + 1);
 			let inputSize = layersSizes[l - 1];
 			let layerSize = layersSizes[l]; 			
@@ -78,7 +78,7 @@ $.nnet = (function() {
 		netCtx.font = "15px Monospace";
 		for (let l = 0; l < layersSizes.length; l++) {
 			netCtx.strokeStyle = "black";
-			netCtx.fillStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.5);
+			netCtx.fillStyle = $.GJSLibColors.hslToColor(l / layersSizes.length, 1, 0.5);
 			let layerSize = layersSizes[l]; 			
 			let x = layerXOffset * (l + 1);
 			// pro každý neuron z vrstvy
@@ -179,7 +179,7 @@ $.nnet = (function() {
 
 	let innerStart = function() {
 		layersSizes = [4, 5, 4];
-		nnet = new $.GJSLibNeuralNet(layersSizes);
+		nnet = new $.GJSLibNeuralNet(layersSizes, $.GJSLibNeuralNet.sigmoid());
 		
 		// vykresli neuronovou síť
 		netCtx.clearRect(0, 0, netWidth, netHeight);

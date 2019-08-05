@@ -84,7 +84,7 @@ $.perlin = (function() {
 								
 				let lightness = Math.min(1, Math.max(0, (result + 1) / 2));				
 				
-				ctx.fillStyle = $.GJSLibColors.hslToRGB(1, 0.8, lightness);
+				ctx.fillStyle = $.GJSLibColors.hslToColor(1, 0.8, lightness);
 				ctx.fillRect(x, y, pointSize, pointSize);
 			}
 		}		

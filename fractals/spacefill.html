@@ -138,7 +138,7 @@ $.spacefill = (function() {
 		innerIntervalCallback = setInterval(function() {
 			for (let i=0; i < batch; i++) {
 				let line = lines[index];
-				ctx.strokeStyle = $.GJSLibColors.hslToRGB((index * hueStep) % 1, 0.5, 0.5);
+				ctx.strokeStyle = $.GJSLibColors.hslToColor((index * hueStep) % 1, 0.5, 0.5);
 				ctx.beginPath();
 				ctx.moveTo(line[0], line[1]);						
 				ctx.lineTo(line[2], line[3]);	

@@ -1,0 +1,34 @@
+<head>
+	<script type="text/javascript" src="../libs/numbers.js"></script>
+</head>
+
+[HTML]<table id="eliasTable" style="text-align: right"></table>[/HTML]
+<script>var $ = $ || {}; 
+$.elias = (function() {
+
+	let init = function() {	
+		let txt = "<thead><tr><th>Číslo</th><th>Binary</th><th>Delta</th><th>Gamma</th><th>Omega</th></tr></thead><tbody>";
+		for (let i = 1; i <= 20; i++) {
+			txt += "<tr>";
+			txt += "<td>" + i + "</td>";
+			txt += "<td>" + $.GJSLibNumbers.serializeBinary($.GJSLibNumbers.toBinary(i)) + "</td>";
+			txt += "<td>" + $.GJSLibNumbers.serializeBinary($.GJSLibNumbers.toEliasDelta(i)) + "</td>";
+			txt += "<td>" + $.GJSLibNumbers.serializeBinary($.GJSLibNumbers.toEliasGamma(i)) + "</td>";
+			txt += "<td>" + $.GJSLibNumbers.serializeBinary($.GJSLibNumbers.toEliasOmega(i)) + "</td>";
+			txt += "</tr>";
+		}
+		txt += "</tbody>";
+		document.getElementById("eliasTable").innerHTML = txt;
+	};	
+		
+	return {
+
+		start: function() {					
+			init();						
+		},
+		
+	};
+
+})();
+
+$.elias.start();</script>

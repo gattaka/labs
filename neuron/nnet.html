@@ -136,7 +136,7 @@ $.nnet = (function() {
 		netCtx.strokeStyle = "black";
 		netCtx.lineWidth = 3;
 		for (let l = 1; l < layersSizes.length; l++) {
-			netCtx.strokeStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.4);
+			netCtx.strokeStyle = $.GJSLibColors.hslToColor(l / layersSizes.length, 1, 0.4);
 			let x = layerXOffset * (l + 1);
 			let inputSize = layersSizes[l - 1];
 			let layerSize = layersSizes[l]; 			
@@ -163,7 +163,7 @@ $.nnet = (function() {
 		netCtx.font = "15px Monospace";
 		for (let l = 0; l < layersSizes.length; l++) {
 			netCtx.strokeStyle = "black";
-			netCtx.fillStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.5);
+			netCtx.fillStyle = $.GJSLibColors.hslToColor(l / layersSizes.length, 1, 0.5);
 			let layerSize = layersSizes[l]; 			
 			let x = layerXOffset * (l + 1);
 			// pro každý neuron z vrstvy
@@ -227,7 +227,7 @@ $.nnet = (function() {
 			}
 			drawMatrixStart(xstart, h);
 			xstart += matrixXMargin;
-			netCtx.fillStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.5);
+			netCtx.fillStyle = $.GJSLibColors.hslToColor(l / layersSizes.length, 1, 0.5);
 			for (let row = 0; row < rows; row++) {
 				for (let col = 0; col < cols; col++) {
 					let x = xstart + col * (textWidth + textXSpace) + textWidth / 2;

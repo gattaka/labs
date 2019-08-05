@@ -34,7 +34,7 @@ $.gradient = (function() {
 				let result = gradient.w * cx + gradient.h * cy;
 				let scaled = (result % maxResult) / maxResult;
 
-				ctx.fillStyle = $.GJSLibColors.hslToRGB(scaled, 0.8, 0.5);
+				ctx.fillStyle = $.GJSLibColors.hslToColor(scaled, 0.8, 0.5);
 				ctx.fillRect(x, y, pointSize, pointSize);
 			}
 		}

@@ -59,7 +59,7 @@
 				let cx = xOffset + x * cellWidth;
 				let cy = yOffset + y * cellHeight;			
 				ctx.strokeRect(cx, cy, cellWidth, cellHeight);
-				ctx.fillStyle = $.GJSLibColors.hslToRGB(1, 0, 1 - data[index]);				
+				ctx.fillStyle = $.GJSLibColors.hslToColor(1, 0, 1 - data[index]);				
 				ctx.fillRect(cx, cy, cellWidth, cellHeight);
 			}
 		}

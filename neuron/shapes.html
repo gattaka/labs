@@ -59,7 +59,7 @@
 		netCtx.strokeStyle = "black";
 		netCtx.lineWidth = 1;
 		for (let l = 1; l < layersSizes.length; l++) {
-			netCtx.strokeStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.4);
+			netCtx.strokeStyle = $.GJSLibColors.hslToColor(l / layersSizes.length, 1, 0.4);
 			let x = netXOffset + layerXOffset * l;
 			let inputSize = layersSizes[l - 1];
 			let layerSize = layersSizes[l]; 			
@@ -86,7 +86,7 @@
 		netCtx.font = "15px Monospace";
 		for (let l = 0; l < layersSizes.length; l++) {
 			netCtx.strokeStyle = "black";
-			netCtx.fillStyle = $.GJSLibColors.hslToRGB(l / layersSizes.length, 1, 0.5);
+			netCtx.fillStyle = $.GJSLibColors.hslToColor(l / layersSizes.length, 1, 0.5);
 			let layerSize = layersSizes[l]; 			
 			let x = netXOffset + layerXOffset * l;
 			// pro každý neuron z vrstvy

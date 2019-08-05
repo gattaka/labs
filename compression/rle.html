@@ -69,15 +69,7 @@ $.rle = (function() {
 		innerIntervalCallback = setInterval(function() {
 			step();
 		}, interval);
-	};
-		
-	let encodeElias = function(number) {
-		let binary = $.GJSLibNumbers.toBinary(number);
-		let result = [];
-		for (let i = 0; i < binary.length - 1; i++)
-			result[i] = 0;
-		return result.concat(binary);
-	};
+	};	
 	
 	let draw = function(canvasId, data) {
 		let canvas = document.getElementById(canvasId);
@@ -184,11 +176,11 @@ $.rle = (function() {
 		let last = 0;
 		for (let i = 1; i < data.length; i++) {
 			if (data[last] != data[i]) {
-				compressed = compressed.concat(encodeElias(i - last));
+				compressed = compressed.concat($.GJSLibNumbers.toEliasGamma(i - last));
 				last = i;
 			}
 		}
-		compressed = compressed.concat(encodeElias(data.length - last));
+		compressed = compressed.concat($.GJSLibNumbers.toEliasGamma(data.length - last));
 		draw("comBitCanvas", compressed);
 		let ratio = compressed.length / data.length * 100;
 		document.getElementById("comBitSpan").innerText = "Compressed (bitwise) " + compressed.length + " bits (" + ratio.toPrecision(4) + "%)";
@@ -224,11 +216,11 @@ $.rle = (function() {
 			if (img[last][0] != img[i][0] 
 				|| img[last][1] != img[i][1] 
 				|| img[last][2] != img[i][2]) {
-				pxCompressed = pxCompressed.concat(encodeElias(i - last)).concat(serializeColor(img[last]));
+				pxCompressed = pxCompressed.concat($.GJSLibNumbers.toEliasGamma(i - last)).concat(serializeColor(img[last]));
 				last = i;
 			}
 		}
-		pxCompressed = pxCompressed.concat(encodeElias(img.length - last)).concat(serializeColor(img[last]));
+		pxCompressed = pxCompressed.concat($.GJSLibNumbers.toEliasGamma(img.length - last)).concat(serializeColor(img[last]));
 		draw("comPxCanvas", pxCompressed);
 		let ratio = pxCompressed.length / dataLen * 100;
 		document.getElementById("comPxSpan").innerText = "Compressed (pixelwise) " + pxCompressed.length + " bits (" + ratio.toPrecision(4) + "%)";
@@ -285,18 +277,18 @@ $.rle = (function() {
 		let palCompressed = [];		
 		
 		// počet barev a paleta
-		palCompressed = palCompressed.concat(encodeElias(colorIndex.length));
+		palCompressed = palCompressed.concat($.GJSLibNumbers.toEliasGamma(colorIndex.length));
 		for (let i = 0; i < colorIndex.length; i++)
 			palCompressed = palCompressed.concat(serializeColor(colorIndex[i]));		
 		
 		let last = 0;
 		for (let i = 1; i < palImg.length; i++) {
 			if (palImg[last] != palImg[i]) {
-				palCompressed = palCompressed.concat(encodeElias(i - last)).concat(encodeElias(palImg[last]));
+				palCompressed = palCompressed.concat($.GJSLibNumbers.toEliasGamma(i - last)).concat($.GJSLibNumbers.toEliasGamma(palImg[last]));
 				last = i;
 			}
 		}
-		palCompressed = palCompressed.concat(encodeElias(palImg.length - last)).concat(encodeElias(palImg[last]));
+		palCompressed = palCompressed.concat($.GJSLibNumbers.toEliasGamma(palImg.length - last)).concat($.GJSLibNumbers.toEliasGamma(palImg[last]));
 		draw("comPalCanvas", palCompressed);
 		let ratio = palCompressed.length / dataLen * 100;
 		document.getElementById("comPalSpan").innerText = "Compressed (palettwise) " + palCompressed.length + " bits (" + ratio.toPrecision(4) + "%)";
