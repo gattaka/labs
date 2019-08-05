@@ -3,6 +3,7 @@ $.GJSLibPlotter = class GJSLibPlotter {
 	
 	constructor(canvas, xUnit, yUnit, xCenter, yCenter) {
 		
+		this.labels = [];
 		this.points = [];
 		this.functions = [];	
 	
@@ -141,10 +142,18 @@ $.GJSLibPlotter = class GJSLibPlotter {
 			let xToUnit = xFromUnit + xUnitsLength;
 			let yFromUnit = -yUnitsLength / 2 + yOffsetSteps * yUnit;
 			let yToUnit = yFromUnit + yUnitsLength;
+							
+			ctx.font = "15px Monospace";
+			for (let l = 0; l < plotterSelf.labels.length; l++) {
+				if (plotterSelf.labels[l]) {
+					ctx.fillStyle = colors[l];
+					ctx.fillRect(10, 13 + l * 20, 5, 5);
+					ctx.fillText(plotterSelf.labels[l], 20, 20 + l * 20);
+				}
+			}
 				
 			// -xUnit protože jednotky X jsou vypisované zleva a graf by se
 			// dokresloval u levého kraje skokově
-			ctx.font = "15px Monospace";
 			for (let x = xFromUnit - xUnit; x <= xToUnit; x += stepX) {
 				for (let i = 0; i < plotterSelf.functions.length; i++) {				
 					let y = plotterSelf.functions[i](x);
@@ -269,8 +278,9 @@ $.GJSLibPlotter = class GJSLibPlotter {
 		return [xq, yq];
 	};
 	
-	addFunc(func) {
+	addFunc(func, label) {
 		this.functions.push(func);
+		this.labels.push(label);
 	}
 	
 	addPoint(x, y, label) {

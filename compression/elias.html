@@ -1,8 +1,10 @@
 <head>
 	<script type="text/javascript" src="../libs/numbers.js"></script>
+	<script type="text/javascript" src="../libs/plotter.js"></script>
 </head>
 
-[HTML]<table id="eliasTable" style="text-align: right"></table>[/HTML]
+[HTML]<table table id="eliasTable" bordercolor="#888" cellpadding="5px" rules="all" border="0" style="margin-left: auto; margin-right: auto; text-align: right"></table>
+<canvas id="graph" width="700px" height="300px"/>[/HTML]
 <script>var $ = $ || {}; 
 $.elias = (function() {
 
@@ -19,6 +21,25 @@ $.elias = (function() {
 		}
 		txt += "</tbody>";
 		document.getElementById("eliasTable").innerHTML = txt;
+		
+		let plotter = new $.GJSLibPlotter(document.getElementById("graph"), 100, 5, 700, 15);
+		plotter.addFunc(function(x) {
+			let intx = Math.floor(x);
+			return $.GJSLibNumbers.toBinary(intx).length;
+		}, "Binary");
+		plotter.addFunc(function(x) {
+			let intx = Math.floor(x);
+			return $.GJSLibNumbers.toEliasDelta(intx).length;
+		}, "Delta");
+		plotter.addFunc(function(x) {
+			let intx = Math.floor(x);
+			return $.GJSLibNumbers.toEliasGamma(intx).length;
+		}, "Gamma");
+		plotter.addFunc(function(x) {
+			let intx = Math.floor(x);
+			return $.GJSLibNumbers.toEliasOmega(intx).length;
+		}, "Omega");
+		plotter.refresh();
 	};	
 		
 	return {
