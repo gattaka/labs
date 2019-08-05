@@ -10,7 +10,7 @@ $.elias = (function() {
 
 	let init = function() {	
 		let txt = "<thead><tr><th>Číslo</th><th>Binary</th><th>Delta</th><th>Gamma</th><th>Omega</th></tr></thead><tbody>";
-		for (let i = 1; i <= 20; i++) {
+		for (let i = 1; i <= 10000; ) {
 			txt += "<tr>";
 			txt += "<td>" + i + "</td>";
 			txt += "<td>" + $.GJSLibNumbers.serializeBinary($.GJSLibNumbers.toBinary(i)) + "</td>";
@@ -18,6 +18,15 @@ $.elias = (function() {
 			txt += "<td>" + $.GJSLibNumbers.serializeBinary($.GJSLibNumbers.toEliasGamma(i)) + "</td>";
 			txt += "<td>" + $.GJSLibNumbers.serializeBinary($.GJSLibNumbers.toEliasOmega(i)) + "</td>";
 			txt += "</tr>";
+			switch (i) {
+			case 10: i = 15; break;
+			case 15: i = 20; break;
+			case 20: i = 50; break;
+			case 50: i = 100; break;
+			case 100: i = 1000; break;
+			case 1000: i = 10000; break;
+			default: i++;
+			}
 		}
 		txt += "</tbody>";
 		document.getElementById("eliasTable").innerHTML = txt;
