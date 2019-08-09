@@ -1,0 +1,82 @@
+[N1]Demo[/N1]
+[HTML]<table table id="eulerTable" bordercolor="#888" cellpadding="5px" rules="all" border="0" style="margin-left: auto; margin-right: auto; text-align: right"></table>[/HTML]
+<script>var $ = $ || {};
+$.euler = (function() {
+
+	/**
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+
+	let interval = 1;
+	let innerIntervalCallback;
+	*/
+	
+	let step = function() {
+		
+	}
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};	
+	
+	let processPart = function(base, prec) {
+		return (Math.pow(base, prec) - 1) / prec;
+	};
+	
+	let init = function() {			
+		//innnerChangeInterval(interval);	
+		let prec = 0.00000001;	
+		console.log(0.1 + ": " + processPart(0.1, prec));
+		console.log(0.5 + ": " + processPart(0.5, prec));
+		console.log(1.5 + ": " + processPart(1.5, prec));
+		console.log(2 + ": " + processPart(2, prec));
+		console.log(3 + ": " + processPart(3, prec));
+		console.log(4 + ": " + processPart(4, prec));
+				
+		let txt = "<thead><tr><th>Iterace</th><th>Step</th><th>Koeficient</th><th>Základ</th></tr></thead><tbody>";
+		let base = 4;
+		let step = base;
+		for (let i = 0; i < 20; i++) {
+			let part = processPart(base, prec);
+			txt += "<tr>";
+			txt += "<td>" + i + "</td>";
+			txt += "<td>" + step + "</td>";
+			txt += "<td>" + part + "</td>";
+			txt += "<td>" + base + "</td>";			
+			txt += "</tr>";								
+			step /= 2;			
+			if (part == 1) 
+				break;			
+			base = base + (part > 1 ? -step : step);
+		}
+		txt += "</tbody>";
+		document.getElementById("eulerTable").innerHTML = txt;	
+		
+	};	
+		
+	return {
+
+		start: function() {					
+			init();						
+		},
+		
+	};
+
+})();
+
+$.euler.start();</script>
