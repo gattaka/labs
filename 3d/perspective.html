@@ -1,9 +1,23 @@
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>View angle (0-360°)</td>
+			<td>Ray width (5-1)</td>
+		</tr>
+		<tr>
+			<td><input id="viewAngle" 
+				onchange="$.perspective.changeViewAngle(this.value)" style="width: 80px;" value="90"></td>
+			<td><input id="rayWidth"
+				onchange="$.perspective.changeRayWidth(this.value)" style="width: 80px;" value="5"></td>
+		</tr>
+	</tbody>
+</table>
 <div style="margin: 10px 0; border: 1px solid red; display: inline-block;">
 	<canvas id="perspectiveCanvas" width="700" height="400"></canvas>
 </div>
 <div style="margin: 10px 0; border: 1px solid red; display: inline-block;">
 	<canvas id="minimapCanvas" width="700" height="400"></canvas>
-</div>
+</div>[/HTML]
 <script>var $ = $ || {};
 $.perspective = (function() {
 
@@ -24,8 +38,15 @@ $.perspective = (function() {
 	let interval = 20;
 	let innerIntervalCallback;
 	
+	// Jednotky
+	// CLU -- cell unit, jednotka buňky mapy = 1
+	// MVU -- map unit, jednotka virtuální mapy
+	// MMU -- minimapk unit, jednotka zobrazení minimapy
+	// SCU -- scena unit, jednotka zobrazení scény
+	
 	// kolik jednotek má dílek mapy
-	let mapResolution = 20;
+	let cluToMvu = 20;
+	let mvuToMmu = 1.2;
 			
 	// Wolfenstein typ -- dílky mapy mají konstantní velikost, 
 	// nemají patra a jsou vždy na sebe kolmé
@@ -44,14 +65,14 @@ $.perspective = (function() {
 	];
 	
 	// hranice
-	let mapMinX = 0;
-	let mapMinY = 0;
-	let mapMaxX = (mapCols + 1) * mapResolution;
-	let mapMaxY = (mapRows + 1) * mapResolution;
+	let minXMvu = 0;
+	let minYMvu = 0;
+	let maxXMvu = (mapCols + 1) * cluToMvu;
+	let maxYMvu = (mapRows + 1) * cluToMvu;
 		
 	// pozice a orientace hráče na mapě
-	let playerMapX = mapCols / 2 * mapResolution;
-	let playerMapY = mapRows / 2 * mapResolution;
+	let playerXMvu = mapCols / 2 * cluToMvu;
+	let playerYMvu = mapRows / 2 * cluToMvu;
 	let playerOrient = 270; // 0-360	
 	
 	// rozsah v jakém hráč vidí
@@ -59,16 +80,14 @@ $.perspective = (function() {
 	let angleRes = width / angleWidthRes;
 	let angleRange = 90;
 	let angleIncrement = angleRange / angleRes;		
-	let rayStep = 5;		
+	let rayStepMvu = 5;		
 	let perspectiveLen = 0.5;	
 	
-	// rozlišení minimapy (dílek -> px)
-	let minimapResolution = 1.2;
-	let minimapCursorSide = 10;
+	let cursorSideMmu = 10;
 	
-	let walkSpeedStep = 2; 
+	let walkSpeedStepMvu = 2; 
 	let turnSpeedStep = 3;
-	let walkSpeed = 0;
+	let walkSpeedMvu = 0;
 	let turnSpeed = 0;
 	
 	let init = function() {		
@@ -83,10 +102,10 @@ $.perspective = (function() {
 	let onKeyDown = function(event) {
 		switch (event.keyCode) {
 		case 87: 
-			walkSpeed = walkSpeedStep;
+			walkSpeedMvu = walkSpeedStepMvu;
 			break;
 		case 83: 
-			walkSpeed = -walkSpeedStep;
+			walkSpeedMvu = -walkSpeedStepMvu;
 			break;
 		case 65: 
 			turnSpeed = -turnSpeedStep;
@@ -101,7 +120,7 @@ $.perspective = (function() {
 		switch (event.keyCode) {
 		case 87: 
 		case 83: 
-			walkSpeed = 0;
+			walkSpeedMvu = 0;
 			break;			
 		case 65: 
 		case 68: 
@@ -120,58 +139,98 @@ $.perspective = (function() {
 	let toRad = function(angle) {
 		return Math.PI * angle / 180;
 	};
+	
+	let xMvuToMmu = function(xMvu) {
+		return minimapHalfWidth - (mapCols / 2 * cluToMvu - xMvu) * mvuToMmu;
+	};
+	
+	let yMvuToMmu = function(yMvu) {
+		return minimapHalfHeight - (mapRows / 2 * cluToMvu - yMvu) * mvuToMmu;
+	};
 
-	let draw = function() {						
+	let draw = function() {		
+		updatePlayer();
+		drawMinimap();
+		drawScene();
+	};
+	
+	let updatePlayer = function() {
+		playerOrient += turnSpeed;
+							
+		let draftPlayerXMvu = playerXMvu + Math.cos(toRad(playerOrient)) * walkSpeedMvu;
+		let draftPlayerYMvu = playerYMvu + Math.sin(toRad(playerOrient)) * walkSpeedMvu;
+		let draftPlayerXClu = Math.floor(draftPlayerXMvu / cluToMvu);
+		let draftPlayerYClu = Math.floor(draftPlayerYMvu / cluToMvu);
+		if (draftPlayerYClu >= 0 && draftPlayerYClu < mapRows && draftPlayerXClu >= 0 && draftPlayerXClu <= mapCols) {
+			cellValue = map[draftPlayerYClu][draftPlayerXClu];
+			if (cellValue == 0) {
+				playerXMvu = draftPlayerXMvu;
+				playerYMvu = draftPlayerYMvu;
+			}
+		}
+	};
+	
+	let drawScene = function() {			
 		ctx.fillStyle = "black";
 		ctx.fillRect(0, 0, width, height);
-		
-		playerOrient += turnSpeed;
-		playerMapX += Math.cos(toRad(playerOrient)) * walkSpeed;
-		playerMapY += Math.sin(toRad(playerOrient)) * walkSpeed;
+						
+		// minimap info
+		let playerXMmu = xMvuToMmu(playerXMvu);
+		let playerYMmu = yMvuToMmu(playerYMvu);
 							
 		let angleRadStart = toRad(playerOrient - angleRange / 2);
 		let angleRadStop = toRad(playerOrient + angleRange / 2);
 		let angleRadIncrement = toRad(angleIncrement);
 		for (let angleRad = angleRadStart, x = 0; angleRad < angleRadStop; angleRad += angleRadIncrement, x += angleWidthRes) {		
-			let rayXStep = Math.cos(angleRad) * rayStep;
-			let rayYStep = Math.sin(angleRad) * rayStep;			
-			let rayX = playerMapX;
-			let rayY = playerMapY;
+			let rayXStepMvu = Math.cos(angleRad) * rayStepMvu;
+			let rayYStepMvu = Math.sin(angleRad) * rayStepMvu;			
+			let rayXMvu = playerXMvu;
+			let rayYMvu = playerYMvu;
 			
 			let cellValue = 0;
-			while (cellValue == 0 && rayX > mapMinX && rayX < mapMaxX && rayY > mapMinY && rayY < mapMaxY) {
-				rayX += rayXStep;
-				rayY += rayYStep;
-				let mapRow = Math.floor(rayY / mapResolution);
-				let mapCol = Math.floor(rayX / mapResolution);
-				if (mapRow >= 0 && mapRow < mapRows && mapCol >= 0 && mapCol <= mapCols) {
-					cellValue = map[mapRow][mapCol];				
+			while (cellValue == 0 && rayXMvu > minXMvu && rayXMvu < maxXMvu && rayYMvu > minYMvu && rayYMvu < maxYMvu) {
+				rayXMvu += rayXStepMvu;
+				rayYMvu += rayYStepMvu;
+				let yClu = Math.floor(rayYMvu / cluToMvu);
+				let xClu = Math.floor(rayXMvu / cluToMvu);
+				if (yClu >= 0 && yClu < mapRows && xClu >= 0 && xClu <= mapCols) {
+					cellValue = map[yClu][xClu];	
 				} else {
 					cellValue = 0;
 				}				
+				if (cellValue != 0)
+					break;
 			}
+			
+			// minimap ray show
+			let rayXMmu = xMvuToMmu(rayXMvu);
+			let rayYMmu = yMvuToMmu(rayYMvu);
+			
+			minimapCtx.lineWidth = 2; 
+			minimapCtx.strokeStyle = "white"; 
+			minimapCtx.moveTo(playerXMmu, playerYMmu);
+			minimapCtx.lineTo(rayXMmu, rayYMmu);
+			minimapCtx.stroke();
 											
 			if (cellValue != 0) {
-				let distance = Math.sqrt(Math.pow(playerMapX - rayX, 2) + Math.pow(playerMapY - rayY, 2));
+				let distance = Math.sqrt(Math.pow(playerXMvu - rayXMvu, 2) + Math.pow(playerYMvu - rayYMvu, 2));
 				let yDiff = distance * perspectiveLen;
 				let segmentHeight = height - yDiff * 2;
 				ctx.fillStyle = mapColor(cellValue);
 				ctx.fillRect(x, yDiff, angleWidthRes, segmentHeight);
 			}
-		}
-				
-		drawMinimap();
+		}					
 	}
 	
 	let drawMinimap = function() {
 		minimapCtx.fillStyle = "black";
 		minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight);
 
-		let minimapCellSize = mapResolution * minimapResolution;
+		let minimapCellSize = cluToMvu * mvuToMmu;
 
 		for (let row = 0; row < mapRows; row++) {	
 			let rowData = map[row];
-			let y = minimapHalfHeight - (Math.floor(mapRows / 2) - row) * minimapCellSize;
+			let y = minimapHalfHeight - (Math.floor(mapRows / 2) - row) * minimapCellSize - minimapCellSize / 2;
 			for (let col = 0; col < mapCols; col++) {
 				let colData = rowData[col];
 				if (colData == 0)
@@ -189,20 +248,20 @@ $.perspective = (function() {
 		minimapCtx.strokeStyle = "red";		
 		minimapCtx.beginPath();
 		
-		let centerX = minimapHalfWidth - (mapCols / 2 * mapResolution - playerMapX) * minimapResolution;
-		let centerY = minimapHalfHeight - (mapRows / 2 * mapResolution - playerMapY) * minimapResolution;
+		let playerXMmu = xMvuToMmu(playerXMvu);
+		let playerYMmu = yMvuToMmu(playerYMvu);
 		
 		let orientRad = toRad(playerOrient)
-		let midVertX = centerX + Math.cos(orientRad) * minimapCursorSide;
-		let midVertY = centerY + Math.sin(orientRad) * minimapCursorSide;
+		let midVertX = playerXMmu + Math.cos(orientRad) * cursorSideMmu;
+		let midVertY = playerYMmu + Math.sin(orientRad) * cursorSideMmu;
 		
 		let leftVertRad = orientRad + Math.PI * 1.25;
-		let leftVertX = centerX + Math.cos(leftVertRad) * minimapCursorSide;
-		let leftVertY = centerY + Math.sin(leftVertRad) * minimapCursorSide;
+		let leftVertX = playerXMmu + Math.cos(leftVertRad) * cursorSideMmu;
+		let leftVertY = playerYMmu + Math.sin(leftVertRad) * cursorSideMmu;
 		
 		let rightVertRad = orientRad - Math.PI * 1.25;
-		let rightVertX = centerX + Math.cos(rightVertRad) * minimapCursorSide;
-		let rightVertY = centerY + Math.sin(rightVertRad) * minimapCursorSide;
+		let rightVertX = playerXMmu + Math.cos(rightVertRad) * cursorSideMmu;
+		let rightVertY = playerYMmu + Math.sin(rightVertRad) * cursorSideMmu;
 		
 		minimapCtx.lineWidth = 2; 
 		minimapCtx.strokeStyle = "red"; 
@@ -213,9 +272,23 @@ $.perspective = (function() {
 	};	
 
 	return {
+	
 		start: function() {	
 			init();			
 		},	
+		
+		changeViewAngle: function(value) {
+			console.log("viewAngle changed from '" + angleRange + "' to '" + value + "'");
+			angleRange = value;
+			angleIncrement = angleRange / angleRes;	
+		},
+		
+		changeRayWidth: function(value) {
+			console.log("rayWidth changed from '" + angleWidthRes + "' to '" + value + "'");
+			angleWidthRes = value;
+			angleRes = width / angleWidthRes;			
+			angleIncrement = angleRange / angleRes;	
+		},
 	};
 
 })();
