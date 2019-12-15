@@ -1,0 +1,170 @@
+<div style="margin: 10px 0; border: 1px solid red; display: inline-block;">
+	<canvas id="perspectiveCanvas" width="700" height="400"></canvas>
+</div>
+<div style="margin: 10px 0; border: 1px solid red; display: inline-block;">
+	<canvas id="minimapCanvas" width="700" height="400"></canvas>
+</div>
+<script>var $ = $ || {};
+$.perspective = (function() {
+
+	let canvas = document.getElementById("perspectiveCanvas");
+	let ctx = canvas.getContext("2d");
+	let width;
+	let height;
+	let halfWidth;
+	let halfHeight;
+	
+	let minimapCanvas = document.getElementById("minimapCanvas");
+	let minimapCtx = minimapCanvas.getContext("2d");
+	let minimapWidth;
+	let minimapHeight;
+	let minimapHalfWidth;
+	let minimapHalfHeight;
+	
+	let interval = 20;
+	let innerIntervalCallback;
+	
+	// kolik jednotek má dílek mapy
+	let mapResolution = 30;
+			
+	// Wolfenstein typ -- dílky mapy mají konstantní velikost, 
+	// nemají patra a jsou vždy na sebe kolmé
+	// 0 = prázdno
+	// 1 = díl mapy (kostka) se zdmi typu 1
+	let mapRows = 7;
+	let mapCols = 7;
+	let map = [
+		[0,1,2,1,0,0,0],
+		[0,1,0,0,1,0,0],
+		[0,2,0,0,0,1,0],
+		[1,0,0,0,0,0,1],
+		[0,1,0,0,1,0,1],
+		[0,1,0,0,0,0,1],
+		[0,1,1,1,1,1,1]
+	];
+		
+	// pozice a orientace hráče na mapě
+	let playerMapX = mapRows / 2 * mapResolution;
+	let playerMapY = mapCols / 2 * mapResolution;
+	let playerOrient = 0; // 0-359	
+	
+	// rozsah v jakém hráč vidí
+	let angleRes = 2;
+	let angleRange = 90;
+	let angleIncrement = angleRange / width * angleRes;		
+	let rayStep = 5;		
+	let perspectiveLen = 0.1;
+	
+	¨// rozlišení minimapy (dílek -> px)
+	let minimapResolution = 1.2;
+	let minimapCursorSide = 10;
+	
+	let init = function() {	
+		width = canvas.width;
+		height = canvas.height;
+		halfWidth = width / 2; 
+		halfHeight = height / 2;
+		
+		minimapWidth = minimapCanvas.width;
+		minimapHeight = minimapCanvas.height;
+		minimapHalfWidth = minimapWidth / 2; 
+		minimapHalfHeight = minimapHeight / 2;
+
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);			
+	};		
+
+	let draw = function() {				
+		
+		ctx.fillStyle = "black";
+		ctx.fillRect(0, 0, width, height);
+		
+		
+		
+		let lastCellX = Math.floor(playerMapX / mapResolution);
+		let lastCellY = Math.floor(playerMapY / mapResolution);
+		for (let angle = 0; angle < angleRange; angle += angleIncrement) {
+			
+			let angleRad = angle / 180 * Math.PI;
+			let rayXStep = Math.cos(angleRad) * rayStep;
+			let rayYStep = Math.sin(angleRad) * rayStep;
+			
+			let rayX = playerMapX;
+			let rayY = playerMapY;
+			while (rayX > 0 && rayX < mapCols * mapResolution &&
+			
+			
+			let cellValue = map[lastCellY][lastCellX];
+			
+			
+			if (cellValue != 0) {
+				let distance = Math.sqrt(Math.pow(playerMapX - lastCellX * mapResolution) + Math.pow(playerMapY - lastCellY * mapResolution));
+				let rayH = height - distance * perspectiveLen;
+				minimapCtx.fillStyle = cellValue == 1 ? "yellow" : "green"; 
+				minimapCtx.fillRect(angle * angleRes, y, minimapCellSize, minimapCellSize);
+			}
+		}
+		
+		
+		drawMinimap();
+	}
+	
+	let drawMinimap = function() {
+		minimapCtx.fillStyle = "black";
+		minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight);
+
+		let minimapCellSize = mapResolution * minimapResolution;
+
+		for (let row = 0; row < mapRows; row++) {	
+			let rowData = map[row];
+			let y = minimapHalfHeight - (Math.floor(mapRows / 2) - row) * minimapCellSize;
+			for (let col = 0; col < mapCols; col++) {
+				let colData = rowData[col];
+				if (colData == 0)
+					continue;
+				let x = minimapHalfWidth - (Math.floor(mapCols / 2) - col) * minimapCellSize;
+				minimapCtx.fillStyle = "yellow"; 
+				minimapCtx.fillRect(x, y, minimapCellSize, minimapCellSize);
+			}
+		}
+		
+		drawCursor();
+	};
+	
+	let drawCursor = function() {
+		minimapCtx.strokeStyle = "red";		
+		minimapCtx.beginPath();
+		
+		let centerX = minimapHalfWidth - (mapRows / 2 * mapResolution - playerMapX) * minimapResolution;
+		let centerY = minimapHalfHeight - (mapCols / 2 * mapResolution - playerMapY) * minimapResolution;
+		
+		let orientRad = Math.PI * (playerOrient / 180 - 0.5);
+		let midVertX = centerX + Math.cos(orientRad) * minimapCursorSide;
+		let midVertY = centerY + Math.sin(orientRad) * minimapCursorSide;
+		
+		let leftVertRad = orientRad + Math.PI * 1.25;
+		let leftVertX = centerX + Math.cos(leftVertRad) * minimapCursorSide;
+		let leftVertY = centerY + Math.sin(leftVertRad) * minimapCursorSide;
+		
+		let rightVertRad = orientRad - Math.PI * 1.25;
+		let rightVertX = centerX + Math.cos(rightVertRad) * minimapCursorSide;
+		let rightVertY = centerY + Math.sin(rightVertRad) * minimapCursorSide;
+		
+		minimapCtx.lineWidth = 2; 
+		minimapCtx.strokeStyle = "red"; 
+		minimapCtx.moveTo(leftVertX, leftVertY);
+		minimapCtx.lineTo(midVertX, midVertY);
+		minimapCtx.lineTo(rightVertX, rightVertY);
+		minimapCtx.stroke();
+	};
+
+	return {
+		start: function() {	
+			init();			
+		},	
+	};
+
+})();
+
+$.perspective.start();</script>
