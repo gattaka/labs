@@ -25,22 +25,22 @@ $.perspective = (function() {
 	let innerIntervalCallback;
 	
 	// kolik jednotek má dílek mapy
-	let mapResolution = 30;
+	let mapResolution = 20;
 			
 	// Wolfenstein typ -- dílky mapy mají konstantní velikost, 
 	// nemají patra a jsou vždy na sebe kolmé
 	// 0 = prázdno
 	// 1 = díl mapy (kostka) se zdmi typu 1
 	let mapRows = 7;
-	let mapCols = 7;
+	let mapCols = 10;
 	let map = [
-		[0,1,2,1,0,0,0],
-		[0,1,0,0,1,0,0],
-		[0,2,0,0,0,1,0],
-		[1,0,0,0,0,0,1],
-		[0,1,0,0,1,0,1],
-		[0,1,0,0,0,0,1],
-		[0,1,1,1,1,1,1]
+		[0,1,2,1,4,5,6,1,0,0],
+		[0,6,0,0,0,0,0,3,2,0],
+		[3,2,0,0,0,0,0,0,1,1],
+		[5,0,0,0,0,0,0,0,0,4],
+		[4,2,0,0,1,0,0,0,0,1],
+		[0,3,0,0,0,0,0,0,0,4],
+		[0,1,7,1,9,7,5,2,1,8]
 	];
 	
 	// hranice
@@ -50,35 +50,71 @@ $.perspective = (function() {
 	let mapMaxY = (mapRows + 1) * mapResolution;
 		
 	// pozice a orientace hráče na mapě
-	let playerMapX = mapRows / 2 * mapResolution;
-	let playerMapY = mapCols / 2 * mapResolution;
+	let playerMapX = mapCols / 2 * mapResolution;
+	let playerMapY = mapRows / 2 * mapResolution;
 	let playerOrient = 270; // 0-360	
 	
 	// rozsah v jakém hráč vidí
-	let angleWidthRes = 10;
+	let angleWidthRes = 5;
 	let angleRes = width / angleWidthRes;
 	let angleRange = 90;
 	let angleIncrement = angleRange / angleRes;		
 	let rayStep = 5;		
-	let perspectiveLen = 0.1;	
+	let perspectiveLen = 0.5;	
 	
 	// rozlišení minimapy (dílek -> px)
 	let minimapResolution = 1.2;
 	let minimapCursorSide = 10;
 	
-	let init = function() {					
+	let walkSpeedStep = 2; 
+	let turnSpeedStep = 3;
+	let walkSpeed = 0;
+	let turnSpeed = 0;
+	
+	let init = function() {		
+		document.addEventListener("keydown", onKeyDown);
+		document.addEventListener("keyup", onKeyUp);
+	
 		innerIntervalCallback = setInterval(function() {
 			draw();
 		}, interval);			
 	};		
+	
+	let onKeyDown = function(event) {
+		switch (event.keyCode) {
+		case 38: 
+			walkSpeed = walkSpeedStep;
+			break;
+		case 40: 
+			walkSpeed = -walkSpeedStep;
+			break;
+		case 37: 
+			turnSpeed = -turnSpeedStep;
+			break;
+		case 39: 
+			turnSpeed = turnSpeedStep;
+			break;
+		}
+	};
+	
+	let onKeyUp = function(event) {
+		switch (event.keyCode) {
+		case 38: 
+		case 40: 
+			walkSpeed = 0;
+			break;			
+		case 37: 
+		case 39: 
+			turnSpeed = 0;
+			break;
+		}
+	};
 
 	let mapColor = function(id) {
-		switch (id) {
-		case 0: return "black";
-		case 1: return "yellow";		
-		default:
-		case 2: return "green";
-		}
+		if (id == 0) 		
+			return "black";
+		let hue = id * 255 / 10;
+		return "hsl(" + hue + ", 100%, 50%)";
 	};
 
 	let toRad = function(angle) {
@@ -88,6 +124,10 @@ $.perspective = (function() {
 	let draw = function() {						
 		ctx.fillStyle = "black";
 		ctx.fillRect(0, 0, width, height);
+		
+		playerOrient += turnSpeed;
+		playerMapX += Math.cos(toRad(playerOrient)) * walkSpeed;
+		playerMapY += Math.sin(toRad(playerOrient)) * walkSpeed;
 							
 		let angleRadStart = toRad(playerOrient - angleRange / 2);
 		let angleRadStop = toRad(playerOrient + angleRange / 2);
@@ -102,7 +142,13 @@ $.perspective = (function() {
 			while (cellValue == 0 && rayX > mapMinX && rayX < mapMaxX && rayY > mapMinY && rayY < mapMaxY) {
 				rayX += rayXStep;
 				rayY += rayYStep;
-				cellValue = map[Math.floor(rayY / mapResolution)][Math.floor(rayX / mapResolution)];				
+				let mapRow = Math.floor(rayY / mapResolution);
+				let mapCol = Math.floor(rayX / mapResolution);
+				if (mapRow >= 0 && mapRow < mapRows && mapCol >= 0 && mapCol <= mapCols) {
+					cellValue = map[mapRow][mapCol];				
+				} else {
+					cellValue = 0;
+				}				
 			}
 											
 			if (cellValue != 0) {
@@ -143,8 +189,8 @@ $.perspective = (function() {
 		minimapCtx.strokeStyle = "red";		
 		minimapCtx.beginPath();
 		
-		let centerX = minimapHalfWidth - (mapRows / 2 * mapResolution - playerMapX) * minimapResolution;
-		let centerY = minimapHalfHeight - (mapCols / 2 * mapResolution - playerMapY) * minimapResolution;
+		let centerX = minimapHalfWidth - (mapCols / 2 * mapResolution - playerMapX) * minimapResolution;
+		let centerY = minimapHalfHeight - (mapRows / 2 * mapResolution - playerMapY) * minimapResolution;
 		
 		let orientRad = toRad(playerOrient)
 		let midVertX = centerX + Math.cos(orientRad) * minimapCursorSide;
@@ -164,7 +210,7 @@ $.perspective = (function() {
 		minimapCtx.lineTo(midVertX, midVertY);
 		minimapCtx.lineTo(rightVertX, rightVertY);
 		minimapCtx.stroke();
-	};
+	};	
 
 	return {
 		start: function() {	
