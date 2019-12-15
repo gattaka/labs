@@ -2,20 +2,20 @@
 	<tbody>
 		<tr>
 			<td>View angle (0-360°)</td>
-			<td>Ray width (5-1)</td>
+			<td>Ray width (20-5)</td>
 		</tr>
 		<tr>
 			<td><input id="viewAngle" 
-				onchange="$.perspective.changeViewAngle(this.value)" style="width: 80px;" value="90"></td>
+				onchange="$.perspective.changeViewAngle(this.value)" style="width: 120px;" value="90"></td>
 			<td><input id="rayWidth"
-				onchange="$.perspective.changeRayWidth(this.value)" style="width: 80px;" value="5"></td>
+				onchange="$.perspective.changeRayWidth(this.value)" style="width: 100px;" value="10"></td>
 		</tr>
 	</tbody>
 </table>
-<div style="margin: 10px 0; border: 1px solid red; display: inline-block;">
+<div style="margin: 10px 0; display: inline-block;">
 	<canvas id="perspectiveCanvas" width="700" height="400"></canvas>
 </div>
-<div style="margin: 10px 0; border: 1px solid red; display: inline-block;">
+<div style="margin: 10px 0; display: inline-block;">
 	<canvas id="minimapCanvas" width="700" height="400"></canvas>
 </div>[/HTML]
 <script>var $ = $ || {};
@@ -47,20 +47,24 @@ $.perspective = (function() {
 	// kolik jednotek má dílek mapy
 	let cluToMvu = 20;
 	let mvuToMmu = 1.2;
-			
+				
 	// Wolfenstein typ -- dílky mapy mají konstantní velikost, 
 	// nemají patra a jsou vždy na sebe kolmé
 	// 0 = prázdno
 	// 1 = díl mapy (kostka) se zdmi typu 1
-	let mapRows = 7;
+	let mapRows = 11;
 	let mapCols = 10;
 	let map = [
-		[0,1,2,1,4,5,6,1,0,0],
-		[0,6,0,0,0,0,0,3,2,0],
-		[3,2,0,0,0,0,0,0,1,1],
-		[5,0,0,0,0,0,0,0,0,4],
-		[4,2,0,0,1,0,0,0,0,1],
-		[0,3,0,0,0,0,0,0,0,4],
+		[0,1,2,1,4,2,6,1,7,0],
+		[0,5,0,0,0,0,0,0,3,0],
+		[5,2,0,0,1,0,0,0,2,0],
+		[1,0,0,0,0,0,0,0,7,0],
+		[6,0,0,0,0,0,1,0,9,0],
+		[9,4,0,0,0,0,0,0,2,0],
+		[0,2,0,0,0,0,0,0,3,1],
+		[5,1,0,0,0,0,0,0,0,4],
+		[9,0,0,0,1,0,0,0,0,1],
+		[6,3,0,0,0,0,0,0,0,4],
 		[0,1,7,1,9,7,5,2,1,8]
 	];
 	
@@ -76,13 +80,13 @@ $.perspective = (function() {
 	let playerOrient = 270; // 0-360	
 	
 	// rozsah v jakém hráč vidí
-	let angleWidthRes = 5;
+	let angleWidthRes = 10;
 	let angleRes = width / angleWidthRes;
 	let angleRange = 90;
-	let angleIncrement = angleRange / angleRes;		
-	let rayStepMvu = 5;		
+	let angleIncrement = angleRange / angleRes;
+	let rayStepMvu = 2;		
 	let perspectiveLen = 0.5;	
-	
+		
 	let cursorSideMmu = 10;
 	
 	let walkSpeedStepMvu = 2; 
@@ -129,11 +133,20 @@ $.perspective = (function() {
 		}
 	};
 
-	let mapColor = function(id) {
+	let mapColor = function(id, light) {
 		if (id == 0) 		
 			return "black";
 		let hue = id * 255 / 10;
-		return "hsl(" + hue + ", 100%, 50%)";
+		if (typeof light === "undefined")
+			return "hsl(" + hue + ", 100%, 50%)";
+		return "hsl(" + hue + ", 100%, " + light + "%)";
+	};
+
+	let lightFromDistance = function(distanceMvu) {
+		let lightBaseMvu = 80;
+		let minLight = 5;
+		let maxLight = 50;		
+		return Math.max(minLight, Math.min(maxLight, 1000 / distanceMvu));
 	};
 
 	let toRad = function(angle) {
@@ -213,10 +226,10 @@ $.perspective = (function() {
 			minimapCtx.stroke();
 											
 			if (cellValue != 0) {
-				let distance = Math.sqrt(Math.pow(playerXMvu - rayXMvu, 2) + Math.pow(playerYMvu - rayYMvu, 2));
-				let yDiff = distance * perspectiveLen;
-				let segmentHeight = height - yDiff * 2;
-				ctx.fillStyle = mapColor(cellValue);
+				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - rayXMvu, 2) + Math.pow(playerYMvu - rayYMvu, 2));
+				let yDiff = distanceMvu * perspectiveLen;
+				let segmentHeight = height - yDiff * 2;				
+				ctx.fillStyle = mapColor(cellValue, lightFromDistance(distanceMvu));
 				ctx.fillRect(x, yDiff, angleWidthRes, segmentHeight);
 			}
 		}					
@@ -278,14 +291,20 @@ $.perspective = (function() {
 		},	
 		
 		changeViewAngle: function(value) {
-			console.log("viewAngle changed from '" + angleRange + "' to '" + value + "'");
-			angleRange = value;
+			if (isNaN(value))
+				return;
+			let newValue = Number(value);
+			console.log("viewAngle changed from '" + angleRange + "' to '" + newValue + "'");
+			angleRange = newValue;
 			angleIncrement = angleRange / angleRes;	
 		},
 		
 		changeRayWidth: function(value) {
-			console.log("rayWidth changed from '" + angleWidthRes + "' to '" + value + "'");
-			angleWidthRes = value;
+			if (isNaN(value))
+				return;
+			let newValue = Number(value);
+			console.log("rayWidth changed from '" + angleWidthRes + "' to '" + newValue + "'");
+			angleWidthRes = newValue;
 			angleRes = width / angleWidthRes;			
 			angleIncrement = angleRange / angleRes;	
 		},
