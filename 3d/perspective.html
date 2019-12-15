@@ -9,17 +9,17 @@ $.perspective = (function() {
 
 	let canvas = document.getElementById("perspectiveCanvas");
 	let ctx = canvas.getContext("2d");
-	let width;
-	let height;
-	let halfWidth;
-	let halfHeight;
+	let width = canvas.width;
+	let height = canvas.height;
+	let halfWidth = width / 2; 
+	let halfHeight = height / 2;
 	
 	let minimapCanvas = document.getElementById("minimapCanvas");
 	let minimapCtx = minimapCanvas.getContext("2d");
-	let minimapWidth;
-	let minimapHeight;
-	let minimapHalfWidth;
-	let minimapHalfHeight;
+	let minimapWidth = minimapCanvas.width;
+	let minimapHeight = minimapCanvas.height;
+	let minimapHalfWidth = minimapWidth / 2; 
+	let minimapHalfHeight = minimapHeight / 2;
 	
 	let interval = 20;
 	let innerIntervalCallback;
@@ -42,71 +42,78 @@ $.perspective = (function() {
 		[0,1,0,0,0,0,1],
 		[0,1,1,1,1,1,1]
 	];
+	
+	// hranice
+	let mapMinX = 0;
+	let mapMinY = 0;
+	let mapMaxX = (mapCols + 1) * mapResolution;
+	let mapMaxY = (mapRows + 1) * mapResolution;
 		
 	// pozice a orientace hráče na mapě
 	let playerMapX = mapRows / 2 * mapResolution;
 	let playerMapY = mapCols / 2 * mapResolution;
-	let playerOrient = 0; // 0-359	
+	let playerOrient = 270; // 0-360	
 	
 	// rozsah v jakém hráč vidí
-	let angleRes = 2;
+	let angleWidthRes = 10;
+	let angleRes = width / angleWidthRes;
 	let angleRange = 90;
-	let angleIncrement = angleRange / width * angleRes;		
+	let angleIncrement = angleRange / angleRes;		
 	let rayStep = 5;		
-	let perspectiveLen = 0.1;
+	let perspectiveLen = 0.1;	
 	
-	¨// rozlišení minimapy (dílek -> px)
+	// rozlišení minimapy (dílek -> px)
 	let minimapResolution = 1.2;
 	let minimapCursorSide = 10;
 	
-	let init = function() {	
-		width = canvas.width;
-		height = canvas.height;
-		halfWidth = width / 2; 
-		halfHeight = height / 2;
-		
-		minimapWidth = minimapCanvas.width;
-		minimapHeight = minimapCanvas.height;
-		minimapHalfWidth = minimapWidth / 2; 
-		minimapHalfHeight = minimapHeight / 2;
-
+	let init = function() {					
 		innerIntervalCallback = setInterval(function() {
 			draw();
 		}, interval);			
 	};		
 
-	let draw = function() {				
-		
+	let mapColor = function(id) {
+		switch (id) {
+		case 0: return "black";
+		case 1: return "yellow";		
+		default:
+		case 2: return "green";
+		}
+	};
+
+	let toRad = function(angle) {
+		return Math.PI * angle / 180;
+	};
+
+	let draw = function() {						
 		ctx.fillStyle = "black";
 		ctx.fillRect(0, 0, width, height);
-		
-		
-		
-		let lastCellX = Math.floor(playerMapX / mapResolution);
-		let lastCellY = Math.floor(playerMapY / mapResolution);
-		for (let angle = 0; angle < angleRange; angle += angleIncrement) {
-			
-			let angleRad = angle / 180 * Math.PI;
+							
+		let angleRadStart = toRad(playerOrient - angleRange / 2);
+		let angleRadStop = toRad(playerOrient + angleRange / 2);
+		let angleRadIncrement = toRad(angleIncrement);
+		for (let angleRad = angleRadStart, x = 0; angleRad < angleRadStop; angleRad += angleRadIncrement, x += angleWidthRes) {		
 			let rayXStep = Math.cos(angleRad) * rayStep;
-			let rayYStep = Math.sin(angleRad) * rayStep;
-			
+			let rayYStep = Math.sin(angleRad) * rayStep;			
 			let rayX = playerMapX;
 			let rayY = playerMapY;
-			while (rayX > 0 && rayX < mapCols * mapResolution &&
 			
-			
-			let cellValue = map[lastCellY][lastCellX];
-			
-			
+			let cellValue = 0;
+			while (cellValue == 0 && rayX > mapMinX && rayX < mapMaxX && rayY > mapMinY && rayY < mapMaxY) {
+				rayX += rayXStep;
+				rayY += rayYStep;
+				cellValue = map[Math.floor(rayY / mapResolution)][Math.floor(rayX / mapResolution)];				
+			}
+											
 			if (cellValue != 0) {
-				let distance = Math.sqrt(Math.pow(playerMapX - lastCellX * mapResolution) + Math.pow(playerMapY - lastCellY * mapResolution));
-				let rayH = height - distance * perspectiveLen;
-				minimapCtx.fillStyle = cellValue == 1 ? "yellow" : "green"; 
-				minimapCtx.fillRect(angle * angleRes, y, minimapCellSize, minimapCellSize);
+				let distance = Math.sqrt(Math.pow(playerMapX - rayX, 2) + Math.pow(playerMapY - rayY, 2));
+				let yDiff = distance * perspectiveLen;
+				let segmentHeight = height - yDiff * 2;
+				ctx.fillStyle = mapColor(cellValue);
+				ctx.fillRect(x, yDiff, angleWidthRes, segmentHeight);
 			}
 		}
-		
-		
+				
 		drawMinimap();
 	}
 	
@@ -124,7 +131,7 @@ $.perspective = (function() {
 				if (colData == 0)
 					continue;
 				let x = minimapHalfWidth - (Math.floor(mapCols / 2) - col) * minimapCellSize;
-				minimapCtx.fillStyle = "yellow"; 
+				minimapCtx.fillStyle = mapColor(colData); 
 				minimapCtx.fillRect(x, y, minimapCellSize, minimapCellSize);
 			}
 		}
@@ -139,7 +146,7 @@ $.perspective = (function() {
 		let centerX = minimapHalfWidth - (mapRows / 2 * mapResolution - playerMapX) * minimapResolution;
 		let centerY = minimapHalfHeight - (mapCols / 2 * mapResolution - playerMapY) * minimapResolution;
 		
-		let orientRad = Math.PI * (playerOrient / 180 - 0.5);
+		let orientRad = toRad(playerOrient)
 		let midVertX = centerX + Math.cos(orientRad) * minimapCursorSide;
 		let midVertY = centerY + Math.sin(orientRad) * minimapCursorSide;
 		
