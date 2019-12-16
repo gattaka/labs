@@ -3,7 +3,7 @@
 	<tbody>
 		<tr>
 			<td>View angle (0-360°)</td>
-			<td>Ray width (20-5)</td>
+			<td>Ray width (20-1)</td>
 			<td>Ray sample step (0.1-5)</td>
 			<td>Lens size (10-100)</td>
 		</tr>
@@ -11,13 +11,13 @@
 			<td><input id="viewAngle" 
 				onchange="$.perspective.changeViewAngle(this.value)" style="width: 120px;" value="90"></td>
 			<td><input id="rayWidth"
-				onchange="$.perspective.changeRayWidth(this.value)" style="width: 100px;" value="10"></td>
+				onchange="$.perspective.changeRayWidth(this.value)" style="width: 100px;" value="5"></td>
 			<td><input id="raySampleStep"
-				onchange="$.perspective.changeRaySampleStep(this.value)" style="width: 120px;" value="1"></td>
+				onchange="$.perspective.changeRaySampleStep(this.value)" style="width: 120px;" value="0.2"></td>
 			<td><input id="lensSize"
 				onchange="$.perspective.changeLensSize(this.value)" style="width: 120px;" value="20"></td>
 			<td>
-				<input id="showRays" type="checkbox" onclick="$.perspective.changeShowRays(this.checked)" checked>Show rays?</input>
+				<input id="showRays" type="checkbox" onclick="$.perspective.changeShowRays(this.checked)">Show rays?</input>
 			</td>
 		</tr>
 	</tbody>
@@ -94,27 +94,29 @@ $.perspective = (function() {
 	let playerVOrient = 270; // 0-360	
 	
 	// rozsah v jakém hráč vidí
-	let angleWidthRes = 10;
+	let angleWidthRes = 5;
 	let angleRes = width / angleWidthRes;
 	let angleRange = 90;
 	let angleIncrement = angleRange / angleRes;
-	let rayStepMvu = 1;		
+	let rayStepMvu = 0.2;		
 	let perspectiveLen = 20;	
 	
 	let walkSpeedStepMvu = 2; 
 	let walkSpeedForwardMvu = 0;
 	let walkSpeedSideMvu = 0;
 	
-	let mouseSensitivity = 0.5;
+	let mouseHSensitivity = 0.5;
+	let mouseVSensitivity = 1.5;
 		
-	let showRays = true;
+	let showRays = false;
 	
 	let init = function() {		
 		document.addEventListener("keydown", onKeyDown);
 		document.addEventListener("keyup", onKeyUp);	
 		
 		canvas.addEventListener("mousemove", function (e) {
-			playerHOrient = mouseSensitivity * (e.clientX - width);
+			playerHOrient = mouseHSensitivity * (e.clientX - width / 2);
+			playerVOrient = mouseVSensitivity * (height / 2 - e.clientY);
 		}, false);
 	
 		innerIntervalCallback = setInterval(function() {
@@ -163,8 +165,8 @@ $.perspective = (function() {
 
 	let lightFromDistance = function(distanceMvu) {
 		let lightBaseMvu = 80;
-		let minLight = 15;
-		let maxLight = 50;		
+		let minLight = 5;
+		let maxLight = 40;		
 		return Math.max(minLight, Math.min(maxLight, 1000 / distanceMvu));
 	};
 
@@ -233,10 +235,11 @@ $.perspective = (function() {
 			}
 			
 			// minimap ray show
-			if (showRays) {
+			if (showRays || angleRad == angleRadStart || angleRad + angleRadIncrement >= angleRadStop) {
 				let rayXMmu = xMvuToMmu(rayXMvu);
 				let rayYMmu = yMvuToMmu(rayYMvu);
 				
+				minimapCtx.beginPath();
 				minimapCtx.lineWidth = 2; 
 				minimapCtx.strokeStyle = "white";
 				minimapCtx.moveTo(playerXMmu, playerYMmu);
@@ -248,7 +251,7 @@ $.perspective = (function() {
 				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - rayXMvu, 2) + Math.pow(playerYMvu - rayYMvu, 2));				
 				// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance
 				let segmentHeightScu = perspectiveLen * 1000 / distanceMvu;
-				let segmentYScu = height / 2 - segmentHeightScu / 2;
+				let segmentYScu = height / 2 - segmentHeightScu / 2 + playerVOrient;
 				ctx.fillStyle = mapColor(cellValue, lightFromDistance(distanceMvu));
 				ctx.fillRect(x, segmentYScu, angleWidthRes, segmentHeightScu);
 			}
@@ -279,8 +282,7 @@ $.perspective = (function() {
 	
 	let drawCursor = function() {
 		minimapCtx.strokeStyle = "red";		
-		minimapCtx.beginPath();
-		
+				
 		let playerXMmu = xMvuToMmu(playerXMvu);
 		let playerYMmu = yMvuToMmu(playerYMvu);
 		
@@ -296,12 +298,13 @@ $.perspective = (function() {
 		let rightVertX = playerXMmu + Math.cos(rightVertRad) * cursorSideMmu;
 		let rightVertY = playerYMmu + Math.sin(rightVertRad) * cursorSideMmu;
 		
+		minimapCtx.beginPath();
 		minimapCtx.lineWidth = 2; 
 		minimapCtx.strokeStyle = "red"; 
 		minimapCtx.moveTo(leftVertX, leftVertY);
 		minimapCtx.lineTo(midVertX, midVertY);
 		minimapCtx.lineTo(rightVertX, rightVertY);
-		minimapCtx.stroke();
+		minimapCtx.stroke();		
 	};	
 
 	return {
