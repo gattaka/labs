@@ -1,18 +1,28 @@
-[HTML]<table>
+[HTML]Ovládání: W - dopředu, S - dozadu, A - úkrok doleva, D - úkrok doprava, Myš - pohled
+<table>
 	<tbody>
 		<tr>
 			<td>View angle (0-360°)</td>
 			<td>Ray width (20-5)</td>
+			<td>Ray sample step (0.1-5)</td>
+			<td>Lens size (10-100)</td>
 		</tr>
 		<tr>
 			<td><input id="viewAngle" 
 				onchange="$.perspective.changeViewAngle(this.value)" style="width: 120px;" value="90"></td>
 			<td><input id="rayWidth"
 				onchange="$.perspective.changeRayWidth(this.value)" style="width: 100px;" value="10"></td>
+			<td><input id="raySampleStep"
+				onchange="$.perspective.changeRaySampleStep(this.value)" style="width: 120px;" value="1"></td>
+			<td><input id="lensSize"
+				onchange="$.perspective.changeLensSize(this.value)" style="width: 120px;" value="20"></td>
+			<td>
+				<input id="showRays" type="checkbox" onclick="$.perspective.changeShowRays(this.checked)" checked>Show rays?</input>
+			</td>
 		</tr>
 	</tbody>
 </table>
-<div style="margin: 10px 0; display: inline-block;">
+<div style="margin: 10px 0; display: inline-block; cursor: none;">
 	<canvas id="perspectiveCanvas" width="700" height="400"></canvas>
 </div>
 <div style="margin: 10px 0; display: inline-block;">
@@ -48,6 +58,9 @@ $.perspective = (function() {
 	let cluToMvu = 20;
 	let mvuToMmu = 1.2;
 				
+	// minimap cursor
+	let cursorSideMmu = 10;
+				
 	// Wolfenstein typ -- dílky mapy mají konstantní velikost, 
 	// nemají patra a jsou vždy na sebe kolmé
 	// 0 = prázdno
@@ -77,26 +90,32 @@ $.perspective = (function() {
 	// pozice a orientace hráče na mapě
 	let playerXMvu = mapCols / 2 * cluToMvu;
 	let playerYMvu = mapRows / 2 * cluToMvu;
-	let playerOrient = 270; // 0-360	
+	let playerHOrient = 270; // 0-360	
+	let playerVOrient = 270; // 0-360	
 	
 	// rozsah v jakém hráč vidí
 	let angleWidthRes = 10;
 	let angleRes = width / angleWidthRes;
 	let angleRange = 90;
 	let angleIncrement = angleRange / angleRes;
-	let rayStepMvu = 2;		
-	let perspectiveLen = 0.5;	
-		
-	let cursorSideMmu = 10;
+	let rayStepMvu = 1;		
+	let perspectiveLen = 20;	
 	
 	let walkSpeedStepMvu = 2; 
-	let turnSpeedStep = 3;
-	let walkSpeedMvu = 0;
-	let turnSpeed = 0;
+	let walkSpeedForwardMvu = 0;
+	let walkSpeedSideMvu = 0;
+	
+	let mouseSensitivity = 0.5;
+		
+	let showRays = true;
 	
 	let init = function() {		
 		document.addEventListener("keydown", onKeyDown);
-		document.addEventListener("keyup", onKeyUp);
+		document.addEventListener("keyup", onKeyUp);	
+		
+		canvas.addEventListener("mousemove", function (e) {
+			playerHOrient = mouseSensitivity * (e.clientX - width);
+		}, false);
 	
 		innerIntervalCallback = setInterval(function() {
 			draw();
@@ -106,16 +125,16 @@ $.perspective = (function() {
 	let onKeyDown = function(event) {
 		switch (event.keyCode) {
 		case 87: 
-			walkSpeedMvu = walkSpeedStepMvu;
+			walkSpeedForwardMvu = walkSpeedStepMvu;
 			break;
 		case 83: 
-			walkSpeedMvu = -walkSpeedStepMvu;
+			walkSpeedForwardMvu = -walkSpeedStepMvu;
 			break;
 		case 65: 
-			turnSpeed = -turnSpeedStep;
+			walkSpeedSideMvu = walkSpeedStepMvu;
 			break;
 		case 68: 
-			turnSpeed = turnSpeedStep;
+			walkSpeedSideMvu = -walkSpeedStepMvu;
 			break;
 		}
 	};
@@ -124,11 +143,11 @@ $.perspective = (function() {
 		switch (event.keyCode) {
 		case 87: 
 		case 83: 
-			walkSpeedMvu = 0;
+			walkSpeedForwardMvu = 0;
 			break;			
 		case 65: 
 		case 68: 
-			turnSpeed = 0;
+			walkSpeedSideMvu = 0;
 			break;
 		}
 	};
@@ -144,7 +163,7 @@ $.perspective = (function() {
 
 	let lightFromDistance = function(distanceMvu) {
 		let lightBaseMvu = 80;
-		let minLight = 5;
+		let minLight = 15;
 		let maxLight = 50;		
 		return Math.max(minLight, Math.min(maxLight, 1000 / distanceMvu));
 	};
@@ -167,11 +186,9 @@ $.perspective = (function() {
 		drawScene();
 	};
 	
-	let updatePlayer = function() {
-		playerOrient += turnSpeed;
-							
-		let draftPlayerXMvu = playerXMvu + Math.cos(toRad(playerOrient)) * walkSpeedMvu;
-		let draftPlayerYMvu = playerYMvu + Math.sin(toRad(playerOrient)) * walkSpeedMvu;
+	let updatePlayer = function() {							
+		let draftPlayerXMvu = playerXMvu + Math.cos(toRad(playerHOrient)) * walkSpeedForwardMvu + Math.cos(toRad(playerHOrient - 90)) * walkSpeedSideMvu;
+		let draftPlayerYMvu = playerYMvu + Math.sin(toRad(playerHOrient)) * walkSpeedForwardMvu + Math.sin(toRad(playerHOrient - 90)) * walkSpeedSideMvu;
 		let draftPlayerXClu = Math.floor(draftPlayerXMvu / cluToMvu);
 		let draftPlayerYClu = Math.floor(draftPlayerYMvu / cluToMvu);
 		if (draftPlayerYClu >= 0 && draftPlayerYClu < mapRows && draftPlayerXClu >= 0 && draftPlayerXClu <= mapCols) {
@@ -190,9 +207,9 @@ $.perspective = (function() {
 		// minimap info
 		let playerXMmu = xMvuToMmu(playerXMvu);
 		let playerYMmu = yMvuToMmu(playerYMvu);
-							
-		let angleRadStart = toRad(playerOrient - angleRange / 2);
-		let angleRadStop = toRad(playerOrient + angleRange / 2);
+		
+		let angleRadStart = toRad(playerHOrient - angleRange / 2);
+		let angleRadStop = toRad(playerHOrient + angleRange / 2);
 		let angleRadIncrement = toRad(angleIncrement);
 		for (let angleRad = angleRadStart, x = 0; angleRad < angleRadStop; angleRad += angleRadIncrement, x += angleWidthRes) {		
 			let rayXStepMvu = Math.cos(angleRad) * rayStepMvu;
@@ -216,21 +233,24 @@ $.perspective = (function() {
 			}
 			
 			// minimap ray show
-			let rayXMmu = xMvuToMmu(rayXMvu);
-			let rayYMmu = yMvuToMmu(rayYMvu);
+			if (showRays) {
+				let rayXMmu = xMvuToMmu(rayXMvu);
+				let rayYMmu = yMvuToMmu(rayYMvu);
+				
+				minimapCtx.lineWidth = 2; 
+				minimapCtx.strokeStyle = "white";
+				minimapCtx.moveTo(playerXMmu, playerYMmu);
+				minimapCtx.lineTo(rayXMmu, rayYMmu);
+				minimapCtx.stroke();
+			}
 			
-			minimapCtx.lineWidth = 2; 
-			minimapCtx.strokeStyle = "white"; 
-			minimapCtx.moveTo(playerXMmu, playerYMmu);
-			minimapCtx.lineTo(rayXMmu, rayYMmu);
-			minimapCtx.stroke();
-											
 			if (cellValue != 0) {
-				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - rayXMvu, 2) + Math.pow(playerYMvu - rayYMvu, 2));
-				let yDiff = distanceMvu * perspectiveLen;
-				let segmentHeight = height - yDiff * 2;				
+				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - rayXMvu, 2) + Math.pow(playerYMvu - rayYMvu, 2));				
+				// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance
+				let segmentHeightScu = perspectiveLen * 1000 / distanceMvu;
+				let segmentYScu = height / 2 - segmentHeightScu / 2;
 				ctx.fillStyle = mapColor(cellValue, lightFromDistance(distanceMvu));
-				ctx.fillRect(x, yDiff, angleWidthRes, segmentHeight);
+				ctx.fillRect(x, segmentYScu, angleWidthRes, segmentHeightScu);
 			}
 		}					
 	}
@@ -264,7 +284,7 @@ $.perspective = (function() {
 		let playerXMmu = xMvuToMmu(playerXMvu);
 		let playerYMmu = yMvuToMmu(playerYMvu);
 		
-		let orientRad = toRad(playerOrient)
+		let orientRad = toRad(playerHOrient)
 		let midVertX = playerXMmu + Math.cos(orientRad) * cursorSideMmu;
 		let midVertY = playerYMmu + Math.sin(orientRad) * cursorSideMmu;
 		
@@ -308,6 +328,28 @@ $.perspective = (function() {
 			angleRes = width / angleWidthRes;			
 			angleIncrement = angleRange / angleRes;	
 		},
+		
+		changeRaySampleStep: function(value) {
+			if (isNaN(value))
+				return;
+			let newValue = Number(value);
+			console.log("raySampleStep changed from '" + rayStepMvu + "' to '" + newValue + "'");
+			rayStepMvu = newValue;
+		},	
+
+		changeLensSize: function(value) {
+			if (isNaN(value))
+				return;
+			let newValue = Number(value);
+			console.log("lensSize changed from '" + perspectiveLen + "' to '" + newValue + "'");
+			perspectiveLen = newValue;
+		},
+		
+		changeShowRays: function(value) {
+			console.log("showRays changed from '" + showRays + "' to '" + value + "'");
+			showRays = value;
+		},
+		
 	};
 
 })();
