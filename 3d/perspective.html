@@ -3,19 +3,16 @@
 	<tbody>
 		<tr>
 			<td>View angle (0-360°)</td>
-			<td>Ray width (20-1)</td>
 			<td>Ray sample step (0.1-5)</td>
-			<td>Lens size (10-100)</td>
+			<td>Lens size (100-1000)</td>
 		</tr>
 		<tr>
 			<td><input id="viewAngle" 
 				onchange="$.perspective.changeViewAngle(this.value)" style="width: 120px;" value="90"></td>
-			<td><input id="rayWidth"
-				onchange="$.perspective.changeRayWidth(this.value)" style="width: 100px;" value="5"></td>
 			<td><input id="raySampleStep"
 				onchange="$.perspective.changeRaySampleStep(this.value)" style="width: 120px;" value="0.2"></td>
 			<td><input id="lensSize"
-				onchange="$.perspective.changeLensSize(this.value)" style="width: 120px;" value="20"></td>
+				onchange="$.perspective.changeLensSize(this.value)" style="width: 120px;" value="10"></td>
 			<td>
 				<input id="showRays" type="checkbox" onclick="$.perspective.changeShowRays(this.checked)">Show rays?</input>
 			</td>
@@ -95,12 +92,12 @@ $.perspective = (function() {
 	//let playerVOrient = 270; // 0-360	
 	
 	// rozsah v jakém hráč vidí
-	let angleWidthRes = 5;
-	let angleRes = width / angleWidthRes;
-	let angleRange = 90;
-	let angleIncrement = angleRange / angleRes;
+	let rayWidthScu = 1;
+	let rayCount = width / rayWidthScu;
+	let angleRangeDeg = 90;
+	let angleIncrDeg = angleRangeDeg / rayCount;
 	let rayStepMvu = 0.2;		
-	let perspectiveLen = 20;	
+	let lensMultiplier = 10;	
 	
 	let walkSpeedStepMvu = 2; 
 	let walkSpeedForwardMvu = 0;
@@ -195,7 +192,7 @@ $.perspective = (function() {
 		let draftPlayerXClu = Math.floor(draftPlayerXMvu / cluToMvu);
 		let draftPlayerYClu = Math.floor(draftPlayerYMvu / cluToMvu);
 		if (draftPlayerYClu >= 0 && draftPlayerYClu < mapRows && draftPlayerXClu >= 0 && draftPlayerXClu <= mapCols) {
-			cellValue = map[draftPlayerYClu][draftPlayerXClu];
+			let cellValue = map[draftPlayerYClu][draftPlayerXClu];
 			if (cellValue == 0) {
 				playerXMvu = draftPlayerXMvu;
 				playerYMvu = draftPlayerYMvu;
@@ -228,24 +225,28 @@ $.perspective = (function() {
 	};
 	
 	let checkHit = function(xClu, yClu, rayXMvu, rayYMvu, playerXMvu, playerYMvu) {
+		// https://www.mathsisfun.com/algebra/vectors-cross-product.html
 		// https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
 		// p + t r = q + u s
 		
-		// přímky buňky
-		// ^ ---> ^
+		// přímky buňky -- je potřeba aby byly zachovány normály, 
+		// které poslouží k odlišení počátku přímky od jejího konce
+		// normála je vždy ve směru doleva od přímky se směrem nahoru
+		// ^ ---> |
 		// |	  |
-		// | ---> |
+		// | <--- v		
 		
 		// p + t * r
 		let lineLeft = {x: xClu * cluToMvu, y: yClu * cluToMvu, w: 0, h: cluToMvu};
-		let lineRight = {x: (xClu + 1) * cluToMvu, y: yClu * cluToMvu, w: 0, h: cluToMvu};
+		let lineRight = {x: (xClu + 1) * cluToMvu, y: (yClu + 1) * cluToMvu, w: 0, h: -cluToMvu};
 		let lineTop = {x: xClu * cluToMvu, y: (yClu + 1) * cluToMvu, w: cluToMvu, h: 0};
-		let lineBottom = {x: xClu * cluToMvu, y: yClu * cluToMvu, w: cluToMvu, h: 0};
+		let lineBottom = {x: (xClu + 1) * cluToMvu, y: yClu * cluToMvu, w: -cluToMvu, h: 0};
 		let lines = [lineLeft, lineRight, lineTop, lineBottom];
 		
 		// q + u * s
 		let ray = {x: playerXMvu, y: playerYMvu, w: rayXMvu - playerXMvu, h: rayYMvu - playerYMvu};
 		
+		let result = { hit: false };
 		for (let i = 0; i < 4; i++) {
 			let line = lines[i];
 			
@@ -264,17 +265,23 @@ $.perspective = (function() {
 			// If r × s = 0 and (q − p) × r ≠ 0, then the two lines are parallel and non-intersecting.
 			// If r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t r = q + u s.
 			// Otherwise, the two line segments are not parallel but do not intersect.
-			if (vecCross(r, s) != 0 && t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-				return {
-					hit: true, 
-					orientation: i,
-					value: map[yClu][xClu], // TODO povrch stěny, ne celé kostky
-					point: vecAdd(p, vecScal(r, t))
-				};
+			if (vecCross(r, s) != 0 && t >= 0 && t <= 1 && u >= 0 && u <= 1) {							
+				// hit -- ale je nejbližší?
+				let hitPoint = vecAdd(p, vecScal(r, t));
+				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitPoint.x, 2) + Math.pow(playerYMvu - hitPoint.y, 2))
+				if (!result.hit || result.distance > distanceMvu) {					
+					result = {
+						hit: true, 
+						value: map[yClu][xClu], // TODO povrch stěny, ne celé kostky
+						distanceMvu: distanceMvu,
+						point: hitPoint,
+						lineOriginDistanceMvu: Math.sqrt(Math.pow(p.x - hitPoint.x, 2) + Math.pow(p.y - hitPoint.y, 2))
+					};
+				}
 			}
 		}
 		
-		return { hit: false };
+		return result;
 	};
 	
 	let drawScene = function() {			
@@ -285,10 +292,10 @@ $.perspective = (function() {
 		let playerXMmu = xMvuToMmu(playerXMvu);
 		let playerYMmu = yMvuToMmu(playerYMvu);
 				
-		let angleRadStart = toRad(playerHOrient - angleRange / 2);
-		let angleRadStop = toRad(playerHOrient + angleRange / 2);
-		let angleRadIncrement = toRad(angleIncrement);
-		for (let angleRad = angleRadStart, x = 0; angleRad < angleRadStop; angleRad += angleRadIncrement, x += angleWidthRes) {		
+		let angleStartRad = toRad(playerHOrient - angleRangeDeg / 2);
+		let angleStopRad = toRad(playerHOrient + angleRangeDeg / 2);
+		let angleIncrRad = toRad(angleIncrDeg);
+		for (let angleRad = angleStartRad, xScu = 0; angleRad < angleStopRad; angleRad += angleIncrRad, xScu += rayWidthScu) {		
 			let rayXStepMvu = Math.cos(angleRad) * rayStepMvu;
 			let rayYStepMvu = Math.sin(angleRad) * rayStepMvu;			
 			let rayXMvu = playerXMvu;
@@ -298,7 +305,7 @@ $.perspective = (function() {
 			let yClu = -1;
 			let hitResult = {hit: false};
 			// TODO během kontrol kolize přes protínbání přímek, není potřeba dělat iterativní kroky paprsku -- paprsek je jedna velká přímka
-			while (cellValue == 0 && rayXMvu > minXMvu && rayXMvu < maxXMvu && rayYMvu > minYMvu && rayYMvu < maxYMvu) {
+			while (rayXMvu > minXMvu && rayXMvu < maxXMvu && rayYMvu > minYMvu && rayYMvu < maxYMvu) {
 				rayXMvu += rayXStepMvu;
 				rayYMvu += rayYStepMvu;
 				xClu = Math.floor(rayXMvu / cluToMvu);
@@ -316,7 +323,7 @@ $.perspective = (function() {
 			}
 										
 			// minimap ray show
-			if (showRays || angleRad == angleRadStart || angleRad + angleRadIncrement >= angleRadStop) {
+			if (showRays || angleRad == angleStartRad || angleRad + angleIncrRad >= angleStopRad) {
 				let rayXMmu = xMvuToMmu(rayXMvu);
 				let rayYMmu = yMvuToMmu(rayYMvu);
 				
@@ -330,22 +337,24 @@ $.perspective = (function() {
 			
 			if (hitResult.hit) {
 				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - rayXMvu, 2) + Math.pow(playerYMvu - rayYMvu, 2));				
-				// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance
-				let segmentHeightScu = perspectiveLen * 1000 / distanceMvu;
-				let segmentYScu = height / 2 - segmentHeightScu / 2; // + playerVOrient;
-				
-				let old = true;
-				if (old) {
-					ctx.fillStyle = mapColor(hitResult.value, lightFromDistance(distanceMvu));
-					ctx.fillRect(x, segmentYScu, angleWidthRes, segmentHeightScu);
-				} else {
-					let img = document.querySelector('img');
-					let imgwidth = img.offsetWidth;
-					let imgheight = img.offsetHeight;
-					let imgOffset = processImgOffset(xClu, yClu, rayXMvu, rayYMvu, playerXMvu, playerYMvu);
-					// context.drawImage(img,sx,sy,swidth,sheight,x,y,width,height);
-					ctx.drawImage(img, lastXImgOffset * angleWidthRes, 0, angleWidthRes, imgheight, x, segmentYScu, angleWidthRes, segmentHeightScu);
-				}
+				// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance				
+				let mvuToScu = lensMultiplier * 100 / distanceMvu;
+				let img = document.querySelector('img');
+				// Převod MVU na IMG jednotky
+				let xMvuToImg = img.offsetWidth / cluToMvu;
+				let yMvuToImg = img.offsetHeight / cluToMvu;
+				let sourceWidthImg = xMvuToImg * rayWidthScu / mvuToScu;
+				let sourceHeightImg = img.offsetHeight;	
+				let sourceXImg = xMvuToImg * hitResult.lineOriginDistanceMvu;
+				let sourceYImg = 0;
+				let targetWidthScu = rayWidthScu;
+				let targetHeightScu = sourceHeightImg / yMvuToImg * mvuToScu;			
+				let targetXScu = xScu;
+				let targetYScu = height / 2 - targetHeightScu / 2; // + playerVOrient;				
+				// https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage
+				ctx.drawImage(img, 
+					sourceXImg, sourceYImg, sourceWidthImg, sourceHeightImg, 
+					targetXScu, targetYScu, targetWidthScu, targetHeightScu);				
 			}		
 		}					
 	}
@@ -409,19 +418,19 @@ $.perspective = (function() {
 			if (isNaN(value))
 				return;
 			let newValue = Number(value);
-			console.log("viewAngle changed from '" + angleRange + "' to '" + newValue + "'");
-			angleRange = newValue;
-			angleIncrement = angleRange / angleRes;	
+			console.log("viewAngle changed from '" + angleRangeDeg + "' to '" + newValue + "'");
+			angleRangeDeg = newValue;
+			angleIncrDeg = angleRangeDeg / rayCount;	
 		},
 		
 		changeRayWidth: function(value) {
 			if (isNaN(value))
 				return;
 			let newValue = Number(value);
-			console.log("rayWidth changed from '" + angleWidthRes + "' to '" + newValue + "'");
-			angleWidthRes = newValue;
-			angleRes = width / angleWidthRes;			
-			angleIncrement = angleRange / angleRes;	
+			console.log("rayWidth changed from '" + rayWidthScu + "' to '" + newValue + "'");
+			rayWidthScu = newValue;
+			rayCount = width / rayWidthScu;			
+			angleIncrDeg = angleRangeDeg / rayCount;	
 		},
 		
 		changeRaySampleStep: function(value) {
@@ -436,8 +445,8 @@ $.perspective = (function() {
 			if (isNaN(value))
 				return;
 			let newValue = Number(value);
-			console.log("lensSize changed from '" + perspectiveLen + "' to '" + newValue + "'");
-			perspectiveLen = newValue;
+			console.log("lensSize changed from '" + lensMultiplier + "' to '" + newValue + "'");
+			lensMultiplier = newValue;
 		},
 		
 		changeShowRays: function(value) {
