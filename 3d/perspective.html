@@ -27,7 +27,8 @@
 </div>
 <div style="margin: 10px 0; display: inline-block;">
 	<canvas id="minimapCanvas" width="700" height="400"></canvas>
-</div>[/HTML]
+</div>
+<img src="./metal.jpg" style="display: block;" />[/HTML]
 <script>var $ = $ || {};
 $.perspective = (function() {
 
@@ -91,7 +92,7 @@ $.perspective = (function() {
 	let playerXMvu = mapCols / 2 * cluToMvu;
 	let playerYMvu = mapRows / 2 * cluToMvu;
 	let playerHOrient = 270; // 0-360	
-	let playerVOrient = 270; // 0-360	
+	//let playerVOrient = 270; // 0-360	
 	
 	// rozsah v jakém hráč vidí
 	let angleWidthRes = 5;
@@ -116,7 +117,7 @@ $.perspective = (function() {
 		
 		canvas.addEventListener("mousemove", function (e) {
 			playerHOrient = mouseHSensitivity * (e.clientX - width / 2);
-			playerVOrient = mouseVSensitivity * (height / 2 - e.clientY);
+			//playerVOrient = mouseVSensitivity * (height / 2 - e.clientY);
 		}, false);
 	
 		innerIntervalCallback = setInterval(function() {
@@ -202,6 +203,80 @@ $.perspective = (function() {
 		}
 	};
 	
+	let vecCross = function(a, b) {
+		// a × b = ax * by − ay * bx
+		return a.x * b.y - a.y * b.x;
+	};
+	
+	let vecScal = function(a, t) {
+		// a * t = [ax * t, ay * t]
+		return {x: a.x * t, y: a.y * t};
+	};
+	
+	let vecDiff = function(a, b) {
+		// a - b = [ax - bx, ay - by]
+		return {x: a.x - b.x, y: a.y - b.y};
+	};
+	
+	let vecAdd = function(a, b) {
+		// a + b = [ax - bx, ay + by]
+		return {x: a.x + b.x, y: a.y + b.y};
+	};
+	
+	let vec = function(x, y) {
+		return {x: x, y: y};
+	};
+	
+	let checkHit = function(xClu, yClu, rayXMvu, rayYMvu, playerXMvu, playerYMvu) {
+		// https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+		// p + t r = q + u s
+		
+		// přímky buňky
+		// ^ ---> ^
+		// |	  |
+		// | ---> |
+		
+		// p + t * r
+		let lineLeft = {x: xClu * cluToMvu, y: yClu * cluToMvu, w: 0, h: cluToMvu};
+		let lineRight = {x: (xClu + 1) * cluToMvu, y: yClu * cluToMvu, w: 0, h: cluToMvu};
+		let lineTop = {x: xClu * cluToMvu, y: (yClu + 1) * cluToMvu, w: cluToMvu, h: 0};
+		let lineBottom = {x: xClu * cluToMvu, y: yClu * cluToMvu, w: cluToMvu, h: 0};
+		let lines = [lineLeft, lineRight, lineTop, lineBottom];
+		
+		// q + u * s
+		let ray = {x: playerXMvu, y: playerYMvu, w: rayXMvu - playerXMvu, h: rayYMvu - playerYMvu};
+		
+		for (let i = 0; i < 4; i++) {
+			let line = lines[i];
+			
+			let p = vec(line.x, line.y);
+			let r = vec(line.w, line.h);
+			let q = vec(ray.x, ray	.y);
+			let s = vec(ray.w, ray.h);
+					
+			// t = (q − p) × s / (r × s)
+			let t = vecCross(vecDiff(q, p), s) / vecCross(r, s);
+			
+			// u = (p − q) × r / (s × r)
+			let u = vecCross(vecDiff(p, q), r) / vecCross(s, r);
+			
+			// If r × s = 0 and (q − p) × r = 0, then the two lines are collinear
+			// If r × s = 0 and (q − p) × r ≠ 0, then the two lines are parallel and non-intersecting.
+			// If r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t r = q + u s.
+			// Otherwise, the two line segments are not parallel but do not intersect.
+			if (vecCross(r, s) != 0 && t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+				return {
+					hit: true, 
+					orientation: i,
+					value: map[yClu][xClu], // TODO povrch stěny, ne celé kostky
+					point: vecAdd(p, vecScal(r, t))
+				};
+			}
+		}
+		
+		return { hit: false };
+	};
+	
 	let drawScene = function() {			
 		ctx.fillStyle = "black";
 		ctx.fillRect(0, 0, width, height);
@@ -209,7 +284,7 @@ $.perspective = (function() {
 		// minimap info
 		let playerXMmu = xMvuToMmu(playerXMvu);
 		let playerYMmu = yMvuToMmu(playerYMvu);
-		
+				
 		let angleRadStart = toRad(playerHOrient - angleRange / 2);
 		let angleRadStop = toRad(playerHOrient + angleRange / 2);
 		let angleRadIncrement = toRad(angleIncrement);
@@ -219,21 +294,27 @@ $.perspective = (function() {
 			let rayXMvu = playerXMvu;
 			let rayYMvu = playerYMvu;
 			
-			let cellValue = 0;
+			let xClu = -1;
+			let yClu = -1;
+			let hitResult = {hit: false};
+			// TODO během kontrol kolize přes protínbání přímek, není potřeba dělat iterativní kroky paprsku -- paprsek je jedna velká přímka
 			while (cellValue == 0 && rayXMvu > minXMvu && rayXMvu < maxXMvu && rayYMvu > minYMvu && rayYMvu < maxYMvu) {
 				rayXMvu += rayXStepMvu;
 				rayYMvu += rayYStepMvu;
-				let yClu = Math.floor(rayYMvu / cluToMvu);
-				let xClu = Math.floor(rayXMvu / cluToMvu);
-				if (yClu >= 0 && yClu < mapRows && xClu >= 0 && xClu <= mapCols) {
-					cellValue = map[yClu][xClu];	
-				} else {
-					cellValue = 0;
-				}				
-				if (cellValue != 0)
-					break;
+				xClu = Math.floor(rayXMvu / cluToMvu);
+				yClu = Math.floor(rayYMvu / cluToMvu);
+				let value = map[yClu][xClu];
+				if (value != 0) {
+					if (yClu >= 0 && yClu < mapRows && xClu >= 0 && xClu <= mapCols) {
+						hitResult = checkHit(xClu, yClu, rayXMvu, rayYMvu, playerXMvu, playerYMvu);
+						if (hitResult.hit) 
+							break;
+					} else {
+						break;
+					}				
+				}
 			}
-			
+										
 			// minimap ray show
 			if (showRays || angleRad == angleRadStart || angleRad + angleRadIncrement >= angleRadStop) {
 				let rayXMmu = xMvuToMmu(rayXMvu);
@@ -247,14 +328,25 @@ $.perspective = (function() {
 				minimapCtx.stroke();
 			}
 			
-			if (cellValue != 0) {
+			if (hitResult.hit) {
 				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - rayXMvu, 2) + Math.pow(playerYMvu - rayYMvu, 2));				
 				// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance
 				let segmentHeightScu = perspectiveLen * 1000 / distanceMvu;
-				let segmentYScu = height / 2 - segmentHeightScu / 2 + playerVOrient;
-				ctx.fillStyle = mapColor(cellValue, lightFromDistance(distanceMvu));
-				ctx.fillRect(x, segmentYScu, angleWidthRes, segmentHeightScu);
-			}
+				let segmentYScu = height / 2 - segmentHeightScu / 2; // + playerVOrient;
+				
+				let old = true;
+				if (old) {
+					ctx.fillStyle = mapColor(hitResult.value, lightFromDistance(distanceMvu));
+					ctx.fillRect(x, segmentYScu, angleWidthRes, segmentHeightScu);
+				} else {
+					let img = document.querySelector('img');
+					let imgwidth = img.offsetWidth;
+					let imgheight = img.offsetHeight;
+					let imgOffset = processImgOffset(xClu, yClu, rayXMvu, rayYMvu, playerXMvu, playerYMvu);
+					// context.drawImage(img,sx,sy,swidth,sheight,x,y,width,height);
+					ctx.drawImage(img, lastXImgOffset * angleWidthRes, 0, angleWidthRes, imgheight, x, segmentYScu, angleWidthRes, segmentHeightScu);
+				}
+			}		
 		}					
 	}
 	
