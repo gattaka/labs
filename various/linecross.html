@@ -1,0 +1,115 @@
+[HTML]<div style="margin: 10px 0; display: inline-block; border: 1px solid darkgrey">
+	<canvas id="cnvs" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.linecross = (function() {
+
+	let cnvs = document.getElementById("cnvs");
+	let cnvCtx = cnvs.getContext("2d");
+	
+	let width = cnvs.width;
+	let height = cnvs.height;
+	let halfWidth = width / 2; 
+	let halfHeight = height / 2;
+				
+	let points = 0;
+	let V = {};
+	let v = {};
+	let d = 0;
+		
+	let W = {};
+	let w = {};
+	let s = 0;
+	
+	let P = {};
+	
+	let size = 6;
+	let hue = 0;
+		
+	let clean = function() {
+		cnvCtx.fillStyle = "white";
+		cnvCtx.fillRect(0, 0, width, height);
+	};
+		
+	let draw = function(pnt) {
+		cnvCtx.fillStyle = "hsl(" + hue + ", 100%, 50%)";
+		cnvCtx.fillRect(pnt.x - size / 2, pnt.y - size / 2, size, size);			
+	};
+	
+	let drawLine = function(a, b) {
+		cnvCtx.strokeStyle = "hsl(" + hue + ", 100%, 50%)";
+		cnvCtx.beginPath();
+		cnvCtx.moveTo(a.x, a.y);
+		cnvCtx.lineTo(b.x, b.y);
+		cnvCtx.stroke();
+	};
+		
+	let init = function() {		
+		clean();
+		
+		cnvCtx.lineWidth = 2;
+		
+		cnvs.addEventListener("click", function (e) {
+			if (points == 4) {
+				points = 0;
+				clean();
+				hue = 0;
+			}
+									
+			let bound = cnvs.getBoundingClientRect();
+			let x = e.clientX - bound.x;
+			let y = e.clientY - bound.y;
+			
+			switch (points) {
+				case 0: 
+					V.x = x;
+					V.y = y;
+					break;
+				case 1: 	
+					v.x = x - V.x; 
+					v.y = y - V.y;					
+					break;
+				case 2: 
+					W.x = x;
+					W.y = y;
+					hue = 150;
+					break;
+				case 3: 
+					w.x = x - W.x; 
+					w.y = y - W.y;
+					break;				
+			}
+						 			
+			if (points == 1) 
+				drawLine(V, {x: V.x + v.x, y: V.y + v.y});				
+			if (points == 3)
+				drawLine(W, {x: W.x + w.x, y: W.y + w.y});			
+				
+			draw({x: x, y: y});
+			points++;
+			
+			if (points == 4) {	
+				hue = 250;
+				s = (v.x * (V.y - W.y) + v.y * (W.x - V.x)) / (v.x * w.y - v.y * w.x);
+				d = (W.y + s * w.y - V.y) / v.y;
+				if (s >= 0 && s <= 1 && d >= 0 && d <= 1) {
+					P = {
+						x: V.x + d * v.x,
+						y: V.y + d * v.y
+					};				
+					draw(P);
+					console.log("Existuje");
+				} else {
+					console.log("Neexistuje");
+				}
+			}			
+		}, false);	
+	};		
+	
+	return {	
+		start: function() {	
+			init();			
+		},					
+	};
+})();
+$.linecross.start();</script>
