@@ -395,20 +395,7 @@ $.perspective = (function() {
 				minimapCtx.lineTo(hitXMmu, hitYMmu);
 				minimapCtx.stroke();
 			}
-			
-			/*
-			if (showLight) {
-				let baseMvu = 300;
-				let minAlpha = .1;
-				let maxAlpha = 1;					
-				let shadowAlpha = Math.max(minAlpha, Math.min(maxAlpha, distanceMvu / baseMvu));
-				ctx.fillStyle = "black";
-				ctx.globalAlpha = shadowAlpha;
-				ctx.fillRect(targetXScu, targetYScu, targetWidthScu, targetHeightScu);
-				ctx.globalAlpha = 1;
-			}
-			*/
-					
+							
 			// pro každý řádek sloupce
 			for (let y = 0; y < height; y++) {
 				let index = (y * width + x) * 4;
@@ -446,11 +433,22 @@ $.perspective = (function() {
 						let texX = Math.floor(sourceXImg);
 						let texY = Math.floor((y - targetYScu) * ratio);
 						let texIdx = (texY * widthImg + texX) * 4;
-						let texPixel = texture.imageData.data;
-						pixels[index]     = texPixel[texIdx];    	// red
-						pixels[index + 1] = texPixel[texIdx + 1];   // green
-						pixels[index + 2] = texPixel[texIdx + 2];   // blue
-						pixels[index + 3] = 255;  					// alpha
+						let texPixel = texture.imageData.data;											
+						if (showLight) {
+							// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
+							let baseMvu = 300;
+							let minVal = 0.5;
+							let maxVal = 1;					
+							let multiplier = Math.max(minVal, Math.min(maxVal, 1 - distanceMvu / baseMvu));
+							pixels[index]     = Math.floor(multiplier * texPixel[texIdx]);
+							pixels[index + 1] = Math.floor(multiplier * texPixel[texIdx + 1]);
+							pixels[index + 2] = Math.floor(multiplier * texPixel[texIdx + 2]);
+						} else {
+							pixels[index]     = texPixel[texIdx];
+							pixels[index + 1] = texPixel[texIdx + 1];
+							pixels[index + 2] = texPixel[texIdx + 2];
+						}
+						pixels[index + 3] = 255;  											
 					}				
 				} else {				
 					pixels[index]     = 0;    // red
