@@ -43,10 +43,13 @@ $.perspective = (function() {
 	let halfWidth = width / 2; 
 	let halfHeight = height / 2;
 			
+	let writeAs32Bit = true;
+			
 	let imageData = ctx.getImageData(0, 0, width, height);
+	let data = imageData.data;
 	let buf = new ArrayBuffer(imageData.data.length);
 	let buf8 = new Uint8ClampedArray(buf);
-	let data = new Uint32Array(buf);	
+	let data32 = new Uint32Array(buf);	
 			
 	let minimapCanvas = document.getElementById("minimapCanvas");
 	let minimapCtx = minimapCanvas.getContext("2d", { alpha: false });
@@ -366,7 +369,7 @@ $.perspective = (function() {
 		let playerXMmu = xMvuToMmu(playerXMvu);
 		let playerYMmu = yMvuToMmu(playerYMvu);
 
-		let angleStartRad = toRad(playerHOrient - angleRangeDeg / 2);		
+		let angleStartRad = toRad(playerHOrient - angleRangeDeg / 2);
 		let angleIncrRad = toRad(angleIncrDeg);
 		
 		let angleRad = angleStartRad;
@@ -375,8 +378,7 @@ $.perspective = (function() {
 		let hitResult;
 		
 		// pro každý sloupec obrazovky
-		for (let x = 0; x < width; x++) {
-			angleRad += angleIncrRad;
+		for (let x = 0; x < width; x++, angleRad += angleIncrRad) {			
 			
 			rayXMvu = playerXMvu + Math.cos(angleRad) * mapRadiusMvu;
 			rayYMvu = playerYMvu + Math.sin(angleRad) * mapRadiusMvu;
@@ -384,7 +386,7 @@ $.perspective = (function() {
 			hitResult = checkHit(rayXMvu, rayYMvu, playerXMvu, playerYMvu);
 			
 			// minimap ray show
-			if (showRays || angleRad == angleStartRad || angleRad + angleIncrRad >= angleStopRad) {
+			if (showRays || x == 0 || x + 1 >= width) {
 				let hitXMmu = xMvuToMmu(hitResult.point.x);
 				let hitYMmu = yMvuToMmu(hitResult.point.y);
 				
@@ -398,12 +400,8 @@ $.perspective = (function() {
 							
 			// pro každý řádek sloupce
 			for (let y = 0; y < height; y++) {
-				let index = (y * width + x) * 4;
-				
-				// https://jsperf.com/canvas-pixel-manipulation
-				let pixels = imageData.data; // 8b
-				// let pixels = data; // 32b
-				
+				let index = (y * width + x);
+										
 				if (hitResult.hit) {				
 					let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitResult.point.x, 2) + Math.pow(playerYMvu - hitResult.point.y, 2));				
 					// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance				
@@ -425,10 +423,7 @@ $.perspective = (function() {
 					let ratio = sourceHeightImg / targetHeightScu;
 						
 					if (y < targetYScu || y > targetYScu + targetHeightScu) {
-						pixels[index]     = 0;    // red
-						pixels[index + 1] = 0;    // green
-						pixels[index + 2] = 0;    // blue
-						pixels[index + 3] = 255;  // alpha
+						putPixel(index, 0, 0, 0, 255);
 					} else {
 						let texX = Math.floor(sourceXImg);
 						let texY = Math.floor((y - targetYScu) * ratio);
@@ -440,28 +435,44 @@ $.perspective = (function() {
 							let minVal = 0.5;
 							let maxVal = 1;					
 							let multiplier = Math.max(minVal, Math.min(maxVal, 1 - distanceMvu / baseMvu));
-							pixels[index]     = Math.floor(multiplier * texPixel[texIdx]);
-							pixels[index + 1] = Math.floor(multiplier * texPixel[texIdx + 1]);
-							pixels[index + 2] = Math.floor(multiplier * texPixel[texIdx + 2]);
+							putPixel(index, 
+								Math.floor(multiplier * texPixel[texIdx]),
+								Math.floor(multiplier * texPixel[texIdx + 1]), 
+								Math.floor(multiplier * texPixel[texIdx + 2]), 
+								255);							
 						} else {
-							pixels[index]     = texPixel[texIdx];
-							pixels[index + 1] = texPixel[texIdx + 1];
-							pixels[index + 2] = texPixel[texIdx + 2];
-						}
-						pixels[index + 3] = 255;  											
+							putPixel(index, 
+								texPixel[texIdx],
+								texPixel[texIdx + 1], 
+								texPixel[texIdx + 2], 
+								255);	
+						}						
 					}				
-				} else {				
-					pixels[index]     = 0;    // red
-					pixels[index + 1] = 0;    // green
-					pixels[index + 2] = 0;    // blue
-					pixels[index + 3] = 255;  // alpha
+				} else {	
+					putPixel(index, 0, 0, 0, 255);
 				}
 			}			
 		}
 		
-		//imageData.data.set(buf8);
-		ctx.putImageData(imageData, 0, 0);		
+		if (writeAs32Bit)
+			imageData.data.set(buf8);
+			
+		ctx.putImageData(imageData, 0, 0);
 	}
+	
+	// https://hacks.mozilla.org/2011/12/faster-canvas-pixel-manipulation-with-typed-arrays/
+	// https://jsperf.com/canvas-pixel-manipulation
+	let putPixel = function(index, r, g, b, a) {
+		if (writeAs32Bit) {
+			data32[index] = (a << 24) | (b << 16) | (g <<  8) | r;
+		} else {
+			let smallIndex = index * 4;
+			data[smallIndex]     = r;    // red
+			data[smallIndex + 1] = g;    // green
+			data[smallIndex + 2] = b;    // blue
+			data[smallIndex + 3] = a;    // alpha
+		}
+	};
 	
 	let drawMinimap = function() {
 		minimapCtx.clearRect(0, 0, minimapWidth, minimapHeight)
