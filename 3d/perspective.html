@@ -6,6 +6,7 @@
 			<td>Lens size (5-20)</td>
 			<td>FPS</td>
 			<td></td>
+			<td></td>
 		</tr>
 		<tr>
 			<td><input id="viewAngle" 
@@ -14,6 +15,7 @@
 				onchange="$.perspective.changeLensSize(this.value)" style="width: 120px;" value="10"></td>
 			<td><span id="fpsSpan" /></td>
 			<td><input id="showRays" type="checkbox" onclick="$.perspective.changeShowRays(this.checked)" checked>Show rays?</input></td>
+			<td><input id="showLight" type="checkbox" onclick="$.perspective.changeShowLight(this.checked)" >Show light?</input></td>
 		</tr>
 	</tbody>
 </table>
@@ -25,7 +27,7 @@
 </div>[/HTML]
 <script>var $ = $ || {};
 $.perspective = (function() {
-
+	
 	let smoothing = false;
 
 	let canvas = document.getElementById("perspectiveCanvas");
@@ -34,12 +36,18 @@ $.perspective = (function() {
 	ctx.webkitImageSmoothingEnabled = smoothing;
     ctx.mozImageSmoothingEnabled = smoothing;
     ctx.imageSmoothingEnabled = smoothing;
+	ctx.msImageSmoothingEnabled = smoothing; 
 	
 	let width = canvas.width;
 	let height = canvas.height;
 	let halfWidth = width / 2; 
 	let halfHeight = height / 2;
-	
+			
+	let imageData = ctx.getImageData(0, 0, width, height);
+	let buf = new ArrayBuffer(imageData.data.length);
+	let buf8 = new Uint8ClampedArray(buf);
+	let data = new Uint32Array(buf);	
+			
 	let minimapCanvas = document.getElementById("minimapCanvas");
 	let minimapCtx = minimapCanvas.getContext("2d", { alpha: false });
 	let minimapWidth = minimapCanvas.width;
@@ -92,10 +100,8 @@ $.perspective = (function() {
 	//let playerVOrient = 270; // 0-360	
 	
 	// rozsah v jakém hráč vidí
-	let rayWidthScu = 1;
-	let rayCount = width / rayWidthScu;
 	let angleRangeDeg = 90;
-	let angleIncrDeg = angleRangeDeg / rayCount;
+	let angleIncrDeg = angleRangeDeg / width;
 	let lensMultiplier = 10;	
 	
 	let walkSpeedStepMvu = 2; 
@@ -105,7 +111,10 @@ $.perspective = (function() {
 	let mouseHSensitivity = 0.8;
 		
 	let showRays = true;
+	let showLight = false;
 		
+	let loaded = false;
+	let loadingProgress = 0;
 	let textures = [];
 	
 	let fpsSpan = document.getElementById("fpsSpan");
@@ -137,18 +146,27 @@ $.perspective = (function() {
 			let textureCanvas = document.createElement("canvas");
 			textureCanvas.width = texture.width;
 			textureCanvas.height = texture.height;
+			
 			let textureCtx = textureCanvas.getContext("2d");
 			let subCanvasSmoothing = false;
 			textureCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
 			textureCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
 			textureCtx.imageSmoothingEnabled = subCanvasSmoothing;
+			textureCtx.msImageSmoothingEnabled = subCanvasSmoothing; 
+			
 			texture.canvas = textureCanvas;
+			texture.ctx = textureCtx;
 			textureImg = new Image();
 			(function() {
-				let seafCtx = textureCtx;
 				let seafImg = textureImg;
+				let seafIndex = i;
 				textureImg.onload = function() {
-					seafCtx.drawImage(seafImg, 0, 0);
+					let tex = textures[seafIndex];
+					tex.ctx.drawImage(seafImg, 0, 0);
+					tex.imageData = tex.ctx.getImageData(0, 0, tex.width, tex.height);
+					loadingProgress++;
+					if (loadingProgress == textures.length)
+						loaded = true;
 				}
 			})();
 			textureImg.src = texture.src;
@@ -339,21 +357,32 @@ $.perspective = (function() {
 		return result;
 	};
 	
-	let drawScene = function() {			
-		ctx.clearRect(0, 0, width, height)
-						
+	let drawScene = function() {	
+		// musí být nahrané textury
+		if (!loaded)
+			return;
+
 		// minimap info
 		let playerXMmu = xMvuToMmu(playerXMvu);
 		let playerYMmu = yMvuToMmu(playerYMvu);
-				
-		let angleStartRad = toRad(playerHOrient - angleRangeDeg / 2);
-		let angleStopRad = toRad(playerHOrient + angleRangeDeg / 2);
+
+		let angleStartRad = toRad(playerHOrient - angleRangeDeg / 2);		
 		let angleIncrRad = toRad(angleIncrDeg);
-		for (let angleRad = angleStartRad, xScu = 0; angleRad < angleStopRad; angleRad += angleIncrRad, xScu += rayWidthScu) {			
-			let rayXMvu = playerXMvu + Math.cos(angleRad) * mapRadiusMvu;
-			let rayYMvu = playerYMvu + Math.sin(angleRad) * mapRadiusMvu;
-			let hitResult = checkHit(rayXMvu, rayYMvu, playerXMvu, playerYMvu);
-										
+		
+		let angleRad = angleStartRad;
+		let rayXMvu = 0;
+		let rayYMvu = 0;
+		let hitResult;
+		
+		// pro každý sloupec obrazovky
+		for (let x = 0; x < width; x++) {
+			angleRad += angleIncrRad;
+			
+			rayXMvu = playerXMvu + Math.cos(angleRad) * mapRadiusMvu;
+			rayYMvu = playerYMvu + Math.sin(angleRad) * mapRadiusMvu;
+			
+			hitResult = checkHit(rayXMvu, rayYMvu, playerXMvu, playerYMvu);
+			
 			// minimap ray show
 			if (showRays || angleRad == angleStartRad || angleRad + angleIncrRad >= angleStopRad) {
 				let hitXMmu = xMvuToMmu(hitResult.point.x);
@@ -367,33 +396,8 @@ $.perspective = (function() {
 				minimapCtx.stroke();
 			}
 			
-			if (hitResult.hit) {
-				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitResult.point.x, 2) + Math.pow(playerYMvu - hitResult.point.y, 2));				
-				// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance				
-				let mvuToScu = lensMultiplier * 100 / distanceMvu;
-				
-				let texture = textures[hitResult.value - 1];
-				
-				let widthImg = texture.width;
-				let heightImg = texture.height;
-				
-				// Převod MVU na IMG jednotky
-				let xMvuToImg = widthImg / cluToMvu;
-				let yMvuToImg = heightImg / cluToMvu;
-				let sourceWidthImg = xMvuToImg * rayWidthScu / mvuToScu;
-				let sourceHeightImg = heightImg;	
-				let sourceXImg = xMvuToImg * hitResult.lineOriginDistanceMvu;
-				let sourceYImg = 0;
-				let targetWidthScu = rayWidthScu + 1;
-				let targetHeightScu = sourceHeightImg / yMvuToImg * mvuToScu;			
-				let targetXScu = xScu;
-				let targetYScu = height / 2 - targetHeightScu / 2; // + playerVOrient;				
-
-				// https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/drawImage						
-				ctx.drawImage(texture.canvas, 
-					sourceXImg, sourceYImg, sourceWidthImg, sourceHeightImg, 
-					Math.floor(targetXScu), Math.floor(targetYScu), Math.floor(targetWidthScu), Math.floor(targetHeightScu));
-	
+			/*
+			if (showLight) {
 				let baseMvu = 300;
 				let minAlpha = .1;
 				let maxAlpha = 1;					
@@ -403,7 +407,62 @@ $.perspective = (function() {
 				ctx.fillRect(targetXScu, targetYScu, targetWidthScu, targetHeightScu);
 				ctx.globalAlpha = 1;
 			}
-		}					
+			*/
+					
+			// pro každý řádek sloupce
+			for (let y = 0; y < height; y++) {
+				let index = (y * width + x) * 4;
+				
+				// https://jsperf.com/canvas-pixel-manipulation
+				let pixels = imageData.data; // 8b
+				// let pixels = data; // 32b
+				
+				if (hitResult.hit) {				
+					let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitResult.point.x, 2) + Math.pow(playerYMvu - hitResult.point.y, 2));				
+					// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance				
+					let mvuToScu = lensMultiplier * 100 / distanceMvu;
+					
+					let texture = textures[hitResult.value - 1];
+					
+					let widthImg = texture.width;
+					let heightImg = texture.height;
+					
+					// Převod MVU na IMG jednotky
+					let xMvuToImg = widthImg / cluToMvu;
+					let yMvuToImg = heightImg / cluToMvu;
+					let sourceWidthImg = xMvuToImg / mvuToScu;
+					let sourceHeightImg = heightImg;	
+					let sourceXImg = xMvuToImg * hitResult.lineOriginDistanceMvu;
+					let targetHeightScu = Math.floor(sourceHeightImg / yMvuToImg * mvuToScu);
+					let targetYScu = Math.floor(height / 2 - targetHeightScu / 2); // + playerVOrient;		
+					let ratio = sourceHeightImg / targetHeightScu;
+						
+					if (y < targetYScu || y > targetYScu + targetHeightScu) {
+						pixels[index]     = 0;    // red
+						pixels[index + 1] = 0;    // green
+						pixels[index + 2] = 0;    // blue
+						pixels[index + 3] = 255;  // alpha
+					} else {
+						let texX = Math.floor(sourceXImg);
+						let texY = Math.floor((y - targetYScu) * ratio);
+						let texIdx = (texY * widthImg + texX) * 4;
+						let texPixel = texture.imageData.data;
+						pixels[index]     = texPixel[texIdx];    	// red
+						pixels[index + 1] = texPixel[texIdx + 1];   // green
+						pixels[index + 2] = texPixel[texIdx + 2];   // blue
+						pixels[index + 3] = 255;  					// alpha
+					}				
+				} else {				
+					pixels[index]     = 0;    // red
+					pixels[index + 1] = 0;    // green
+					pixels[index + 2] = 0;    // blue
+					pixels[index + 3] = 255;  // alpha
+				}
+			}			
+		}
+		
+		//imageData.data.set(buf8);
+		ctx.putImageData(imageData, 0, 0);		
 	}
 	
 	let drawMinimap = function() {
@@ -469,16 +528,6 @@ $.perspective = (function() {
 			angleIncrDeg = angleRangeDeg / rayCount;	
 		},
 		
-		changeRayWidth: function(value) {
-			if (isNaN(value))
-				return;
-			let newValue = Number(value);
-			console.log("rayWidth changed from '" + rayWidthScu + "' to '" + newValue + "'");
-			rayWidthScu = newValue;
-			rayCount = width / rayWidthScu;			
-			angleIncrDeg = angleRangeDeg / rayCount;	
-		},
-
 		changeLensSize: function(value) {
 			if (isNaN(value))
 				return;
@@ -490,6 +539,11 @@ $.perspective = (function() {
 		changeShowRays: function(value) {
 			console.log("showRays changed from '" + showRays + "' to '" + value + "'");
 			showRays = value;
+		},
+		
+		changeShowLight: function(value) {
+			console.log("showLight changed from '" + showLight + "' to '" + value + "'");
+			showLight = value;
 		},
 		
 	};
