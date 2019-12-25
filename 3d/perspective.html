@@ -28,7 +28,7 @@
 <script>var $ = $ || {};
 $.perspective = (function() {
 	
-	let smoothing = false;
+	let smoothing = true;
 
 	let canvas = document.getElementById("perspectiveCanvas");
 	let ctx = canvas.getContext("2d", { alpha: false });
@@ -534,7 +534,7 @@ $.perspective = (function() {
 			let newValue = Number(value);
 			console.log("viewAngle changed from '" + angleRangeDeg + "' to '" + newValue + "'");
 			angleRangeDeg = newValue;
-			angleIncrDeg = angleRangeDeg / rayCount;	
+			angleIncrDeg = angleRangeDeg / width;	
 		},
 		
 		changeLensSize: function(value) {
