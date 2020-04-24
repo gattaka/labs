@@ -1,0 +1,129 @@
+[N1]Demo[/N1]
+[HTML]<div style="margin: 10px 0;">
+	<canvas id="canvasT" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.tangent = (function() {
+
+	let canvas = document.getElementById("canvasT");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let wHalf = width / 2;
+	let hHalf = height / 2;
+					
+	let draw = function() {	
+		ctx.strokeStyle = "darkgrey";
+		ctx.strokeRect(0, 0, width, height);
+	
+		ctx.beginPath();		
+		ctx.moveTo(0, hHalf);
+		ctx.lineTo(width, hHalf);
+		ctx.stroke();	
+				
+		// mezera
+		let gap = 0;
+		// výška		
+		let h = 100;		
+		
+		let r1 = 100;
+		let rad1 = Math.asin(h / r1);
+		let xOffset1 = Math.cos(rad1) * r1;
+		let xCenter1 = wHalf + xOffset1 - gap / 2;
+		
+		let r2 = r1;
+		let rad2 = Math.asin(h / r2);
+		let xOffset2 = Math.cos(rad2) * r2;
+		let xCenter2 = wHalf - xOffset2 + gap / 2;
+		
+		let d = gap + xOffset1 + xOffset2;
+		
+		ctx.strokeStyle = "lightgrey";
+		ctx.setLineDash([5, 5]);
+		
+		ctx.beginPath();
+		ctx.arc(xCenter1, hHalf, r1, 0, 2 * Math.PI);		
+		ctx.stroke();
+				
+		ctx.beginPath();
+		ctx.arc(xCenter2, hHalf, r2, 0, 2 * Math.PI);
+		ctx.stroke();	
+		
+		let pointSize = 6;
+		ctx.fillStyle = "lightgrey";
+		
+		ctx.fillRect(xCenter1 - pointSize / 2, hHalf - pointSize / 2, pointSize, pointSize);
+		ctx.fillRect(xCenter2 - pointSize / 2, hHalf - pointSize / 2, pointSize, pointSize);
+		
+		ctx.fillStyle = "lightblue";		
+		
+		ctx.beginPath();
+		ctx.arc(xCenter1, hHalf, r1, Math.PI - rad1, Math.PI + rad1);		
+		ctx.fill();	
+				
+		ctx.beginPath();
+		ctx.arc(xCenter2, hHalf, r2, -rad2, rad2);
+		ctx.fill();	
+		
+		ctx.fillRect(wHalf - gap / 2 - 1, hHalf - h, gap + 2, h * 2);				
+		
+		// zakřivení, které má tvar C má kladné R, zakřivení, který má tvar D má záporné
+		// klasická zvětšovací čočka má tedy R1 kladné a R2 záporné
+		
+		// https://en.wikipedia.org/wiki/Refractive_index#Typical_values
+		let n = 1.5;
+		let convexIndex1 = 1;
+		let convexIndex2 = -1;
+		let rxCenter1 = r1 * convexIndex1;
+		let rxCenter2 = r2 * convexIndex2;
+		let f = 1 / ((n - 1) * (1 / rxCenter1 - 1 / rxCenter2 + (n - 1) * d / (n * rxCenter1 * rxCenter2) ));
+		console.log("F: " + f);
+		
+		ctx.fillStyle = "red";
+		ctx.fillRect(wHalf + f - pointSize / 2, hHalf - pointSize / 2, pointSize, pointSize);
+		
+		ctx.strokeStyle = "green";
+		ctx.setLineDash([]);
+		
+		let rayHeight = 40;
+		
+		console.log("RY: " + rayHeight);
+		console.log("R1: " + r1);
+		// vstupní úhel vůči kolmici k tečně je stejný jako úhel kolmice se středem kruhu vstupní strany čočky
+		let th1 = Math.asin(rayHeight / r1);
+		console.log("TH1: " + (th1 * 180 / Math.PI));
+		// https://en.wikipedia.org/wiki/Refractive_index
+		// https://en.wikipedia.org/wiki/Snell%27s_law
+		// Beru ideální přechod vakuum - sklo takže n1 = 1 a n2 = 1.5, n1 tedy nepíšu
+		// n1 * sin(th1) = n2 * sin(th2)
+		// sin(th2) = sin(th1) / n2
+		// th2 = asin(sin(th1) / n2)		
+		let th2 = Math.asin(Math.sin(th1) / n);
+		// protože th2 není v pravoúhlém trojúhelníku, je potřeba dopočítat doplňkové úhly
+		let th1Rest = Math.PI - th1;
+		let th2Opst = Math.PI - th1Rest - th2;
+		let rx2part = rayHeight / Math.tan(th2Opst);
+		
+		let ry = hHalf - rayHeight;
+		let rx = xCenter1 - Math.sqrt(r1 * r1 - rayHeight * rayHeight);
+		ctx.beginPath();		
+		ctx.moveTo(0, ry);
+		ctx.lineTo(rx, ry);
+		ctx.lineTo(rx + rx2part, hHalf);
+		ctx.stroke();	
+		
+	};
+	
+	let init = function() {	
+		ctx.lineWidth = 1;				
+		draw();
+	};	
+		
+	return {
+		start: function() {					
+			init();						
+		},	
+	};
+})();
+
+$.tangent.start();</script>
