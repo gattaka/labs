@@ -100,16 +100,40 @@ $.tangent = (function() {
 		ctx.fillRect(toGlobalX(f) - pointSize / 2, toGlobalY(0) - pointSize / 2, pointSize, pointSize);
 		
 		drawRay(n, r1, r2, xCenter1, xCenter2, 70, "purple");
-		drawRay(n, r1, r2, xCenter1, xCenter2, 50, "red");
+		/*drawRay(n, r1, r2, xCenter1, xCenter2, 50, "red");
 		drawRay(n, r1, r2, xCenter1, xCenter2, 30, "blue");
 		drawRay(n, r1, r2, xCenter1, xCenter2, 10, "green");
-		
+		*/
 		
 	};
 	
+	let findRoots = function(a, b, c) {
+		r1 = (-b + Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+		r2 = (-b - Math.sqrt(b * b - 4 * a * c)) / (2 * a);
+		return [r1, r2];
+	};
+	
+	// přímka ax + b a kruh s průměrem r a počátku v x = s 
+	let intersection = function(a, b, r, s) {
+		let roots = findRoots(a * a + 1, 2 * b * a - 2 * s, b * b - r * r + s * s);
+		let x1 = roots[0];
+		let x2 = roots[1];
+		let y1 = a * x1 + b;
+		let y2 = a * x2 + b;
+		if (x1 < x2)			
+			return [[x1, y1], [x2, y2]];
+		else 
+			return [[x2, y2], [x1, y1]];
+	};
+	
 	let drawRay = function(n, r1, r2, xCenter1, xCenter2, rayHeight, color) {
-		console.log("RY: " + rayHeight);
-		console.log("R1: " + r1);
+		let ry0 = rayHeight;
+		let result = intersection(0, ry0, r1, xCenter1);
+		let rx1 = result[0][0];
+		let ry1 = ry0;
+		console.log("RX1: " + rx1);
+		console.log("RY1: " + ry1);
+				
 		// vstupní úhel vůči kolmici k tečně je stejný jako úhel kolmice se středem kruhu vstupní strany čočky
 		let th1 = Math.asin(rayHeight / r1);
 		console.log("TH1: " + (th1 * 180 / Math.PI));
@@ -123,18 +147,27 @@ $.tangent = (function() {
 		// protože th2 není v pravoúhlém trojúhelníku, je potřeba dopočítat doplňkové úhly
 		let th1Rest = Math.PI - th1;
 		let th2Opst = Math.PI - th1Rest - th2;
-		let rx2part = rayHeight / Math.tan(th2Opst);
+		// přepočet z jednotkové kružnice na strmost stoupání přímky
+		// tempo stoupání musí být *-1, protože je otočené
+		let a = -Math.tan(th2Opst);		
+		// a její posun dle počátečního (koncového) y
+		let b = rayHeight - (a * rx1);
 		
-		let ry = rayHeight;
-		let rx = xCenter1 - Math.sqrt(r1 * r1 - rayHeight * rayHeight);
+		result = intersection(a, b, r2, xCenter2);
+		let rx2 = result[1][0]; 
+		let ry2 = result[1][1];
+		//let rx2 = 30; let ry2 = a * rx2 + b;
+		
+		console.log("RX2: " + rx2);
+		console.log("RY2: " + ry2);
 		
 		ctx.strokeStyle = color;
 		ctx.setLineDash([]);
 		
 		ctx.beginPath();		
-		ctx.moveTo(0, toGlobalY(ry));
-		ctx.lineTo(toGlobalX(rx), toGlobalY(ry));
-		ctx.lineTo(toGlobalX(rx + rx2part), toGlobalY(0));
+		ctx.moveTo(0, toGlobalY(ry0));
+		ctx.lineTo(toGlobalX(rx1), toGlobalY(ry1));
+		ctx.lineTo(toGlobalX(rx2), toGlobalY(ry2));
 		ctx.stroke();	
 	};
 	
