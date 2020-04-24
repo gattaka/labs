@@ -1,9 +1,31 @@
 [N1]Demo[/N1]
-[HTML]<div style="margin: 10px 0;">
+[HTML]<div>
+	<table>
+		<tbody>
+			<tr>
+				<td>Gap <0-50></td>
+				<td>Height <50-R1|R2></td>
+				<td>Radius1 <100-300></td>
+				<td>Radius2 <100-300></td>
+				<td>N index <1-2></td>
+				<td></td>
+			</tr>
+			<tr>
+				<td><input id="gapInput" style="width: 80px;" value="10"></td>
+				<td><input id="heightInput" style="width: 150px;" value="100"></td>
+				<td><input id="radius1Input" style="width: 150px;" value="130"></td>
+				<td><input id="radius2Input" style="width: 150px;" value="140"></td>
+				<td><input id="nInput" style="width: 100px;" value="1.5"></td>				
+				<td><button type="button" onclick="$.rays.start()">Run!</button></td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<div style="margin: 10px 0;">
 	<canvas id="canvasT" width="700" height="400"></canvas>
 </div>[/HTML]
 <script>var $ = $ || {};
-$.tangent = (function() {
+$.rays = (function() {
 
 	let canvas = document.getElementById("canvasT");
 	let ctx = canvas.getContext("2d");
@@ -28,7 +50,11 @@ $.tangent = (function() {
 		return hHalf - vy;
 	}
 					
-	let draw = function() {	
+	let init = function(gap, h, r1, r2, n) {
+		ctx.fillStyle = "white";
+		ctx.fillRect(0, 0, width, height);
+	
+		ctx.lineWidth = 1;	
 		ctx.strokeStyle = "darkgrey";
 		ctx.strokeRect(0, 0, width, height);
 	
@@ -36,18 +62,11 @@ $.tangent = (function() {
 		ctx.moveTo(0, hHalf);
 		ctx.lineTo(width, hHalf);
 		ctx.stroke();	
-				
-		// mezera
-		let gap = 0;
-		// výška		
-		let h = 100;		
 		
-		let r1 = 150;
 		let rad1 = Math.asin(h / r1);
 		let xOffset1 = Math.cos(rad1) * r1;
 		let xCenter1 = xOffset1 - gap / 2;
 		
-		let r2 = r1;
 		let rad2 = Math.asin(h / r2);
 		let xOffset2 = Math.cos(rad2) * r2;
 		let xCenter2 = -xOffset2 + gap / 2;
@@ -88,23 +107,23 @@ $.tangent = (function() {
 		// zakřivení, které má tvar C má kladné R, zakřivení, který má tvar D má záporné
 		// klasická zvětšovací čočka má tedy R1 kladné a R2 záporné
 		// platí pro přechod ze vzduchu do mateirálu čočky s n (např. n=1.5 je sklo)
-		let n = 1.5;
 		let convexIndex1 = 1;
 		let convexIndex2 = -1;
 		let ri1 = r1 * convexIndex1;
 		let ri2 = r2 * convexIndex2;
 		let f = 1 / ((n - 1) * (1 / ri1 - 1 / ri2 + (n - 1) * d / (n * ri1 * ri2)));
 		console.log("F: " + f);
+					
+		let steps = 8;		
+		let range = h - 10;
+		for (let i = 0; i <= steps; i++) {
+			let color = i * 360 / steps;
+			let position = i * range * 2 / steps - range;
+			drawRay(n, r1, r2, xCenter1, xCenter2, position, "hsl(" + color + ", 100%, 50%)");	
+		}		
 		
 		ctx.fillStyle = "red";
 		ctx.fillRect(toGlobalX(f) - pointSize / 2, toGlobalY(0) - pointSize / 2, pointSize, pointSize);
-		
-		drawRay(n, r1, r2, xCenter1, xCenter2, 70, "purple");
-		/*drawRay(n, r1, r2, xCenter1, xCenter2, 50, "red");
-		drawRay(n, r1, r2, xCenter1, xCenter2, 30, "blue");
-		drawRay(n, r1, r2, xCenter1, xCenter2, 10, "green");
-		*/
-		
 	};
 	
 	let findRoots = function(a, b, c) {
@@ -121,22 +140,15 @@ $.tangent = (function() {
 		let y1 = a * x1 + b;
 		let y2 = a * x2 + b;
 		if (x1 < x2)			
-			return [[x1, y1], [x2, y2]];
+			return [{x: x1, y: y1}, {x: x2, y: y2}];
 		else 
-			return [[x2, y2], [x1, y1]];
+			return [{x: x2, y: y2}, {x: x1, y: y1}];
 	};
 	
-	let drawRay = function(n, r1, r2, xCenter1, xCenter2, rayHeight, color) {
-		let ry0 = rayHeight;
-		let result = intersection(0, ry0, r1, xCenter1);
-		let rx1 = result[0][0];
-		let ry1 = ry0;
-		console.log("RX1: " + rx1);
-		console.log("RY1: " + ry1);
-				
+	let refract = function(x, y, r, n) {
 		// vstupní úhel vůči kolmici k tečně je stejný jako úhel kolmice se středem kruhu vstupní strany čočky
-		let th1 = Math.asin(rayHeight / r1);
-		console.log("TH1: " + (th1 * 180 / Math.PI));
+		let th1 = Math.asin(y / r);
+		console.log("TH IN: " + (th1 * 180 / Math.PI));
 		// https://en.wikipedia.org/wiki/Refractive_index
 		// https://en.wikipedia.org/wiki/Snell%27s_law
 		// Beru přechod vzduch - čočka takže n1 = 1.000293 a n2 dle materiálu čočky
@@ -144,6 +156,7 @@ $.tangent = (function() {
 		// sin(th2) = n1 * sin(th1) / n2
 		// th2 = asin(n1 * sin(th1) / n2)		
 		let th2 = Math.asin(1.000293 * Math.sin(th1) / n);
+		console.log("TH OUT: " + th2);
 		// protože th2 není v pravoúhlém trojúhelníku, je potřeba dopočítat doplňkové úhly
 		let th1Rest = Math.PI - th1;
 		let th2Opst = Math.PI - th1Rest - th2;
@@ -151,15 +164,29 @@ $.tangent = (function() {
 		// tempo stoupání musí být *-1, protože je otočené
 		let a = -Math.tan(th2Opst);		
 		// a její posun dle počátečního (koncového) y
-		let b = rayHeight - (a * rx1);
-		
-		result = intersection(a, b, r2, xCenter2);
-		let rx2 = result[1][0]; 
-		let ry2 = result[1][1];
-		//let rx2 = 30; let ry2 = a * rx2 + b;
-		
+		let b = y - a * x;
+		return {a: a, b: b};
+	};
+	
+	let drawRay = function(n, r1, r2, xCenter1, xCenter2, rayHeight, color) {
+		let ry0 = rayHeight;
+		let result = intersection(0, ry0, r1, xCenter1);
+		let rx1 = result[0].x;
+		let ry1 = result[0].y;
+		console.log("RX1: " + rx1);
+		console.log("RY1: " + ry1);
+				
+		let line = refract(rx1, ry1, r1, n);
+		result = intersection(line.a, line.b, r2, xCenter2);
+		let rx2 = result[1].x; 
+		let ry2 = result[1].y;
+	
 		console.log("RX2: " + rx2);
 		console.log("RY2: " + ry2);
+		
+		line = refract(rx2, ry2, r2, 1/n);
+		let ry3 = 0;
+		let rx3 = (ry3 - line.b) / -line.a;
 		
 		ctx.strokeStyle = color;
 		ctx.setLineDash([]);
@@ -168,19 +195,36 @@ $.tangent = (function() {
 		ctx.moveTo(0, toGlobalY(ry0));
 		ctx.lineTo(toGlobalX(rx1), toGlobalY(ry1));
 		ctx.lineTo(toGlobalX(rx2), toGlobalY(ry2));
+		ctx.lineTo(toGlobalX(rx3), toGlobalY(ry3));
 		ctx.stroke();	
 	};
 	
-	let init = function() {	
-		ctx.lineWidth = 1;				
-		draw();
-	};	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
 		
 	return {
-		start: function() {					
-			init();						
+		start: function() {	
+			let gapParam = validate("Invalid gap", "gapInput", 0, 50);
+			let heightParam = validate("Invalid height", "heightInput", 50, 150);
+			let radius1Param = validate("Invalid radius 1", "radius1Input", 100, 300);
+			let radius2Param = validate("Invalid radius 2", "radius2Input", 100, 300);
+			let nParam = validate("Invalid N index", "nInput", 1, 2);
+
+			if (gapParam && heightParam && radius1Param && radius2Param && nParam)				
+				init(gapParam, heightParam, radius1Param, radius2Param, nParam);						
 		},	
 	};
 })();
 
-$.tangent.start();</script>
+$.rays.start();</script>
