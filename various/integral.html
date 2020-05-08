@@ -1,0 +1,121 @@
+[N1]Demo[/N1]
+[HTML]<div style="margin: 10px 0;">
+	<canvas id="canvasT" width="350" height="200"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.tangent = (function() {
+
+	let canvas = document.getElementById("canvasT");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	
+	let point = 2;
+	let interval = 70;
+	let innerIntervalCallback;
+	let xOffsetPerc = 0.1;
+	let yOffsetPerc = 0.9;
+	let xScale = 15;
+	let yScale = 1.5;
+	
+	let partWidth = 5;
+	let partStep = -1;
+		
+	let func = function(x) {		
+		return 20 * x - x * x;
+	};
+	
+	let deriv = function(x) {		
+		return 2 * x; 
+	};
+		
+	let toCX = function(x) {
+		return (x - width * xOffsetPerc) / xScale; 
+	};
+	
+	let toX = function(cx) {
+		return cx * xScale + width * xOffsetPerc; 
+	};
+	
+	let toCY = function(y) {
+		return (height * yOffsetPerc - y) / yScale;
+	};
+	
+	let toY = function(cy) {
+		return height * yOffsetPerc - cy * yScale;
+	};
+		
+	let draw = function() {	
+		ctx.clearRect(0, 0, width, height);
+		ctx.strokeStyle = "darkgrey";
+		ctx.beginPath();
+		// x
+		ctx.moveTo(0, toY(0));
+		ctx.lineTo(width, toY(0));
+		// y
+		ctx.moveTo(toX(0), 0);
+		ctx.lineTo(toX(0), height);
+		ctx.stroke();
+	
+		for (let x = 0; x < width; x++) {	
+			let cx = toCX(x);
+			let cy = func(cx) ;
+			if (cx < 0 || cy < 0)
+				continue;
+			let y = toY(cy);
+			// obsah
+			if ((x - toX(0)) % partWidth == 0) {
+				ctx.fillStyle = "lightgreen";
+				ctx.strokeStyle = "green";
+				let w = partWidth;
+				let h = toY(0) - y;
+				ctx.fillRect(x, y, w, h);
+				ctx.strokeRect(x, y, w, h);
+			}
+				
+			// funkce
+			ctx.fillStyle = "blue";
+			ctx.fillRect(x, y, point, point);
+		}
+	};
+			
+	let step = function() {
+		if (partWidth < 2 || partWidth > width / 8)
+			partStep *= -1;
+		partWidth += partStep;
+		draw();
+	}
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};
+	
+	let init = function() {	
+		ctx.lineWidth = 2;				
+		innnerChangeInterval(interval);	
+	};	
+		
+	return {
+
+		start: function() {					
+			init();						
+		},
+		
+	};
+
+})();
+
+$.tangent.start();</script>

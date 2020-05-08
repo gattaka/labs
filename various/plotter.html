@@ -15,7 +15,9 @@
 	
 	let r = 3;
 	plotter.addFunc(function(x) {		
-		return Math.pow(2,x);
+		let r = 5;
+		let shift = 2;
+		return Math.sqrt(r * r - Math.pow(x - shift, 2));
 	});
 	plotter.addFunc(function(x) {		
 		return -x / Math.sqrt(r*r - x*x);
