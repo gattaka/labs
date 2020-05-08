@@ -2,19 +2,21 @@
 [HTML]<table>
 	<tbody>
 		<tr>
-			<td>Dimension <10-50></td>
+			<td>Radius <2-20></td>
+			<td>Layers <2-10></td>
 			<td>Speed (ms) <1-50></td>
 			<td></td>
 		</tr>
 		<tr>				
-			<td><input id="starsInput" style="width: 80px;" value="50">	
-			<td><input id="speedInput" style="width: 160px;" value="5"></td>				
+			<td><input id="pointsInput" style="width: 80px;" value="20">	
+			<td><input id="layersInput" style="width: 80px;" value="6">	
+			<td><input id="speedInput" style="width: 160px;" value="10"></td>				
 			<td><button type="button" onclick="$.stars.start()">Run!</button></td>
 		</tr>		
 	</tbody>
 </table>
 <div style="margin: 10px 0;">
-	<canvas id="myCanvas" width="1400" height="600"></canvas>
+	<canvas id="myCanvas" width="700" height="600"></canvas>
 </div>
 <div id="status"></div>[/HTML]
 <script>let $ = {};
@@ -26,7 +28,10 @@ $.stars = (function() {
 	let height;
 	let halfWidth;
 	let halfHeight;
-	let stars;
+	
+	let points;
+	let layers;
+	let layer = [];
 		
 	let angle = 0;
 	let shift = 0;
@@ -58,51 +63,57 @@ $.stars = (function() {
 		ctx.fillStyle = "black";
 		ctx.fillRect(0, 0, width, height);
 						
-		angle = (angle + 0.5) % 360; 
-		shift = (shift + 0.1) % 10;
+		angle = (angle + 1) % 3600; 
+		shift = (shift + 1) % 100;
 	
-		let rad = angle / 180 * Math.PI;	
+		let rad = angle / 1800 * Math.PI;	
 
 		let focusLength = 20;
-		let saturation = 70;
-		
-		let layers = 5;
-		for (let layer = 1; layer < layers; layer++) {
-			let coef = layer + shift / 10;			
+		let saturation = 80;				
+				
+		for (let i = 1; i < layers; i++) {
+			let color = angle;			
+			let coef = i + shift / 100;			
 			//let scale = Math.pow(coef, 1.5) / 10;
 			//let dw = (width / stars) * scale;
 			//let dh = (height / stars) * scale;
-			let count = stars + 10 / coef;
+			let count = Math.ceil(points + 10 / coef);
 			// pro všechny 4 kvadranty
-			for (let ma = 0; ma < 4; ma++) {
+			for (let ma = 0; ma < 4; ma++) { 
+				ctx.fillStyle = "hsl(" + color + ", " + (coef * saturation / layers) + "%, " + (coef * 70 / layers) + "%)";
+				ctx.strokeStyle = ctx.fillStyle;
+				let corners = [];
 				for (let x = 0; x < count; x++) {			
 					for (let y = 0; y < count; y++) {
 						if (x == 0 || y == 0)
-							continue;				
-						if (Math.abs(x) == 1 || Math.abs(y) == 1) {
-							ctx.fillStyle = "hsl(0, " + (coef * saturation / layers + (100 - saturation)) + "%, " + (coef * 50 / layers) + "%)";
-						} else {
-							ctx.fillStyle = "hsl(10, " + (coef * saturation / layers) + "%, " + (coef * 50 / layers) + "%)";
-						}
-							
+							continue;										
 						let c = readCache(x, y);									
 						let r = c.r * coef;
+						let a = c.a;// + Math.PI / 10 * i / layers;
 						// https://en.wikipedia.org/wiki/3D_projection#Diagram
-						let viewDistance = r * focusLength / (layers - (layer + shift / 10));
-						let sx = halfWidth + Math.cos(rad + c.a + ma * Math.PI / 2) * viewDistance;
-						let sy = halfHeight + Math.sin(rad + c.a + ma * Math.PI / 2) * viewDistance;	
-						if (sx < 0 || sy < 0 || sx > width || sy > height)
-							continue;
-						ctx.fillRect(sx, sy, coef, coef);				
+						let viewDistance = r * focusLength / (layers - (i + shift / 100));
+						let sx = halfWidth + Math.cos(rad + a + ma * Math.PI / 2) * viewDistance;
+						let sy = halfHeight + Math.sin(rad + a + ma * Math.PI / 2) * viewDistance;	
+						
+						let size = coef;				
+						ctx.lineWidth = size / 2;						
+						if (x == 1 && y == 1) {
+							corners[1] = [sx, sy];							
+						} else if (x == 1 && y == count - 1) {
+							corners[2] = [sx, sy];
+						} else if (x == count - 1 && y == 1) {			
+							ctx.beginPath();
+							ctx.moveTo(sx, sy);
+							ctx.lineTo(corners[1][0], corners[1][1]);						
+							ctx.lineTo(corners[2][0], corners[2][1]);
+							ctx.stroke();
+						} else if (sx > 0 && sy > 0 && sx < width && sy < height && x > 1 && y > 1) {
+							ctx.fillRect(sx, sy, size, size);								
+						}						
 					}
 				}
 			}
 		}
-		/*
-		ctx.fillStyle = "red"; 
-		ctx.fillRect(0, halfHeight, width, 1);
-		ctx.fillRect(halfWidth, 0, 1, height);
-		*/
 	};
 
 	let innnerChangeInterval = function(value) {
@@ -138,14 +149,19 @@ $.stars = (function() {
 
 	let init = function() {		
 		let speedParam = validate("Invalid speed", "speedInput", 1, 50);	
-		let starsParam = validate("Invalid stars", "starsInput", 10, 500);	
-		if (speedParam && starsParam) {	
+		let pointsParam = validate("Invalid points", "pointsInput", 2, 20);	
+		let layersParam = validate("Invalid stars", "layersInput", 2, 10);			
+		if (speedParam && pointsParam && layersParam) {	
 			width = canvas.width;
 			height = canvas.height;
 			halfWidth = width / 2; 
 			halfHeight = height / 2;
-			stars = starsParam;
+			points = pointsParam;
+			layers = layersParam;
 			innnerChangeInterval(speedParam);	
+			
+			for (let i = 1; i < layers; i++) 
+				layer[i] = {a: 0, d: 0};					
 		}
 	};
 
