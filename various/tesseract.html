@@ -3,16 +3,31 @@
 	<tbody>
 		<tr>
 			<td>Points <2-20></td>
-			<td>Layers <2-10></td>
+			<td>Layers <2-20></td>
 			<td>Speed (ms) <1-50></td>
-			<td></td>
+			<td>Focus <5-50></td>
+			<td>Spread <0.1-2></td>			
 		</tr>
 		<tr>				
-			<td><input id="pointsInput" style="width: 80px;" value="20">	
-			<td><input id="layersInput" style="width: 80px;" value="8">	
-			<td><input id="speedInput" style="width: 160px;" value="10"></td>				
+			<td><input id="pointsInput" style="width: 120px;" value="10">	
+			<td><input id="layersInput" style="width: 120px;" value="8">	
+			<td><input id="speedInput" style="width: 100px;" value="10"></td>				
+			<td><input id="focusInput" style="width: 80px;" value="20"></td>				
+			<td><input id="spreadInput" style="width: 100px;" value="0.7"></td>						
+		</tr>
+		<tr>
+			<td>Dive speed <0.1-2></td>
+			<td>Rotation speed <1-10></td>
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>
+			<td><input id="diveInput" style="width: 110px;" value="0.5"></td>			
+			<td><input id="rotationInput" style="width: 120px;" value="5"></td>			
 			<td><button type="button" onclick="$.tesseract.start()">Run!</button></td>
-		</tr>		
+			<td><input id="fillInput" type="checkbox" onclick="$.tesseract.fill(this.checked)" checked>Fill?</input></td>
+			<td><input id="rainbowInput" type="checkbox" onclick="$.tesseract.rainbow(this.checked)" >Rainbow?</input></td>
+		</tr>
 	</tbody>
 </table>
 <div style="margin: 10px 0;">
@@ -29,18 +44,21 @@ $.tesseract = (function() {
 	let halfHeight;
 	
 	let points;
-	let pointer = 0;
+	let pointer;
 	let layersCount;
-	let layers = [];
+	let layers;
+	let focusLength;
+	let spread;
+	let diveSpeed;
+	let rotationSpeed;
 	
 	let interval = 20;
 	let innerIntervalCallback;		
 	
-	let cache = [];
+	let fill = true;
+	let rainbow = false;
 	
-	let resetCache = function() {
-		cache = [];
-	};
+	let cache;
 	
 	let readCache = function(x, y) {
 		let c1 = cache[x];
@@ -58,15 +76,9 @@ $.tesseract = (function() {
 	
 	let draw = function() {				
 		ctx.fillStyle = "black";
-		ctx.fillRect(0, 0, width, height);
-		let focusLength = 10;
-		let saturation = 80;	
-		let spread = 0.7;
-		let diveSpeed = 0.5;
-		let rotationSpeed = 5;
-		let alpha = 0.5;
-		let fill = true;
-		let rainbow = false;
+		ctx.fillRect(0, 0, width, height);		
+		let saturation = 80;			
+		let alpha = 0.5;		
 		for (let i = 0; i < layersCount; i++) {			
 			let layer = layers[(i + pointer) % layersCount];
 			layer.a = (layer.a + rotationSpeed) % 3600;
@@ -163,15 +175,27 @@ $.tesseract = (function() {
 	let init = function() {		
 		let speedParam = validate("Invalid speed", "speedInput", 1, 50);	
 		let pointsParam = validate("Invalid points", "pointsInput", 2, 20);	
-		let layersParam = validate("Invalid layers", "layersInput", 2, 10);			
-		if (speedParam && pointsParam && layersParam) {	
+		let layersParam = validate("Invalid layers", "layersInput", 2, 20);
+		let focusParam = validate("Invalid focus", "focusInput", 5, 50);	
+		let spreadParam = validate("Invalid spread", "spreadInput", 0.1, 2);	
+		let diveSpeedParam = validate("Invalid dive speed", "diveInput", 0.1, 2);	
+		let rotationSpeedParam = validate("Invalid rotation speed", "rotationInput", 1, 10);		
+		if (speedParam && pointsParam && layersParam && focusParam && spreadParam && diveSpeedParam && rotationSpeedParam) {	
 			width = canvas.width;
 			height = canvas.height;
 			halfWidth = width / 2; 
 			halfHeight = height / 2;
 			points = pointsParam;
 			layersCount = layersParam;
+			focusLength = focusParam;
+			spread = spreadParam;
+			diveSpeed = diveSpeedParam;
+			rotationSpeed = rotationSpeedParam;
 			innnerChangeInterval(speedParam);	
+						
+			pointer = 0;
+			layers = [];
+			cache = [];
 			
 			for (let i = 0; i < layersCount; i++) 
 				layers[i] = {a: 0, d: i * 100 / layersCount};					
@@ -215,7 +239,15 @@ $.tesseract = (function() {
 				}
 			}
 			init();
-		}
+		},
+		
+		fill: function(value) {
+			fill = value;
+		},
+		
+		rainbow: function(value) {
+			rainbow = value;
+		},
 	};
 
 })();
