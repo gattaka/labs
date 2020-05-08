@@ -2,25 +2,24 @@
 [HTML]<table>
 	<tbody>
 		<tr>
-			<td>Radius <2-20></td>
+			<td>Points <2-20></td>
 			<td>Layers <2-10></td>
 			<td>Speed (ms) <1-50></td>
 			<td></td>
 		</tr>
 		<tr>				
 			<td><input id="pointsInput" style="width: 80px;" value="20">	
-			<td><input id="layersInput" style="width: 80px;" value="6">	
+			<td><input id="layersInput" style="width: 80px;" value="8">	
 			<td><input id="speedInput" style="width: 160px;" value="10"></td>				
-			<td><button type="button" onclick="$.stars.start()">Run!</button></td>
+			<td><button type="button" onclick="$.tesseract.start()">Run!</button></td>
 		</tr>		
 	</tbody>
 </table>
 <div style="margin: 10px 0;">
-	<canvas id="myCanvas" width="700" height="600"></canvas>
-</div>
-<div id="status"></div>[/HTML]
+	<canvas id="myCanvas" width="700" height="600" ondblclick="$.tesseract.fullscreen()"></canvas>
+</div>[/HTML]
 <script>let $ = {};
-$.stars = (function() {	
+$.tesseract = (function() {	
 	
 	let canvas = document.getElementById("myCanvas");
 	let ctx = canvas.getContext("2d");
@@ -30,11 +29,9 @@ $.stars = (function() {
 	let halfHeight;
 	
 	let points;
-	let layers;
-	let layer = [];
-		
-	let angle = 0;
-	let shift = 0;
+	let pointer = 0;
+	let layersCount;
+	let layers = [];
 	
 	let interval = 20;
 	let innerIntervalCallback;		
@@ -62,56 +59,72 @@ $.stars = (function() {
 	let draw = function() {				
 		ctx.fillStyle = "black";
 		ctx.fillRect(0, 0, width, height);
-						
-		angle = (angle + 1) % 3600; 
-		shift = (shift + 1) % 100;
-	
-		let rad = angle / 1800 * Math.PI;	
-
-		let focusLength = 20;
-		let saturation = 80;				
-				
-		for (let i = 1; i < layers; i++) {
-			let color = angle;			
-			let coef = i + shift / 100;			
-			//let scale = Math.pow(coef, 1.5) / 10;
-			//let dw = (width / stars) * scale;
-			//let dh = (height / stars) * scale;
-			let count = Math.ceil(points + 10 / coef);
+		let focusLength = 10;
+		let saturation = 80;	
+		let spread = 0.7;
+		let diveSpeed = 0.5;
+		let rotationSpeed = 5;
+		let alpha = 0.5;
+		let fill = true;
+		let rainbow = false;
+		for (let i = 0; i < layersCount; i++) {			
+			let layer = layers[(i + pointer) % layersCount];
+			layer.a = (layer.a + rotationSpeed) % 3600;
+			layer.d += diveSpeed;			
+			let color = rainbow ? layer.a : 0;
+			let outOfView = true;
 			// pro všechny 4 kvadranty
 			for (let ma = 0; ma < 4; ma++) { 
-				ctx.fillStyle = "hsl(" + color + ", " + (coef * saturation / layers) + "%, " + (coef * 70 / layers) + "%)";
+				ctx.fillStyle = "hsla(" + color + ", " + (layer.d * saturation / 100) + "%, " + (layer.d * layer.d * 70 / 10000) + "%, " + alpha + ")";
 				ctx.strokeStyle = ctx.fillStyle;
 				let corners = [];
-				for (let x = 0; x < count; x++) {			
-					for (let y = 0; y < count; y++) {
+				for (let x = 0; x < points; x++) {			
+					for (let y = 0; y < points; y++) {
 						if (x == 0 || y == 0)
 							continue;										
 						let c = readCache(x, y);									
-						let r = c.r * coef;
-						let a = c.a;// + Math.PI / 10 * i / layers;
+						let r = c.r * layer.d;
+						let a = c.a;
 						// https://en.wikipedia.org/wiki/3D_projection#Diagram
-						let viewDistance = r * focusLength / (layers - (i + shift / 100));
+						let viewDistance = r * focusLength / (100 - layer.d) * spread;
+						let rad = layer.a / 1800 * Math.PI;	
 						let sx = halfWidth + Math.cos(rad + a + ma * Math.PI / 2) * viewDistance;
 						let sy = halfHeight + Math.sin(rad + a + ma * Math.PI / 2) * viewDistance;	
 						
-						let size = coef;				
+						// aspoň jeden bod je ve viditelné vzdálenosti
+						if (sx > 0 && sy > 0 && sx < width && sy < height)
+							outOfView = false;
+						
+						let size = layer.d / 20;				
 						ctx.lineWidth = size / 2;						
 						if (x == 1 && y == 1) {
-							corners[1] = [sx, sy];							
-						} else if (x == 1 && y == count - 1) {
-							corners[2] = [sx, sy];
-						} else if (x == count - 1 && y == 1) {			
+							corners[0] = [sx, sy];							
+						} else if (x == 1 && y == points - 1) {
+							corners[1] = [sx, sy];
+						} else if (x == points - 1 && y == 1) {			
+							corners[3] = [sx, sy];
 							ctx.beginPath();
-							ctx.moveTo(sx, sy);
+						} else if (x == points - 1 && y == points - 1) {
+							corners[2] = [sx, sy];
+							ctx.moveTo(corners[0][0], corners[0][1]);
 							ctx.lineTo(corners[1][0], corners[1][1]);						
 							ctx.lineTo(corners[2][0], corners[2][1]);
-							ctx.stroke();
-						} else if (sx > 0 && sy > 0 && sx < width && sy < height && x > 1 && y > 1) {
-							ctx.fillRect(sx, sy, size, size);								
+							ctx.lineTo(corners[3][0], corners[3][1]);
+							ctx.lineTo(corners[0][0], corners[0][1]);
+							if (fill) 
+								ctx.fill();
+							else 
+								ctx.stroke();
+						} else if (x > 1 && y > 1) {
+							ctx.fillRect(sx, sy, size, size);									
 						}						
 					}
-				}
+				}				
+			}
+			if (outOfView) {
+				layer.d = 0;
+				pointer = pointer == 0 ? layersCount - 1 : pointer - 1;		
+				break;				
 			}
 		}
 	};
@@ -150,27 +163,63 @@ $.stars = (function() {
 	let init = function() {		
 		let speedParam = validate("Invalid speed", "speedInput", 1, 50);	
 		let pointsParam = validate("Invalid points", "pointsInput", 2, 20);	
-		let layersParam = validate("Invalid stars", "layersInput", 2, 10);			
+		let layersParam = validate("Invalid layers", "layersInput", 2, 10);			
 		if (speedParam && pointsParam && layersParam) {	
 			width = canvas.width;
 			height = canvas.height;
 			halfWidth = width / 2; 
 			halfHeight = height / 2;
 			points = pointsParam;
-			layers = layersParam;
+			layersCount = layersParam;
 			innnerChangeInterval(speedParam);	
 			
-			for (let i = 1; i < layers; i++) 
-				layer[i] = {a: 0, d: 0};					
+			for (let i = 0; i < layersCount; i++) 
+				layers[i] = {a: 0, d: i * 100 / layersCount};					
 		}
 	};
 
 	return {
 		start: function() {	
 			init();			
+		},
+		
+		fullscreen: function() {
+			if (canvas.width > 700) {
+				canvas.width = 700;
+				canvas.height = 600;
+				canvas.style.position = "relative";
+				if (document.exitFullscreen) {
+					document.exitFullscreen();
+				} else if (document.mozCancelFullScreen) { /* Firefox */
+					document.mozCancelFullScreen();
+				} else if (document.webkitExitFullscreen) { /* Chrome, Safari and Opera */
+					document.webkitExitFullscreen();
+				} else if (document.msExitFullscreen) { /* IE/Edge */
+					document.msExitFullscreen();
+				}
+			} else {
+				canvas.width = screen.width;
+				canvas.height = screen.height;
+				canvas.style.position = "absolute";
+				canvas.style.left = "0";
+				canvas.style.top = "0";
+				canvas.style.zIndex = "999";
+				if (canvas.requestFullscreen) {
+					canvas.requestFullscreen();
+				} else if (canvas.mozRequestFullScreen) { /* Firefox */
+					canvas.mozRequestFullScreen();
+				} else if (canvas.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+					canvas.webkitRequestFullscreen();
+				} else if (elem.msRequestFullscreen) { /* IE/Edge */
+					canvas.msRequestFullscreen();
+				}
+			}
+			init();
 		}
 	};
 
 })();
 
-$.stars.start();</script>
+$.tesseract.start();
+//$.tesseract.fullscreen();
+</script>
