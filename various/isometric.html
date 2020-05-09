@@ -1,5 +1,22 @@
 [N1]Demo[/N1]
-[HTML]<div style="margin: 10px 0;">
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Cells <2-50></td>
+			<td>Animation <1-4></td>
+			<td>Freq 1 <1-10></td>
+			<td>Freq 2 <1-10></td>
+			<td></td>
+		</tr>
+		<tr>			
+			<td><input id="cellsInput" style="width: 100px;" value="13"></td>				
+			<td><input id="animationInput" style="width: 100px;" value="1"></td>			
+			<td><input id="freq1Input" style="width: 100px;" value="1"></td>			
+			<td><input id="freq2Input" style="width: 100px;" value="1"></td>					
+			<td><button type="button" onclick="$.isometric.start()">Run!</button></td>
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0;">
 	<canvas id="canvasT" width="700" height="400"></canvas>
 </div>[/HTML]
 <script>var $ = $ || {};
@@ -16,19 +33,24 @@ $.isometric = (function() {
 	let innerIntervalCallback;
 	
 	let viewX = 0;
-	let viewY = 0;
+	let viewY = 20;
 	
 	let dragged = false;
 	let xDraggedStart;
 	let yDraggedStart;
 	
 	let colors = 5;
-	let mapW = 9;
-	let mapH = 9;
-	let cellW = 80;
-	let cellH = cellW / 2;
+	let mapW;
+	let mapH;
+	let cellW;
+	let cellH;
 	let cellMaxLevel = 60;
 	let isoCenter;
+	
+	let animation;
+	let angle;
+	let freq1;
+	let freq2;
 	
 	let map;
 		
@@ -103,9 +125,11 @@ $.isometric = (function() {
 		ctx.stroke();
 		
 		ctx.beginPath();
-		ctx.moveTo(0, halfHeight);
-		ctx.lineTo(width, halfHeight);
-		ctx.stroke();
+		ctx.moveTo(0, halfHeight + 20);
+		ctx.lineTo(width, halfHeight + 20);
+		ctx.stroke();		
+		
+		angle = (angle + 2) % 360;
 		
 		// map se musí vykreslovat v opačném pořadí, než je X, aby se bloky správně překrývaly
 		let isoCell;
@@ -116,11 +140,34 @@ $.isometric = (function() {
 				isoCell.value = mCell.value;
 				isoCell.level = mCell.level;
 				drawIsoCell(isoCell);	
-				// update výšky
-				mCell.level += mCell.speed;
-				if (mCell.level  < 0 || mCell.level > 1) {
-					mCell.speed *= -1;					
+				// animace
+				switch (animation) {
+				case 1:
 					mCell.level += mCell.speed;
+					if (mCell.level  < 0 || mCell.level > 1) {
+						mCell.speed *= -1;					
+						mCell.level += mCell.speed;
+					}
+					break;
+				case 2:
+					let xAngle = mx / mapW * 90 + angle * freq1;
+					let yAngle = my / mapH * 90 + angle * freq2;
+					mCell.level = Math.abs(Math.sin(xAngle / 180 * Math.PI) + Math.sin(yAngle / 180 * Math.PI)) / 2 ;
+					break;
+				case 3:
+					let aAngle = mx / mapW * 90 + angle * freq1;
+					let bAngle = my / mapH * 90 + angle * freq2;
+					if ((mx + my) % 2 == 1)  
+						mCell.level = Math.abs(Math.sin(aAngle / 180 * Math.PI));
+					else 
+						mCell.level = Math.abs(Math.sin(bAngle / 180 * Math.PI));
+					break;
+				case 4:					
+					let centerDistX = mx - mapW / 2;
+					let centerDistY = my - mapH / 2;					
+					let cAngle = Math.sqrt(centerDistX * centerDistX + centerDistY * centerDistY) / mapW * 180 + angle * freq1;					
+					mCell.level = Math.abs(Math.sin(cAngle / 180 * Math.PI));
+					break;
 				}
 			}
 		}		
@@ -144,32 +191,63 @@ $.isometric = (function() {
 		}, interval);
 	};
 	
-	let init = function() {	
-		ctx.lineWidth = 2;				
-		innnerChangeInterval(interval);	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	let init = function() {			
+		let cellsParam = validate("Invalid cells", "cellsInput", 2, 50);	
+		let animationParam = validate("Invalid animation", "animationInput", 1, 4);	
+		let freq1Param = validate("Invalid freq 1", "freq1Input", 1, 10);	
+		let freq2Param = validate("Invalid freq 2", "freq2Input", 1, 10);	
+
+		if (cellsParam && animationParam && freq1Param && freq2Param) {				
+			mapW = cellsParam;
+			mapH = cellsParam
+			animation = animationParam;
+			freq1 = freq1Param;
+			freq2 = freq2Param;
+			
+			cellW = 680 / mapW;
+			cellH = cellW / 2;
+			
+			angle = 0;
 		
-		let centerMx = Math.floor(mapW / 2);
-		let centerMy = Math.floor(mapH / 2);
-		isoCenter = {
-			ix: centerMx * cellW / 2 + centerMy * cellW / 2,
-			iy: centerMy * cellH / 2 - centerMx * cellH / 2 
-		};
-		
-		map = [];
-		for (let mx = 0; mx < mapW; mx++) {
-			let row = [];
-			map[mx] = row;
-			for (let my = 0; my < mapH; my++) {
-				//let color = (Math.floor(Math.random() * colors) * 360 / colors);				
-				let color = (mx * mapH + my) * 360 / (mapW * mapH);
-				row[my] = {
-					value: "hsl(" + color + ", 100%, 50%)",
-					speed: Math.random() * 0.1,
-					level: Math.random()
+			ctx.lineWidth = 2;				
+			innnerChangeInterval(interval);	
+			
+			let centerMx = Math.floor(mapW / 2);
+			let centerMy = Math.floor(mapH / 2);
+			isoCenter = {
+				ix: centerMx * cellW / 2 + centerMy * cellW / 2,
+				iy: centerMy * cellH / 2 - centerMx * cellH / 2 
+			};
+			
+			map = [];
+			for (let mx = 0; mx < mapW; mx++) {
+				let row = [];
+				map[mx] = row;
+				for (let my = 0; my < mapH; my++) {
+					//let color = (Math.floor(Math.random() * colors) * 360 / colors);				
+					let color = (mx * mapH + my) * 360 / (mapW * mapH);
+					row[my] = {
+						value: "hsl(" + color + ", 100%, 50%)",
+						speed: Math.random() * 0.1,
+						level: Math.random()
+					}
 				}
 			}
-		}
-		
+		}		
 	};	
 	
 	canvas.addEventListener("mousedown", function (e) {
@@ -197,11 +275,11 @@ $.isometric = (function() {
 	
 	canvas.addEventListener("dblclick", function (e) {
 		viewX = 0;
-		viewY = 0;
+		viewY = 20;
 	}, false);
 		
 	return {
-
+	
 		start: function() {					
 			init();						
 		},
