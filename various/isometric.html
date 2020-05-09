@@ -10,7 +10,7 @@
 		</tr>
 		<tr>			
 			<td><input id="cellsInput" style="width: 100px;" value="13"></td>				
-			<td><input id="animationInput" style="width: 100px;" value="1"></td>			
+			<td><input id="animationInput" style="width: 100px;" value="4"></td>			
 			<td><input id="freq1Input" style="width: 100px;" value="1"></td>			
 			<td><input id="freq2Input" style="width: 100px;" value="1"></td>					
 			<td><button type="button" onclick="$.isometric.start()">Run!</button></td>
@@ -150,23 +150,23 @@ $.isometric = (function() {
 					}
 					break;
 				case 2:
-					let xAngle = mx / mapW * 90 + angle * freq1;
-					let yAngle = my / mapH * 90 + angle * freq2;
-					mCell.level = Math.abs(Math.sin(xAngle / 180 * Math.PI) + Math.sin(yAngle / 180 * Math.PI)) / 2 ;
+					let xAngle = mx / mapW * 90 + angle;
+					let yAngle = my / mapH * 90 + angle;
+					mCell.level = Math.abs(Math.sin(freq1 * xAngle / 180 * Math.PI) + Math.sin(freq2 * yAngle / 180 * Math.PI)) / 2;
 					break;
 				case 3:
-					let aAngle = mx / mapW * 90 + angle * freq1;
-					let bAngle = my / mapH * 90 + angle * freq2;
+					let aAngle = mx / mapW * 90 + angle;
+					let bAngle = my / mapH * 90 + angle;
 					if ((mx + my) % 2 == 1)  
-						mCell.level = Math.abs(Math.sin(aAngle / 180 * Math.PI));
+						mCell.level = Math.abs(Math.sin(freq1 * aAngle / 180 * Math.PI));
 					else 
-						mCell.level = Math.abs(Math.sin(bAngle / 180 * Math.PI));
+						mCell.level = Math.abs(Math.sin(freq2 * bAngle / 180 * Math.PI));
 					break;
 				case 4:					
 					let centerDistX = mx - mapW / 2;
 					let centerDistY = my - mapH / 2;					
-					let cAngle = Math.sqrt(centerDistX * centerDistX + centerDistY * centerDistY) / mapW * 180 + angle * freq1;					
-					mCell.level = Math.abs(Math.sin(cAngle / 180 * Math.PI));
+					let cAngle = Math.sqrt(centerDistX * centerDistX + centerDistY * centerDistY) / mapW * 180 + angle;			
+					mCell.level = Math.abs(Math.sin(freq1 * cAngle / 180 * Math.PI));
 					break;
 				}
 			}
