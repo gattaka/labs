@@ -1,0 +1,180 @@
+[N1]Demo[/N1]
+[HTML]<div style="margin: 10px 0;">
+	<canvas id="canvasT" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.isometric = (function() {
+
+	let canvas = document.getElementById("canvasT");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;	
+	let halfWidth = width / 2;
+	let halfHeight = height / 2;
+	
+	let interval = 20;
+	let innerIntervalCallback;
+	
+	let viewX = 0;
+	let viewY = 0;
+	
+	let dragged = false;
+	let xDraggedStart;
+	let yDraggedStart;
+	
+	let colors = 5;
+	let mapW = 9;
+	let mapH = 9;
+	let cellW = 80;
+	let cellH = cellW / 2;
+	let isoCenter;
+	
+	let map;
+		
+	let toIso = function(mx, my) {
+		return {
+			ix: halfWidth + mx * cellW / 2 + my * cellW / 2 - isoCenter.ix + viewX, 
+			iy: halfHeight + my * cellH / 2 - mx * cellH / 2 - isoCenter.iy + viewY
+		};
+	};
+	
+	let toMap = function(ix, iy) {
+		return {ix: halfWidth + mx, iy: halfHeight + my};
+	};
+	
+	let drawIsoCell = function(isoCell) {		
+		let x = [isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix, isoCell.ix - cellW / 2];
+		let y = [isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2, isoCell.iy];
+		
+		// Mimo view nemá cenu vykreslovat
+		if (x[1] < 0 || x[3] > width || y[0] > height || y[2] < 0)
+			return;
+		
+		ctx.fillStyle = isoCell.value;
+		ctx.strokeStyle = "black";
+		ctx.lineWidth = 1;			
+		for (let d = 0; d < 2; d++) {
+			ctx.beginPath();
+			for (let i = 0; i < 5; i++) {
+				let ii = i % 4;
+				if (i == 0) 
+					ctx.moveTo(x[ii], y[ii]);
+				else 
+					ctx.lineTo(x[ii], y[ii]);
+			}
+			if (d == 0) 
+				ctx.fill();
+			else 
+				ctx.stroke();
+		}		
+	};
+		
+	let draw = function() {	
+		ctx.clearRect(0, 0, width, height);
+		
+		ctx.strokeStyle = "black";
+		ctx.lineWidth = 1;					
+		ctx.strokeRect(0, 0, width, height);
+		
+		ctx.beginPath();
+		ctx.moveTo(halfWidth, 0);
+		ctx.lineTo(halfWidth, height);
+		ctx.stroke();
+		
+		ctx.beginPath();
+		ctx.moveTo(0, halfHeight);
+		ctx.lineTo(width, halfHeight);
+		ctx.stroke();
+		
+		let isoCell;
+		for (let mx = 0; mx < mapW; mx++)
+			for (let my = 0; my < mapH; my++) {
+				isoCell = toIso(mx, my);
+				isoCell.value = map[mx][my];
+				drawIsoCell(isoCell);			
+			}
+				
+		//ctx.fillRect(xp - pointSize / 2, toY(a * toCX(xp) + b) - pointSize / 2, pointSize, pointSize);
+	};
+				
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);
+	};
+	
+	let init = function() {	
+		ctx.lineWidth = 2;				
+		innnerChangeInterval(interval);	
+		
+		let centerMx = Math.floor(mapW / 2);
+		let centerMy = Math.floor(mapH / 2);
+		isoCenter = {
+			ix: centerMx * cellW / 2 + centerMy * cellW / 2,
+			iy: centerMy * cellH / 2 - centerMx * cellH / 2 
+		};
+		
+		map = [];
+		for (let mx = 0; mx < mapW; mx++) {
+			let row = [];
+			map[mx] = row;
+			for (let my = 0; my < mapH; my++) {
+				//let color = (Math.floor(Math.random() * colors) * 360 / colors);				
+				let color = (mx * mapH + my) * 360 / (mapW * mapH);
+				row[my] = "hsl(" + color + ", 100%, 50%)";
+			}
+		}
+		
+	};	
+	
+	canvas.addEventListener("mousedown", function (e) {
+		dragged = true;
+		xDraggedStart = e.clientX;
+		yDraggedStart = e.clientY;
+	}, false);
+ 
+	canvas.addEventListener("mouseup", function (e) {
+		dragged = false;
+	}, false);
+	
+	canvas.addEventListener("mouseleave", function (e) {
+		dragged = false;
+	}, false);
+	
+	canvas.addEventListener("mousemove", function (e) {
+		if (!dragged) 
+			return;
+		viewX -= (xDraggedStart - e.clientX);
+		viewY -= (yDraggedStart - e.clientY);
+		xDraggedStart = e.clientX;
+		yDraggedStart = e.clientY;		
+	}, false);
+	
+	canvas.addEventListener("dblclick", function (e) {
+		viewX = 0;
+		viewY = 0;
+	}, false);
+		
+	return {
+
+		start: function() {					
+			init();						
+		},
+		
+	};
+
+})();
+
+$.isometric.start();</script>
