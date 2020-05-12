@@ -20,9 +20,6 @@ $.isometricGame = (function() {
 	let cellW = 128;
 	let cellH = 64;
 	
-	let targetX;
-	let targetY;
-	
 	let loaded = false;
 	let loadingProgress = 0;
 	let textures = [];
@@ -35,6 +32,9 @@ $.isometricGame = (function() {
 	];
 	let mapW = map.length;
 	let mapH = map[0].length;
+	
+	let targetX = halfWidth - 128 / 2;
+	let targetY = halfHeight - 128 / 2;
 	
 	// Stance (4 frames)
 	// Walk (8 frames)
@@ -61,14 +61,17 @@ $.isometricGame = (function() {
 		delay: 100,
 		// inkrement času
 		timer: 0,
-		ix: 0,
-		iy: 0,
+		ix: targetX,
+		iy: targetY,
+		baseix: 128 / 2,
+		baseiy: 128 - 20 
 	};
 	
 	let hero = {
 		mx: mapW / 2, 
 		my: mapH / 2,
-		speed: 100,
+		speed: 0.1,	
+		direction: 0
 	};
 		
 	/*
@@ -168,13 +171,12 @@ $.isometricGame = (function() {
 		let delay = timestamp - lastTime;
 		lastTime = timestamp;
 		
-		// hero		
-		let heroIx = halfWidth - heroSprite.width / 2;
-		let heroIy = halfHeight - heroSprite.height / 2;					
-		drawImg(1, 0, animateHero(delay), heroIx, heroIy);
-		
+		// hero								
+		let heroSpriteAdjustedX = heroSprite.ix - heroSprite.baseix;
+		let heroSpriteAdjustedY = heroSprite.iy - heroSprite.baseiy;
+		drawImg(1, 0, animateHero(delay), heroSpriteAdjustedX, heroSpriteAdjustedY);		
 		ctx.strokeStyle = "black";
-		ctx.strokeRect(heroIx, heroIy, heroSprite.width, heroSprite.height);
+		ctx.strokeRect(heroSpriteAdjustedX, heroSpriteAdjustedY, heroSprite.width, heroSprite.height);
 	};		
 
 	/*
@@ -182,37 +184,63 @@ $.isometricGame = (function() {
 	*/
 	
 	let animateHero = function(delay) {
-		heroSprite.timer += delay;
+		heroSprite.timer += delay;		
 		
-		let direction = 0;
-		let xDiff = targetX - halfWidth;
-		let yDiff = halfHeight - targetY;
-		let angle = Math.atan(yDiff / xDiff) / Math.PI * 180;
-		if (xDiff > 0 && yDiff > 0) {
+		let diffX = targetX - heroSprite.ix;
+		let diffY = heroSprite.iy - targetY;
+		let angle = Math.atan(diffY / diffX) / Math.PI * 180;
+		if (diffX >= 0 && diffY > 0) {
 			// ok
-		} else if (xDiff < 0) {
+		} else if (diffX < 0) {
 			angle += 180;
 		} else {
 			angle += 360;		
 		}
-
-		if (angle >= 0 && angle <= 30 || angle > 330 && angle <= 360) {
-			direction = 4; // right
-		} else if (angle > 30 && angle <= 80) {
-			direction = 3; // right up
-		} else if (angle > 80 && angle <= 100) {
-			direction = 2; // up
-		} else if (angle > 100 && angle <= 150) {
-			direction = 1; // left up
-		} else if (angle > 150 && angle <= 210) {
-			direction = 0; // left
-		} else if (angle > 210 && angle <= 260) {
-			direction = 7; // left down
-		} else if (angle > 260 && angle <= 280) {
-			direction = 6; // down
-		} else /* if (angle > 280 && angle <= 330) */ {
-			direction = 5; // right down
+		
+		if (diffX != 0 || diffY != 0) {
+			let shiftX = -1 * Math.sign(diffX) * delay * hero.speed;
+			// isometrické zkosení 1:2 musí snížit i rychlost
+			let shiftY = -1 * Math.sign(diffY) * delay * hero.speed / 2; 
+			let reductionX = diffX + shiftX;
+			let reductionY = diffY + shiftY;
+			if (Math.sign(reductionX) != Math.sign(diffX) || reductionX == 0) {
+				heroSprite.ix = targetX;
+			} else {
+				heroSprite.ix -= shiftX;
+			}						
+			if (Math.sign(reductionY) != Math.sign(diffY) || reductionY == 0) {
+				heroSprite.iy = targetY;
+			} else {
+				heroSprite.iy += shiftY;
+			}
+			
+			heroSprite.currentLoop = 1;
+						
+			//console.log(angle + " diffX " + diffX + " diffY " + diffY);
+			
+			let tolerance = 5;
+			
+			if (angle >= 0 && angle <= tolerance || angle > (360 - tolerance) && angle <= 360) {
+				hero.direction = 4; // right
+			} else if (angle > tolerance && angle <= (90 - tolerance)) {
+				hero.direction = 3; // right up
+			} else if (angle > (90 - tolerance) && angle <= (90 + tolerance)) {
+				hero.direction = 2; // up
+			} else if (angle > (90 + tolerance) && angle <= (180 - tolerance)) {
+				hero.direction = 1; // left up
+			} else if (angle > (180 - tolerance) && angle <= (180 + tolerance)) {
+				hero.direction = 0; // left
+			} else if (angle > (180 + tolerance) && angle <= (270 - tolerance)) {
+				hero.direction = 7; // left down
+			} else if (angle > (270 - tolerance) && angle <= (270 + tolerance)) {
+				hero.direction = 6; // down
+			} else /* if (angle > 280 && angle <= 330) */ {
+				hero.direction = 5; // right down
+			}						
+		} else {
+			heroSprite.currentLoop = 0;
 		}
+
 		
 		let isMirrorLoop = heroSprite.loopsMirror[heroSprite.currentLoop];
 		let loopFrames = heroSprite.loopsFrames[heroSprite.currentLoop];
@@ -227,7 +255,7 @@ $.isometricGame = (function() {
 		if (isMirrorLoop && currentFrame > loopFrames - 1) 
 			currentFrame = loopFrames - 1 - currentFrame % loopFrames;		
 			
-		return heroSprite.directionFrames * direction + heroSprite.loops[heroSprite.currentLoop] + currentFrame;	
+		return heroSprite.directionFrames * hero.direction + heroSprite.loops[heroSprite.currentLoop] + currentFrame;	
 	};
 	
 	/*
