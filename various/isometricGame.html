@@ -1,4 +1,6 @@
-[HTML]<div style="margin: 10px 0;">
+[HTML]<input type="checkbox" onchange="$.isometricGame.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
+<input type="checkbox" onchange="$.isometricGame.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
+<div style="margin: 10px 0;">
 	<canvas id="canvasT" width="700" height="400"></canvas>
 </div>[/HTML]
 <script>var $ = $ || {};
@@ -13,7 +15,9 @@ $.isometricGame = (function() {
 	
 	let lastTime = 0;
 	
-	let centered = false;
+	let centered = true;
+	let outlines = true;
+	
 	let viewX = 0;
 	let viewY = 0;
 	
@@ -25,15 +29,21 @@ $.isometricGame = (function() {
 	let loadingProgress = 0;
 	let textures = [];
 	
+	// mapa povrchů
 	let map = [
-		[0,0,0,0],
-		[0,1,0,0],
-		[0,0,0,0],
-		[0,0,0,0],
-		[0,0,0,0],
+		[0,0],[0,1],[0,4],[0,1],
+		[0,3],[0,0,1,48],[0,1,1,45],[0,5],
+		[0,0],[0,3,1,50],[0,5,1,47],[0,1],
+		[0,3],[0,2],[0,3],[0,5],		
 	];
-	let mapW = map.length;
-	let mapH = map[0].length;
+	let objectMap = [
+		[],[],[],[],
+		[1,0],[],[0,0],[],
+		[],[],[],[],
+		[],[],[],[],
+	];
+	let mapW = 4;
+	let mapH = 4;
 	
 	let virtualTargetX = halfWidth;
 	let virtualTargetY = halfHeight;
@@ -136,9 +146,14 @@ $.isometricGame = (function() {
 		if (x[1] < 0 || x[3] > width || y[0] > height || y[2] < 0)
 			return;
 			
-		drawImg(0, isoCell.value, 0, isoCell.ix - cellW / 2, isoCell.iy - cellH / 2);		
+		drawImg(0, isoCell.value[0], isoCell.value[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2);	
+
+		// existuje přechod?
+		if (isoCell.value.length > 2)
+			drawImg(0, isoCell.value[2], isoCell.value[3], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2);	
 		
-		drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]]);							
+		if (outlines)
+			drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]]);							
 	};
 		
 	let draw = function(timestamp) {
@@ -170,10 +185,14 @@ $.isometricGame = (function() {
 		let isoCell;
 		for (let mx = mapW - 1; mx >= 0; mx--) {
 			for (let my = 0; my < mapH; my++) {
-				let mCell = map[mx][my];
+				let i = my * mapW + mx;
+				let mCell = map[i];
 				isoCell = toIso(mx, my);
 				isoCell.value = mCell;				
 				drawIsoCell(isoCell);					
+				let object = objectMap[i];
+				if (object.length > 0) 
+					drawImg(2, object[0], object[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2);				
 			}
 		}		
 		
@@ -184,9 +203,11 @@ $.isometricGame = (function() {
 		// hero								
 		let heroSpriteAdjustedX = heroSprite.vix + viewX - heroSprite.baseix;
 		let heroSpriteAdjustedY = heroSprite.viy + viewY - heroSprite.baseiy;
-		drawImg(1, 0, animateHero(delay), heroSpriteAdjustedX, heroSpriteAdjustedY);		
-		ctx.strokeStyle = "black";
-		ctx.strokeRect(heroSpriteAdjustedX, heroSpriteAdjustedY, heroSprite.width, heroSprite.height);
+		drawImg(1, 0, animateHero(delay), heroSpriteAdjustedX, heroSpriteAdjustedY);	
+		if (outlines) {
+			ctx.strokeStyle = "black";
+			ctx.strokeRect(heroSpriteAdjustedX, heroSpriteAdjustedY, heroSprite.width, heroSprite.height);
+		}
 	};		
 
 	/*
@@ -226,8 +247,7 @@ $.isometricGame = (function() {
 			
 			heroSprite.currentLoop = 1;
 						
-												
-			console.log("virtualTargetX " + virtualTargetX + " heroSprite.vix " + heroSprite.vix + " viewX " + viewX);
+			//console.log("virtualTargetX " + virtualTargetX + " heroSprite.vix " + heroSprite.vix + " viewX " + viewX);
 			
 			let tolerance = 5;
 			
@@ -302,35 +322,31 @@ $.isometricGame = (function() {
 
 		// ground textures		
 		textures[0] = [];
-		// object textures
+		// characters textures
 		textures[1] = [];
+		// object textures
+		textures[2] = [];
 		
-		textures[0].push({
-			src: "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_128x64.png",
-			cols: 8, 
-			rows: 7,
-			width: cellW,
-			height: cellH			
-		});
-		loadingProgress++;
+		let list = [
+			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_128x64.png", 8, 7, cellW, cellH],
+			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_128x64.png", 8, 7, cellW, cellH],			
+			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_128x64.png", 8, 7, cellW, cellH],
+			[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height],
+			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64],
+			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64],
+		];
 		
-		textures[0].push({
-			src: "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_128x64.png",
-			cols: 8, 
-			rows: 7,
-			width: cellW,
-			height: cellH			
-		});
-		loadingProgress++;		
-		
-		textures[1].push({
-			src: "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png",
-			cols: 32, 
-			rows: 8,
-			width: heroSprite.width,
-			height: heroSprite.height			
-		});		
-		loadingProgress++;
+		for (let a = 0; a < list.length; a++) {
+			let item = list[a];
+			textures[item[0]].push({
+				src: item[1],
+				cols: item[2], 
+				rows: item[3],
+				width: item[4],
+				height: item[5]			
+			});
+			loadingProgress++;
+		}
 		
 		for (let g = 0; g < textures.length; g++) {	
 			let group = textures[g];
@@ -378,6 +394,14 @@ $.isometricGame = (function() {
 		start: function() {					
 			init();						
 		},		
+		
+		changeCentered: function(value) {
+			centered = value;
+		},
+		
+		changeOutlines: function(value) {
+			outlines = value;
+		},
 	};
 
 })();
