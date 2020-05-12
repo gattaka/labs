@@ -226,11 +226,11 @@ $.isometric = (function() {
 			ctx.lineWidth = 2;				
 			innnerChangeInterval(interval);	
 			
-			let centerMx = Math.floor(mapW / 2);
-			let centerMy = Math.floor(mapH / 2);
+			let mx = mapW / 2;
+			let my = mapH / 2;
 			isoCenter = {
-				ix: centerMx * cellW / 2 + centerMy * cellW / 2,
-				iy: centerMy * cellH / 2 - centerMx * cellH / 2 
+				ix: (mx - 0.5) * cellW / 2 + (my - 0.5) * cellW / 2,
+				iy: my * cellH / 2 - mx * cellH / 2
 			};
 			
 			map = [];

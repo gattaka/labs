@@ -1,0 +1,193 @@
+[HTML]<div style="margin: 10px 0;">
+	<canvas id="canvasT" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.isometricGame = (function() {
+
+	let canvas = document.getElementById("canvasT");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;	
+	let halfWidth = width / 2;
+	let halfHeight = height / 2;
+	
+	let interval = 20;
+	let innerIntervalCallback;
+	
+	let viewX = 0;
+	let viewY = 20;
+	
+	let isoCenter;
+	let cellW = 128;
+	let cellH = 64;
+	
+	let loaded = false;
+	let loadingProgress = 0;
+	let textures = [];
+	
+	let map = [
+		[0,0,0,0],
+		[0,0,0,0],
+		[0,0,0,0],
+		[0,0,0,0],
+	];
+	let mapW = map.length;
+	let mapH = map[0].length;
+		
+	let toIso = function(mx, my) {
+		return {
+			ix: halfWidth + mx * cellW / 2 + my * cellW / 2 - isoCenter.ix + viewX, 
+			iy: halfHeight + my * cellH / 2 - mx * cellH / 2 - isoCenter.iy + viewY
+		};
+	};
+	
+	let toMap = function(ix, iy) {
+		return {ix: halfWidth + mx, iy: halfHeight + my};
+	};	
+	
+	let drawImg = function(id, frame, ix, iy) {
+		let tex = textures[id];
+		let col = frame % tex.cols;
+		let row = Math.floor(frame / tex.cols);
+		ctx.drawImage(tex.canvas, 
+			col * tex.width, row * tex.height, tex.width, tex.height, 
+			ix, iy, tex.width, tex.height);
+	};		
+	
+	let drawPolygon = function(xArr, yArr) {		
+		ctx.strokeStyle = "hsla(0,0%,0%,0.2)";
+		ctx.lineWidth = 1;			
+		for (let d = 0; d < 2; d++) {
+			ctx.beginPath();
+			for (let i = 0; i < xArr.length + 1; i++) {
+				let ii = i % xArr.length;
+				if (i == 0) 
+					ctx.moveTo(xArr[ii], yArr[ii]);
+				else 
+					ctx.lineTo(xArr[ii], yArr[ii]);
+			}
+			ctx.stroke();
+		}
+	}
+		
+	let drawIsoCell = function(isoCell) {		
+		let x = [isoCell.ix - cellW / 2, isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix];
+		let y = [isoCell.iy, isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2];		
+		
+		// Mimo view nemá cenu vykreslovat
+		if (x[1] < 0 || x[3] > width || y[0] > height || y[2] < 0)
+			return;
+			
+		drawImg(0, 0, isoCell.ix - cellW / 2, isoCell.iy - cellH / 2);		
+		
+		drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]]);							
+	};
+		
+	let draw = function(timestamp) {
+		drawScene(timestamp);
+		window.requestAnimationFrame(draw);
+	};
+			
+	let drawScene = function(timestamp) {	
+		ctx.clearRect(0, 0, width, height);
+		
+		ctx.strokeStyle = "black";
+		ctx.lineWidth = 1;					
+		ctx.strokeRect(0, 0, width, height);
+		
+		ctx.beginPath();
+		ctx.moveTo(halfWidth, 0);
+		ctx.lineTo(halfWidth, height);
+		ctx.stroke();
+		
+		ctx.beginPath();
+		ctx.moveTo(0, halfHeight + 20);
+		ctx.lineTo(width, halfHeight + 20);
+		ctx.stroke();						
+
+		// map se musí vykreslovat v opačném pořadí, než je X, aby se bloky správně překrývaly
+		let isoCell;
+		for (let mx = mapW - 1; mx >= 0; mx--) {
+			for (let my = 0; my < mapH; my++) {
+				let mCell = map[mx][my];
+				isoCell = toIso(mx, my);
+				isoCell.value = mCell.value;
+				isoCell.level = mCell.level;
+				drawIsoCell(isoCell);					
+			}
+		}		
+		
+		drawImg(1, 0, halfWidth, halfHeight);
+	};			
+	
+	let init = function() {					
+		let mx = mapW / 2;
+		let my = mapH / 2;
+		isoCenter = {
+			ix: (mx - 0.5) * cellW / 2 + (my - 0.5) * cellW / 2,
+			iy: my * cellH / 2 - mx * cellH / 2
+		};
+
+		textures.push({
+			src: "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_128x64.png",
+			cols: 8, 
+			rows: 7,
+			width: cellW,
+			height: cellH			
+		});
+		
+		textures.push({
+			src: "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png",
+			cols: 32, 
+			rows: 8,
+			width: 128,
+			height: 128			
+		});		
+			
+		for (let i = 0; i < textures.length; i++) {
+			let texture = textures[i];
+			let textureCanvas = document.createElement("canvas");
+			textureCanvas.width = texture.width;
+			textureCanvas.height = texture.height;
+			
+			let textureCtx = textureCanvas.getContext("2d");
+			let subCanvasSmoothing = false;
+			textureCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
+			textureCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
+			textureCtx.imageSmoothingEnabled = subCanvasSmoothing;
+			textureCtx.msImageSmoothingEnabled = subCanvasSmoothing; 
+			
+			texture.canvas = textureCanvas;
+			texture.ctx = textureCtx;
+			textureImg = new Image();			
+			(function() {
+				let seafImg = textureImg;
+				let seafIndex = i;
+				textureImg.onload = function() {
+					let tex = textures[seafIndex];
+					tex.ctx.drawImage(seafImg, 0, 0);
+					tex.imageData = tex.ctx.getImageData(0, 0, tex.width, tex.height);
+					loadingProgress++;
+					if (loadingProgress == textures.length)
+						loaded = true;
+				}
+			})();
+			textureImg.src = texture.src;
+		}
+				
+		// https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
+		// https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-ref
+		// https://developer.mozilla.org/en-US/docs/Web/API/Performance/now
+		// https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
+		window.requestAnimationFrame(draw);		
+	};	
+		
+	return {	
+		start: function() {					
+			init();						
+		},		
+	};
+
+})();
+
+$.isometricGame.start();</script>
