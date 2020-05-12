@@ -20,13 +20,16 @@ $.isometricGame = (function() {
 	let cellW = 128;
 	let cellH = 64;
 	
+	let targetX;
+	let targetY;
+	
 	let loaded = false;
 	let loadingProgress = 0;
 	let textures = [];
 	
 	let map = [
 		[0,0,0,0],
-		[0,0,0,0],
+		[0,1,0,0],
 		[0,0,0,0],
 		[0,0,0,0],
 	];
@@ -58,12 +61,14 @@ $.isometricGame = (function() {
 		delay: 100,
 		// inkrement času
 		timer: 0,
+		ix: 0,
+		iy: 0,
 	};
 	
 	let hero = {
 		mx: mapW / 2, 
-		my: mapH / 2, 
-		direction: 0,
+		my: mapH / 2,
+		speed: 100,
 	};
 		
 	/*
@@ -85,8 +90,8 @@ $.isometricGame = (function() {
 	* DRAWING
 	*/
 	
-	let drawImg = function(id, frame, ix, iy) {
-		let tex = textures[id];
+	let drawImg = function(groupId, spriteId, frame, ix, iy) {
+		let tex = textures[groupId][spriteId];
 		let col = frame % tex.cols;
 		let row = Math.floor(frame / tex.cols);
 		ctx.drawImage(tex.canvas, 
@@ -118,7 +123,7 @@ $.isometricGame = (function() {
 		if (x[1] < 0 || x[3] > width || y[0] > height || y[2] < 0)
 			return;
 			
-		drawImg(0, 0, isoCell.ix - cellW / 2, isoCell.iy - cellH / 2);		
+		drawImg(0, isoCell.value, 0, isoCell.ix - cellW / 2, isoCell.iy - cellH / 2);		
 		
 		drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]]);							
 	};
@@ -154,8 +159,7 @@ $.isometricGame = (function() {
 			for (let my = 0; my < mapH; my++) {
 				let mCell = map[mx][my];
 				isoCell = toIso(mx, my);
-				isoCell.value = mCell.value;
-				isoCell.level = mCell.level;
+				isoCell.value = mCell;				
 				drawIsoCell(isoCell);					
 			}
 		}		
@@ -167,7 +171,7 @@ $.isometricGame = (function() {
 		// hero		
 		let heroIx = halfWidth - heroSprite.width / 2;
 		let heroIy = halfHeight - heroSprite.height / 2;					
-		drawImg(1, animateHero(delay), heroIx, heroIy);
+		drawImg(1, 0, animateHero(delay), heroIx, heroIy);
 		
 		ctx.strokeStyle = "black";
 		ctx.strokeRect(heroIx, heroIy, heroSprite.width, heroSprite.height);
@@ -179,6 +183,36 @@ $.isometricGame = (function() {
 	
 	let animateHero = function(delay) {
 		heroSprite.timer += delay;
+		
+		let direction = 0;
+		let xDiff = targetX - halfWidth;
+		let yDiff = halfHeight - targetY;
+		let angle = Math.atan(yDiff / xDiff) / Math.PI * 180;
+		if (xDiff > 0 && yDiff > 0) {
+			// ok
+		} else if (xDiff < 0) {
+			angle += 180;
+		} else {
+			angle += 360;		
+		}
+
+		if (angle >= 0 && angle <= 30 || angle > 330 && angle <= 360) {
+			direction = 4; // right
+		} else if (angle > 30 && angle <= 80) {
+			direction = 3; // right up
+		} else if (angle > 80 && angle <= 100) {
+			direction = 2; // up
+		} else if (angle > 100 && angle <= 150) {
+			direction = 1; // left up
+		} else if (angle > 150 && angle <= 210) {
+			direction = 0; // left
+		} else if (angle > 210 && angle <= 260) {
+			direction = 7; // left down
+		} else if (angle > 260 && angle <= 280) {
+			direction = 6; // down
+		} else /* if (angle > 280 && angle <= 330) */ {
+			direction = 5; // right down
+		}
 		
 		let isMirrorLoop = heroSprite.loopsMirror[heroSprite.currentLoop];
 		let loopFrames = heroSprite.loopsFrames[heroSprite.currentLoop];
@@ -193,7 +227,7 @@ $.isometricGame = (function() {
 		if (isMirrorLoop && currentFrame > loopFrames - 1) 
 			currentFrame = loopFrames - 1 - currentFrame % loopFrames;		
 			
-		return heroSprite.directionFrames * hero.direction + heroSprite.loops[heroSprite.currentLoop] + currentFrame;	
+		return heroSprite.directionFrames * direction + heroSprite.loops[heroSprite.currentLoop] + currentFrame;	
 	};
 	
 	/*
@@ -207,52 +241,78 @@ $.isometricGame = (function() {
 			ix: (mx - 0.5) * cellW / 2 + (my - 0.5) * cellW / 2,
 			iy: my * cellH / 2 - mx * cellH / 2
 		};
+		
+		canvas.addEventListener("click", function (e) {								
+			let bound = canvas.getBoundingClientRect();
+			targetX = e.clientX - bound.x;
+			targetY = e.clientY - bound.y;
+		});
 
-		textures.push({
+		// ground textures		
+		textures[0] = [];
+		// object textures
+		textures[1] = [];
+		
+		textures[0].push({
 			src: "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_128x64.png",
 			cols: 8, 
 			rows: 7,
 			width: cellW,
 			height: cellH			
 		});
+		loadingProgress++;
 		
-		textures.push({
+		textures[0].push({
+			src: "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_128x64.png",
+			cols: 8, 
+			rows: 7,
+			width: cellW,
+			height: cellH			
+		});
+		loadingProgress++;		
+		
+		textures[1].push({
 			src: "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png",
 			cols: 32, 
 			rows: 8,
 			width: heroSprite.width,
 			height: heroSprite.height			
 		});		
-			
-		for (let i = 0; i < textures.length; i++) {
-			let texture = textures[i];
-			let textureCanvas = document.createElement("canvas");
-			textureCanvas.width = texture.width * texture.cols;
-			textureCanvas.height = texture.height * texture.rows;
-			
-			let textureCtx = textureCanvas.getContext("2d");
-			let subCanvasSmoothing = false;
-			textureCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
-			textureCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
-			textureCtx.imageSmoothingEnabled = subCanvasSmoothing;
-			textureCtx.msImageSmoothingEnabled = subCanvasSmoothing; 
-			
-			texture.canvas = textureCanvas;
-			texture.ctx = textureCtx;
-			textureImg = new Image();			
-			(function() {
-				let seafImg = textureImg;
-				let seafIndex = i;
-				textureImg.onload = function() {
-					loadingProgress++;
-					if (loadingProgress == textures.length)
-						loaded = true;
-					let tex = textures[seafIndex];
-					tex.ctx.drawImage(seafImg, 0, 0);
-					tex.imageData = tex.ctx.getImageData(0, 0, textureCanvas.width, textureCanvas.height);
-				}
-			})();
-			textureImg.src = texture.src;
+		loadingProgress++;
+		
+		for (let g = 0; g < textures.length; g++) {	
+			let group = textures[g];
+			for (let i = 0; i < group.length; i++) {
+				let texture = group[i];
+				let textureCanvas = document.createElement("canvas");
+				textureCanvas.width = texture.width * texture.cols;
+				textureCanvas.height = texture.height * texture.rows;
+				
+				let textureCtx = textureCanvas.getContext("2d");
+				let subCanvasSmoothing = false;
+				textureCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
+				textureCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
+				textureCtx.imageSmoothingEnabled = subCanvasSmoothing;
+				textureCtx.msImageSmoothingEnabled = subCanvasSmoothing; 
+				
+				texture.canvas = textureCanvas;
+				texture.ctx = textureCtx;
+				textureImg = new Image();			
+				(function() {
+					let seafImg = textureImg;
+					let seafGroup = g;
+					let seafIndex = i;
+					textureImg.onload = function() {
+						loadingProgress--;
+						if (loadingProgress == 0)
+							loaded = true;
+						let tex = textures[seafGroup][seafIndex];
+						tex.ctx.drawImage(seafImg, 0, 0);
+						tex.imageData = tex.ctx.getImageData(0, 0, textureCanvas.width, textureCanvas.height);
+					}
+				})();
+				textureImg.src = texture.src;
+			}
 		}
 				
 		// https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
