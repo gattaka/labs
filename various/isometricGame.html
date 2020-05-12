@@ -51,8 +51,8 @@ $.isometricGame = (function() {
 	let mapW = 4;
 	let mapH = 4;
 	
-	let virtualTargetX = halfWidth;
-	let virtualTargetY = halfHeight;
+	let virtualTargetX;
+	let virtualTargetY;
 	
 	// Stance (4 frames)
 	// Walk (8 frames)
@@ -87,8 +87,8 @@ $.isometricGame = (function() {
 		// lze to jednoduše použít i na ostatní objekty/postavy, které 
 		// nebudou ve středu, nebo pokud se postava na okraji mapy posune
 		// mimo střed
-		vix: virtualTargetX,
-		viy: virtualTargetY,		
+		vix: 0,
+		viy: 0,		
 	};
 	
 	let hero = {
@@ -154,7 +154,7 @@ $.isometricGame = (function() {
 		let y = [isoCell.iy, isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2];		
 		
 		// Mimo view nemá cenu vykreslovat
-		if (x[1] < 0 || x[3] > width || y[0] > height || y[2] < 0)
+		if (x[2] < 0 || x[0] > width || y[1] > height || y[3] < 0)
 			return;
 			
 		drawImg(0, isoCell.value[0], isoCell.value[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2, false);	
@@ -188,8 +188,8 @@ $.isometricGame = (function() {
 		ctx.stroke();
 		
 		ctx.beginPath();
-		ctx.moveTo(0, halfHeight + 20);
-		ctx.lineTo(width, halfHeight + 20);
+		ctx.moveTo(0, halfHeight);
+		ctx.lineTo(width, halfHeight);
 		ctx.stroke();						
 
 		// map se musí vykreslovat v opačném pořadí, než je X, aby se bloky správně překrývaly
@@ -281,7 +281,7 @@ $.isometricGame = (function() {
 				hero.direction = 5; // right down
 			}	
 
-			adjustView();
+			adjustView();			
 			
 		} else {
 			heroSprite.currentLoop = 0;
@@ -315,14 +315,19 @@ $.isometricGame = (function() {
 	*/
 	
 	let init = function() {					
-		let mx = mapW / 2;
-		let my = mapH / 2;
+		let mx = 2;
+		let my = 2;
 		isoCenter = {
-			ix: (mx - 0.5) * cellW / 2 + (my - 0.5) * cellW / 2,
+			ix: mx * cellW / 2 + my * cellW / 2,
 			iy: my * cellH / 2 - mx * cellH / 2
 		};
 		
-		adjustView();
+		viewX = 0;
+		viewY = 0;
+		virtualTargetX = halfWidth;
+		virtualTargetY = halfHeight;		
+		heroSprite.vix = virtualTargetX;
+		heroSprite.viy = virtualTargetY;								
 		
 		canvas.addEventListener("click", function (e) {								
 			let bound = canvas.getBoundingClientRect();
@@ -345,7 +350,8 @@ $.isometricGame = (function() {
 			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_128x64.png", 8, 7, cellW, cellH, 0, 0],
 			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_128x64.png", 8, 7, cellW, cellH, 0, 0],			
 			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_128x64.png", 8, 7, cellW, cellH, 0, 0],
-			[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 64, 128 - 52],
+			[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 64, 128 - 32],			
+			//[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 0, 0],			
 			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 0],
 			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 0],
 			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 16, 128 + 64],			
