@@ -13,8 +13,9 @@ $.isometricGame = (function() {
 	
 	let lastTime = 0;
 	
+	let centered = false;
 	let viewX = 0;
-	let viewY = 20;
+	let viewY = 0;
 	
 	let isoCenter;
 	let cellW = 128;
@@ -29,12 +30,13 @@ $.isometricGame = (function() {
 		[0,1,0,0],
 		[0,0,0,0],
 		[0,0,0,0],
+		[0,0,0,0],
 	];
 	let mapW = map.length;
 	let mapH = map[0].length;
 	
-	let targetX = halfWidth - 128 / 2;
-	let targetY = halfHeight - 128 / 2;
+	let virtualTargetX = halfWidth;
+	let virtualTargetY = halfHeight;
 	
 	// Stance (4 frames)
 	// Walk (8 frames)
@@ -61,10 +63,18 @@ $.isometricGame = (function() {
 		delay: 100,
 		// inkrement času
 		timer: 0,
-		ix: targetX,
-		iy: targetY,
+		// virtuální isometrické souřadnice
+		// nejsou reálné, protože pokud bude postava uprostřed plochy,
+		// nebudou se jeho reálné souřadnice měnit, ale je potřeba nějak
+		// evidovat "posun" k cíli -- šlo by napevno postavu přilepit na
+		// střed a posouvat jenom podklad, ale takhle je to obecnější a 
+		// lze to jednoduše použít i na ostatní objekty/postavy, které 
+		// nebudou ve středu, nebo pokud se postava na okraji mapy posune
+		// mimo střed
+		vix: virtualTargetX,
+		viy: virtualTargetY,
 		baseix: 128 / 2,
-		baseiy: 128 - 20 
+		baseiy: 128 - 52 
 	};
 	
 	let hero = {
@@ -172,8 +182,8 @@ $.isometricGame = (function() {
 		lastTime = timestamp;
 		
 		// hero								
-		let heroSpriteAdjustedX = heroSprite.ix - heroSprite.baseix;
-		let heroSpriteAdjustedY = heroSprite.iy - heroSprite.baseiy;
+		let heroSpriteAdjustedX = heroSprite.vix + viewX - heroSprite.baseix;
+		let heroSpriteAdjustedY = heroSprite.viy + viewY - heroSprite.baseiy;
 		drawImg(1, 0, animateHero(delay), heroSpriteAdjustedX, heroSpriteAdjustedY);		
 		ctx.strokeStyle = "black";
 		ctx.strokeRect(heroSpriteAdjustedX, heroSpriteAdjustedY, heroSprite.width, heroSprite.height);
@@ -186,8 +196,8 @@ $.isometricGame = (function() {
 	let animateHero = function(delay) {
 		heroSprite.timer += delay;		
 		
-		let diffX = targetX - heroSprite.ix;
-		let diffY = heroSprite.iy - targetY;
+		let diffX = virtualTargetX - heroSprite.vix;
+		let diffY = heroSprite.viy - virtualTargetY;
 		let angle = Math.atan(diffY / diffX) / Math.PI * 180;
 		if (diffX >= 0 && diffY > 0) {
 			// ok
@@ -204,19 +214,20 @@ $.isometricGame = (function() {
 			let reductionX = diffX + shiftX;
 			let reductionY = diffY + shiftY;
 			if (Math.sign(reductionX) != Math.sign(diffX) || reductionX == 0) {
-				heroSprite.ix = targetX;
+				heroSprite.vix = virtualTargetX;
 			} else {
-				heroSprite.ix -= shiftX;
+				heroSprite.vix -= shiftX;
 			}						
 			if (Math.sign(reductionY) != Math.sign(diffY) || reductionY == 0) {
-				heroSprite.iy = targetY;
+				heroSprite.viy = virtualTargetY;
 			} else {
-				heroSprite.iy += shiftY;
+				heroSprite.viy += shiftY;
 			}
 			
 			heroSprite.currentLoop = 1;
 						
-			//console.log(angle + " diffX " + diffX + " diffY " + diffY);
+												
+			console.log("virtualTargetX " + virtualTargetX + " heroSprite.vix " + heroSprite.vix + " viewX " + viewX);
 			
 			let tolerance = 5;
 			
@@ -236,11 +247,13 @@ $.isometricGame = (function() {
 				hero.direction = 6; // down
 			} else /* if (angle > 280 && angle <= 330) */ {
 				hero.direction = 5; // right down
-			}						
+			}	
+
+			adjustView();
+			
 		} else {
 			heroSprite.currentLoop = 0;
-		}
-
+		}		
 		
 		let isMirrorLoop = heroSprite.loopsMirror[heroSprite.currentLoop];
 		let loopFrames = heroSprite.loopsFrames[heroSprite.currentLoop];
@@ -258,6 +271,13 @@ $.isometricGame = (function() {
 		return heroSprite.directionFrames * hero.direction + heroSprite.loops[heroSprite.currentLoop] + currentFrame;	
 	};
 	
+	let adjustView = function() {
+		if (centered) {
+			viewX = halfWidth - heroSprite.vix;
+			viewY = halfHeight - heroSprite.viy;
+		}
+	};
+	
 	/*
 	* INIT
 	*/
@@ -270,10 +290,14 @@ $.isometricGame = (function() {
 			iy: my * cellH / 2 - mx * cellH / 2
 		};
 		
+		adjustView();
+		
 		canvas.addEventListener("click", function (e) {								
 			let bound = canvas.getBoundingClientRect();
-			targetX = e.clientX - bound.x;
-			targetY = e.clientY - bound.y;
+			let targetX = e.clientX - bound.x;
+			let targetY = e.clientY - bound.y;			
+			virtualTargetX = targetX - viewX;
+			virtualTargetY = targetY - viewY;
 		});
 
 		// ground textures		
