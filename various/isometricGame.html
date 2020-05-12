@@ -11,8 +11,7 @@ $.isometricGame = (function() {
 	let halfWidth = width / 2;
 	let halfHeight = height / 2;
 	
-	let interval = 20;
-	let innerIntervalCallback;
+	let lastTime = 0;
 	
 	let viewX = 0;
 	let viewY = 20;
@@ -33,6 +32,43 @@ $.isometricGame = (function() {
 	];
 	let mapW = map.length;
 	let mapH = map[0].length;
+	
+	// Stance (4 frames)
+	// Walk (8 frames)
+	// Attack (4 frames)
+	// Cast (4 frames)
+	// Block (2 frames)
+	// Hit and Die (6 frames)
+	// Aim Crossbow (4 frames)
+	let heroSprite = {
+		width: 128,
+		height: 128,		
+		directionFrames: 32,
+		// počáteční frame animací
+		loops: [0, 4, 8, 4, 4, 2, 6],
+		// počty frame animací
+		loopsFrames: [4, 8, 4, 4, 2, 6, 4],
+		loopsMirror: [true, false, false, false, false, false, false],
+		currentLoop: 0,
+		// krok v rámci smyčky -- není to samé jako frame, protože
+		// pokud jde o smyčku, která se zrcadlí, bude kroků 2x víc,
+		// než má fyzicky smyčka snímků
+		currentLoopStep: 0,
+		// délka trvání frame
+		delay: 100,
+		// inkrement času
+		timer: 0,
+	};
+	
+	let hero = {
+		mx: mapW / 2, 
+		my: mapH / 2, 
+		direction: 0,
+	};
+		
+	/*
+	* COORD TRANSFORMATIONS
+	*/
 		
 	let toIso = function(mx, my) {
 		return {
@@ -44,6 +80,10 @@ $.isometricGame = (function() {
 	let toMap = function(ix, iy) {
 		return {ix: halfWidth + mx, iy: halfHeight + my};
 	};	
+	
+	/*
+	* DRAWING
+	*/
 	
 	let drawImg = function(id, frame, ix, iy) {
 		let tex = textures[id];
@@ -89,6 +129,9 @@ $.isometricGame = (function() {
 	};
 			
 	let drawScene = function(timestamp) {	
+		if (!loaded)
+			return;
+			
 		ctx.clearRect(0, 0, width, height);
 		
 		ctx.strokeStyle = "black";
@@ -117,8 +160,45 @@ $.isometricGame = (function() {
 			}
 		}		
 		
-		drawImg(1, 0, halfWidth, halfHeight);
-	};			
+		// Update času pro animace
+		let delay = timestamp - lastTime;
+		lastTime = timestamp;
+		
+		// hero		
+		let heroIx = halfWidth - heroSprite.width / 2;
+		let heroIy = halfHeight - heroSprite.height / 2;					
+		drawImg(1, animateHero(delay), heroIx, heroIy);
+		
+		ctx.strokeStyle = "black";
+		ctx.strokeRect(heroIx, heroIy, heroSprite.width, heroSprite.height);
+	};		
+
+	/*
+	* ANIMATION
+	*/
+	
+	let animateHero = function(delay) {
+		heroSprite.timer += delay;
+		
+		let isMirrorLoop = heroSprite.loopsMirror[heroSprite.currentLoop];
+		let loopFrames = heroSprite.loopsFrames[heroSprite.currentLoop];
+		let loopVirtualFrames = isMirrorLoop ? loopFrames * 2 : loopFrames;		
+		
+		let stepShift = Math.floor(heroSprite.timer / heroSprite.delay);
+		if (stepShift > 0)
+			heroSprite.timer -= stepShift * heroSprite.delay;			
+		heroSprite.currentLoopStep = (heroSprite.currentLoopStep + stepShift) % loopVirtualFrames;
+		
+		let currentFrame = heroSprite.currentLoopStep;
+		if (isMirrorLoop && currentFrame > loopFrames - 1) 
+			currentFrame = loopFrames - 1 - currentFrame % loopFrames;		
+			
+		return heroSprite.directionFrames * hero.direction + heroSprite.loops[heroSprite.currentLoop] + currentFrame;	
+	};
+	
+	/*
+	* INIT
+	*/
 	
 	let init = function() {					
 		let mx = mapW / 2;
@@ -140,15 +220,15 @@ $.isometricGame = (function() {
 			src: "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png",
 			cols: 32, 
 			rows: 8,
-			width: 128,
-			height: 128			
+			width: heroSprite.width,
+			height: heroSprite.height			
 		});		
 			
 		for (let i = 0; i < textures.length; i++) {
 			let texture = textures[i];
 			let textureCanvas = document.createElement("canvas");
-			textureCanvas.width = texture.width;
-			textureCanvas.height = texture.height;
+			textureCanvas.width = texture.width * texture.cols;
+			textureCanvas.height = texture.height * texture.rows;
 			
 			let textureCtx = textureCanvas.getContext("2d");
 			let subCanvasSmoothing = false;
@@ -164,12 +244,12 @@ $.isometricGame = (function() {
 				let seafImg = textureImg;
 				let seafIndex = i;
 				textureImg.onload = function() {
-					let tex = textures[seafIndex];
-					tex.ctx.drawImage(seafImg, 0, 0);
-					tex.imageData = tex.ctx.getImageData(0, 0, tex.width, tex.height);
 					loadingProgress++;
 					if (loadingProgress == textures.length)
 						loaded = true;
+					let tex = textures[seafIndex];
+					tex.ctx.drawImage(seafImg, 0, 0);
+					tex.imageData = tex.ctx.getImageData(0, 0, textureCanvas.width, textureCanvas.height);
 				}
 			})();
 			textureImg.src = texture.src;
