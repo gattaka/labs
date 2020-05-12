@@ -38,9 +38,15 @@ $.isometricGame = (function() {
 	];
 	let objectMap = [
 		[],[],[],[],
-		[1,0],[],[0,0],[],
+		[1,0],[],[0,0],[2,0],
 		[],[],[],[],
 		[],[],[],[],
+	];
+	let wallsMap = [
+		[0,6],[0,8],[0,8],[0,3],
+		[0,0],[],[],[],
+		[],[],[],[],
+		[],[0,1],[0,3],[],
 	];
 	let mapW = 4;
 	let mapH = 4;
@@ -82,9 +88,7 @@ $.isometricGame = (function() {
 		// nebudou ve středu, nebo pokud se postava na okraji mapy posune
 		// mimo střed
 		vix: virtualTargetX,
-		viy: virtualTargetY,
-		baseix: 128 / 2,
-		baseiy: 128 - 52 
+		viy: virtualTargetY,		
 	};
 	
 	let hero = {
@@ -113,13 +117,20 @@ $.isometricGame = (function() {
 	* DRAWING
 	*/
 	
-	let drawImg = function(groupId, spriteId, frame, ix, iy) {
+	let drawImg = function(groupId, spriteId, frame, ix, iy, showOutline) {
 		let tex = textures[groupId][spriteId];
 		let col = frame % tex.cols;
 		let row = Math.floor(frame / tex.cols);
+		let x = ix - tex.offsetX;
+		let y = iy - tex.offsetY;
 		ctx.drawImage(tex.canvas, 
 			col * tex.width, row * tex.height, tex.width, tex.height, 
-			ix, iy, tex.width, tex.height);
+			x, y, tex.width, tex.height);
+		if (showOutline) {
+			ctx.strokeStyle = "black";
+			ctx.lineWidth = 1;			
+			ctx.strokeRect(x, y, tex.width, tex.height);
+		}
 	};		
 	
 	let drawPolygon = function(xArr, yArr) {		
@@ -146,11 +157,11 @@ $.isometricGame = (function() {
 		if (x[1] < 0 || x[3] > width || y[0] > height || y[2] < 0)
 			return;
 			
-		drawImg(0, isoCell.value[0], isoCell.value[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2);	
+		drawImg(0, isoCell.value[0], isoCell.value[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2, false);	
 
 		// existuje přechod?
 		if (isoCell.value.length > 2)
-			drawImg(0, isoCell.value[2], isoCell.value[3], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2);	
+			drawImg(0, isoCell.value[2], isoCell.value[3], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2, false);	
 		
 		if (outlines)
 			drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]]);							
@@ -189,10 +200,15 @@ $.isometricGame = (function() {
 				let mCell = map[i];
 				isoCell = toIso(mx, my);
 				isoCell.value = mCell;				
-				drawIsoCell(isoCell);					
+				drawIsoCell(isoCell);			
+
+				let wall = wallsMap[i];
+				if (wall.length > 0) 
+					drawImg(3, wall[0], wall[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2, false);	
+				
 				let object = objectMap[i];
 				if (object.length > 0) 
-					drawImg(2, object[0], object[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2);				
+					drawImg(2, object[0], object[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2, false);
 			}
 		}		
 		
@@ -201,13 +217,9 @@ $.isometricGame = (function() {
 		lastTime = timestamp;
 		
 		// hero								
-		let heroSpriteAdjustedX = heroSprite.vix + viewX - heroSprite.baseix;
-		let heroSpriteAdjustedY = heroSprite.viy + viewY - heroSprite.baseiy;
-		drawImg(1, 0, animateHero(delay), heroSpriteAdjustedX, heroSpriteAdjustedY);	
-		if (outlines) {
-			ctx.strokeStyle = "black";
-			ctx.strokeRect(heroSpriteAdjustedX, heroSpriteAdjustedY, heroSprite.width, heroSprite.height);
-		}
+		let heroSpriteAdjustedX = heroSprite.vix + viewX;
+		let heroSpriteAdjustedY = heroSprite.viy + viewY;
+		drawImg(1, 0, animateHero(delay), heroSpriteAdjustedX, heroSpriteAdjustedY, outlines);			
 	};		
 
 	/*
@@ -326,14 +338,18 @@ $.isometricGame = (function() {
 		textures[1] = [];
 		// object textures
 		textures[2] = [];
+		// walls textures
+		textures[3] = [];
 		
 		let list = [
-			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_128x64.png", 8, 7, cellW, cellH],
-			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_128x64.png", 8, 7, cellW, cellH],			
-			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_128x64.png", 8, 7, cellW, cellH],
-			[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height],
-			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64],
-			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64],
+			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_128x64.png", 8, 7, cellW, cellH, 0, 0],
+			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_128x64.png", 8, 7, cellW, cellH, 0, 0],			
+			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_128x64.png", 8, 7, cellW, cellH, 0, 0],
+			[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 64, 128 - 52],
+			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 0],
+			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 0],
+			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 16, 128 + 64],			
+			[3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 0, 64],			
 		];
 		
 		for (let a = 0; a < list.length; a++) {
@@ -343,7 +359,9 @@ $.isometricGame = (function() {
 				cols: item[2], 
 				rows: item[3],
 				width: item[4],
-				height: item[5]			
+				height: item[5],
+				offsetX: item[6],
+				offsetY: item[7],
 			});
 			loadingProgress++;
 		}
