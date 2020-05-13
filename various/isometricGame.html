@@ -32,25 +32,28 @@ $.isometricGame = (function() {
 	
 	// mapa povrchů
 	let map = [
-		[0,0],[0,1],[0,4],[0,1],
-		[0,3],[0,0,1,48],[0,1,1,45],[0,5],
-		[0,0],[0,3,1,50],[0,5,1,47],[0,1],
-		[0,3],[0,2],[0,3],[0,5],		
+		[0,0],[0,1],[0,4],[0,1],[0,2],[0,3],
+		[0,3],[0,0,1,48],[0,1,1,45],[0,5],[0,2],[0,3],
+		[0,0],[0,3,1,50],[0,5,1,47],[0,1],[0,5],[0,2],
+		[0,3],[0,2],[0,3],[0,5],[0,2],[0,3],
+		[0,0],[0,1],[0,4],[0,1],[0,3],[0,0],
 	];
 	let objectMap = [
-		[],[],[],[],
-		[1,0],[],[0,0],[2,0],
-		[],[],[],[],
-		[],[],[],[],
+		[],[],[],[],[],[],
+		[1,0],[],[0,0],[],[],[],
+		[],[],[],[],[],[],
+		[],[],[],[],[],[],
+		[],[],[],[],[],[],
 	];
 	let wallsMap = [
-		[0,6],[0,8],[0,8],[0,3],
-		[0,0],[],[],[],
-		[],[],[],[],
-		[],[0,1],[0,3],[],
+		[0,6],[0,8],[0,8],[0,8],[0,8],[0,3],
+		[0,0],[],[],[],[1,0],[],
+		[],[0,1],[0,3],[],[],[],
+		[],[],[],[],[],[],
+		[0,1],[0,8],[0,8],[0,8],[0,8],[0,3],
 	];
-	let mapW = 4;
-	let mapH = 4;
+	let mapW = 6;
+	let mapH = 5;
 	
 	let mousedown = false;
 	
@@ -95,7 +98,7 @@ $.isometricGame = (function() {
 	let hero = {
 		mx: 0, 
 		my: 0,
-		speed: 0.1,	
+		speed: 0.2,	
 		direction: 0
 	};
 	
@@ -105,6 +108,9 @@ $.isometricGame = (function() {
 		vix: 0,
 		viy: 0
 	};
+	
+	let currentStep = 0;
+	let steps = [];
 		
 	/*
 	* COORD TRANSFORMATIONS
@@ -132,6 +138,13 @@ $.isometricGame = (function() {
 	/*
 	* DRAWING
 	*/
+	
+	let adjustView = function() {
+		if (centered) {
+			viewX = halfWidth - heroSprite.vix;
+			viewY = halfHeight - heroSprite.viy;
+		}
+	};
 	
 	let drawImg = function(groupId, spriteId, frame, ix, iy, showOutline) {
 		let tex = textures[groupId][spriteId];
@@ -186,8 +199,8 @@ $.isometricGame = (function() {
 		if (isoCell.value.length > 2)
 			drawImg(0, isoCell.value[2], isoCell.value[3], isoCell.ix, isoCell.iy - cellH / 2, false);	
 		
-		if (outlines)
-			drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]]);							
+		if (outlines) 
+			drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]]);									
 	};
 		
 	let draw = function(timestamp) {
@@ -232,6 +245,13 @@ $.isometricGame = (function() {
 		}
 		drawPoint(miniX + miniCellWidth * target.mx, miniY + miniCellHeight * target.my, "yellow");
 		drawPoint(miniX + miniCellWidth * hero.mx, miniY + miniCellHeight * hero.my, "lime");
+		
+		for (let s = 0; s < steps.length; s++) {
+			let sIndex = steps[s];
+			let sMx = sIndex % mapW + 0.5;
+			let sMy = Math.floor(sIndex / mapW) + 0.5;
+			drawPoint(miniX + miniCellWidth * sMx, miniY + miniCellHeight * sMy, "purple");
+		}
 
 		ctx.lineWidth = 1;
 		ctx.strokeStyle = "black";
@@ -297,6 +317,12 @@ $.isometricGame = (function() {
 				let object = objectMap[i];
 				if (object.length > 0) 
 					drawImg(2, object[0], object[1], isoCell.ix, isoCell.iy - cellH / 2, false);
+				
+				/*
+				ctx.font = "30px Arial";
+				ctx.fillStyle = "white";
+				ctx.fillText(i, isoCell.ix + cellW / 3, isoCell.iy + cellH / 4);
+				*/
 			}
 		}
 
@@ -375,18 +401,20 @@ $.isometricGame = (function() {
 			}	
 
 			adjustView();			
+						
+			mapCoord = toMap(heroSprite.vix, heroSprite.viy);			
+			hero.mx = mapCoord.mx;
+			hero.my = mapCoord.my;
 			
+			/*
 			console.log("viewX: " + viewX);
 			console.log("viewY: " + viewY);			
 			console.log("target.vix: " + target.vix);
 			console.log("target.viy: " + target.viy);
 			console.log("heroSprite.vix: " + heroSprite.vix);
 			console.log("heroSprite.viy: " + heroSprite.viy);
-			
-			mapCoord = toMap(heroSprite.vix, heroSprite.viy);			
-			hero.mx = mapCoord.mx;
-			hero.my = mapCoord.my;
 			console.log("mx: " + hero.mx + " my: " + hero.my);
+			*/
 			
 		} else {
 			heroSprite.currentLoop = 0;
@@ -408,11 +436,145 @@ $.isometricGame = (function() {
 		heroSprite.currentFrame = heroSprite.directionFrames * hero.direction + heroSprite.loops[heroSprite.currentLoop] + currentFrame;	
 	};
 	
-	let adjustView = function() {
-		if (centered) {
-			viewX = halfWidth - heroSprite.vix;
-			viewY = halfHeight - heroSprite.viy;
+	/*
+	* PATHFINDING
+	*/	
+	
+	let aStarHeur = function(aMx, aMy, bMx, bMy) {
+		return Math.sqrt(Math.pow(aMx - bMx, 2) + Math.pow(aMy - bMy, 2));
+	};
+	
+	let aStar = function(fromMx, fromMy, toMx, toMy) {
+		fromMx = Math.floor(fromMx);
+		fromMy = Math.floor(fromMy);
+		toMx = Math.floor(toMx);
+		toMy = Math.floor(toMy);
+		let startIndex = fromMx + fromMy * mapW;
+		let endIndex = toMx + toMy * mapW;
+		
+		let openCount = 1;
+		let visited = [];
+		visited[startIndex] = true;
+		
+		let open = {
+			val: startIndex,
+			next: -1,
+			prev: -1,
+		};		
+		
+		let cameFrom = [];
+		
+		let constructList = function(finalIndex) {
+			let path = [];
+			let current = finalIndex;
+			while (current != startIndex) {
+				current = cameFrom[current];
+				path.push(current);				
+			}
+			return path;
+		};		
+		
+		let gScore = [];
+		gScore[startIndex] = 0; 
+		
+		let fScore = [];
+		fScore[startIndex] = aStarHeur(fromMx, fromMy, toMx, toMy); 
+		
+		while (openCount > 0) {			
+			let min = {};
+			let minfScore = -1;
+			let openItem = open;
+			for (let o = 0; o < openCount; o++) {
+				if (minfScore == -1 || fScore[openItem.val] < minfScore)
+					min = openItem;
+				openItem = openItem.next;
+			}
+			
+			let cIndex = min.val;			
+			if (cIndex == endIndex)
+				return constructList(endIndex);
+
+			openCount--;
+			if (min.prev == -1) {
+				// byl první
+				open = min.next;
+				open.prev = -1;
+			} else if (min.next == -1) {
+				// byl poslední
+				min.prev.next = -1;
+			} else {
+				// byl uprostřed
+				min.prev.next = min.next;
+				min.next.prev = min.prev;
+			}
+			
+			let neighbors = [];
+			let openItemMx = cIndex % mapW;
+			let openItemMy = Math.floor(cIndex / mapW);
+			if (openItemMx > 0) {
+				neighbors.push(cIndex - 1) // left
+				if (openItemMy > 0) neighbors.push(cIndex - mapW - 1); // top left
+				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW - 1); // bottom left
+			}
+			if (openItemMx < mapW - 1) {
+				neighbors.push(cIndex + 1) // right
+				if (openItemMy > 0) neighbors.push(cIndex - mapW + 1); // top right
+				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW + 1); // bottom right
+			}
+			if (openItemMy > 0) neighbors.push(cIndex - mapW); // top
+			if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW); // bottom
+			
+			for (let n = 0; n < neighbors.length; n++) {
+				let nIndex = neighbors[n];
+				if (!isCollision(nIndex)) {
+					let nMx = nIndex % mapW;
+					let nMy = Math.floor(nIndex / mapW);
+					let d = 1; //(nMx != openItemMx && nMy != openItemMy) ? 1.5 : 1;
+					let tScore = gScore[cIndex] + d; 
+					if (typeof gScore[nIndex] === "undefined" || tScore < gScore[nIndex]) {				
+						cameFrom[nIndex] = cIndex;
+						gScore[nIndex] = tScore;
+						fScore[nIndex] = gScore[nIndex] + aStarHeur(nMx, nMy, toMx, toMy); ;						
+						if (typeof visited[nIndex] === "undefined") {
+							visited[nIndex] = true;
+							open = {
+								val: nIndex,
+								next: open,
+								prev: -1,
+							};	
+							open.next.prev = open;
+							openCount++;
+						}
+					}
+				}
+			}						
 		}
+		
+		// cesta neexistuje
+		return [];
+	};
+	
+	let isCollision = function(index) {
+		return typeof wallsMap[index] !== "undefined" && wallsMap[index].length > 0;
+	};
+	
+	let updateTarget = function(e) {
+		let bound = canvas.getBoundingClientRect();
+		let targetX = e.clientX - bound.x;
+		let targetY = e.clientY - bound.y;			
+		let ix = targetX - viewX;
+		let iy = targetY - viewY;
+		mapCoord = toMap(ix, iy);	
+		let i = Math.floor(mapCoord.my) * mapW + Math.floor(mapCoord.mx);
+		if (!isCollision(i)) {			
+			target.vix = ix;
+			target.viy = iy;
+			target.mx = mapCoord.mx;
+			target.my = mapCoord.my;
+		}
+		steps = aStar(hero.mx, hero.my, target.mx, target.my);
+		currentStep = 0;
+		console.log("A* steps: " + steps);
 	};
 	
 	/*
@@ -424,8 +586,12 @@ $.isometricGame = (function() {
 		let my = 1.5;
 		hero.mx = mx;
 		hero.my = my;
+		target.mx = mx;
+		target.my = my;
+		
 		viewX = 0;
 		viewY = 0;
+		
 		let iso = toIso(mx, my);
 		target.vix = Math.floor(iso.ix);
 		target.viy = Math.floor(iso.iy);
@@ -451,8 +617,8 @@ $.isometricGame = (function() {
 			//[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 0, 0],			
 			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 0],
 			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 0],
-			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 16, 128 + 64],			
 			[3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 0, 64],			
+			[3, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 16, 128 + 64],			
 		];
 		
 		for (let a = 0; a < list.length; a++) {
@@ -509,19 +675,7 @@ $.isometricGame = (function() {
 		// https://developer.mozilla.org/en-US/docs/Web/API/Performance/now
 		// https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
 		window.requestAnimationFrame(draw);		
-	};	
-	
-	let updateTarget = function(e) {
-		let bound = canvas.getBoundingClientRect();
-		let targetX = e.clientX - bound.x;
-		let targetY = e.clientY - bound.y;			
-		target.vix = Math.floor(targetX - viewX);
-		target.viy = Math.floor(targetY - viewY);
-		
-		mapCoord = toMap(target.vix, target.viy);			
-		target.mx = mapCoord.mx;
-		target.my = mapCoord.my;
-	};
+	};		
 	
 	canvas.addEventListener("mousedown", function (e) {
 		mousedown = true;
