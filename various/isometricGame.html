@@ -48,8 +48,8 @@ $.isometricGame = (function() {
 	];
 	let wallsMap = [
 		[0,6],[0,8],[0,8],[0,8],[0,8],[0,3],
-		[0,0],[],[],[],[1,0],[],
-		[],[0,1],[0,3],[],[],[],
+		[0,0],[],[],[],[],[1,0],
+		[],[],[0,1],[0,3],[],[],
 		[],[],[],[],[],[],
 		[0,1],[0,8],[0,8],[0,8],[0,8],[0,3],
 	];
@@ -526,14 +526,14 @@ $.isometricGame = (function() {
 			let openItemMx = cIndex % mapW;
 			let openItemMy = Math.floor(cIndex / mapW);
 			if (openItemMx > 0) {
-				neighbors.push(cIndex - 1) // left
-				if (openItemMy > 0) neighbors.push(cIndex - mapW - 1); // top left
-				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW - 1); // bottom left
+				neighbors.push(cIndex - 1) // left				
+				//if (openItemMy > 0) neighbors.push(cIndex - mapW - 1); // top left
+				//if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW - 1); // bottom left
 			}
 			if (openItemMx < mapW - 1) {
 				neighbors.push(cIndex + 1) // right
-				if (openItemMy > 0) neighbors.push(cIndex - mapW + 1); // top right
-				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW + 1); // bottom right
+				//if (openItemMy > 0) neighbors.push(cIndex - mapW + 1); // top right
+				//if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW + 1); // bottom right
 			}
 			if (openItemMy > 0) neighbors.push(cIndex - mapW); // top
 			if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW); // bottom
