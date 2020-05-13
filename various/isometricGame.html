@@ -1,5 +1,6 @@
 [HTML]<input type="checkbox" onchange="$.isometricGame.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
 <input type="checkbox" onchange="$.isometricGame.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
+<input type="checkbox" onchange="$.isometricGame.changeNavigation(this.checked)" style="width: 80px;">Direct walking?</input>
 <div style="margin: 10px 0;">
 	<canvas id="canvasT" width="700" height="400"></canvas>
 </div>[/HTML]
@@ -17,11 +18,11 @@ $.isometricGame = (function() {
 	
 	let centered = true;
 	let outlines = true;
+	let directWalking = false;
 	
 	let viewX = 0;
 	let viewY = 0;
 	
-	let isoCenter;
 	let cellW = 128;
 	let cellH = 64;
 	
@@ -49,10 +50,11 @@ $.isometricGame = (function() {
 		[],[0,1],[0,3],[],
 	];
 	let mapW = 4;
-	let mapH = 4;
+	let mapH = 3;
 	
 	let virtualTargetX;
 	let virtualTargetY;
+	let mousedown = false;
 	
 	// Stance (4 frames)
 	// Walk (8 frames)
@@ -92,8 +94,8 @@ $.isometricGame = (function() {
 	};
 	
 	let hero = {
-		mx: mapW / 2, 
-		my: mapH / 2,
+		mx: 0, 
+		my: 0,
 		speed: 0.1,	
 		direction: 0
 	};
@@ -103,14 +105,26 @@ $.isometricGame = (function() {
 	*/
 		
 	let toIso = function(mx, my) {
+		let a = viewX + halfWidth;
+		let b = viewY + halfHeight;
+		let w = cellW / 2;
+		let h = cellH / 2;
 		return {
-			ix: halfWidth + mx * cellW / 2 + my * cellW / 2 - isoCenter.ix + viewX, 
-			iy: halfHeight + my * cellH / 2 - mx * cellH / 2 - isoCenter.iy + viewY
+			ix: mx * w + my * w + a,  
+			iy: my * h - mx * h + b
 		};
 	};
 	
 	let toMap = function(ix, iy) {
-		return {ix: halfWidth + mx, iy: halfHeight + my};
+		let a = viewX + halfWidth;
+		let b = viewY + halfHeight;
+		let w = cellW / 2;
+		let h = cellH / 2;
+		let my = (iy + b) / (2 * h) + (ix - a) / (2 * w);		
+		return {
+			mx: (ix - my * w - a) / w,
+			my: my
+		};
 	};	
 	
 	/*
@@ -150,18 +164,18 @@ $.isometricGame = (function() {
 	}
 		
 	let drawIsoCell = function(isoCell) {		
-		let x = [isoCell.ix - cellW / 2, isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix];
+		let x = [isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix + cellW, isoCell.ix + cellW / 2];
 		let y = [isoCell.iy, isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2];		
 		
 		// Mimo view nemá cenu vykreslovat
 		if (x[2] < 0 || x[0] > width || y[1] > height || y[3] < 0)
 			return;
 			
-		drawImg(0, isoCell.value[0], isoCell.value[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2, false);	
+		drawImg(0, isoCell.value[0], isoCell.value[1], isoCell.ix, isoCell.iy - cellH / 2, false);	
 
 		// existuje přechod?
 		if (isoCell.value.length > 2)
-			drawImg(0, isoCell.value[2], isoCell.value[3], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2, false);	
+			drawImg(0, isoCell.value[2], isoCell.value[3], isoCell.ix, isoCell.iy - cellH / 2, false);	
 		
 		if (outlines)
 			drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]]);							
@@ -204,11 +218,11 @@ $.isometricGame = (function() {
 
 				let wall = wallsMap[i];
 				if (wall.length > 0) 
-					drawImg(3, wall[0], wall[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2, false);	
+					drawImg(3, wall[0], wall[1], isoCell.ix, isoCell.iy - cellH / 2, false);	
 				
 				let object = objectMap[i];
 				if (object.length > 0) 
-					drawImg(2, object[0], object[1], isoCell.ix - cellW / 2, isoCell.iy - cellH / 2, false);
+					drawImg(2, object[0], object[1], isoCell.ix, isoCell.iy - cellH / 2, false);
 			}
 		}		
 		
@@ -219,7 +233,33 @@ $.isometricGame = (function() {
 		// hero								
 		let heroSpriteAdjustedX = heroSprite.vix + viewX;
 		let heroSpriteAdjustedY = heroSprite.viy + viewY;
-		drawImg(1, 0, animateHero(delay), heroSpriteAdjustedX, heroSpriteAdjustedY, outlines);			
+		drawImg(1, 0, animateHero(delay), heroSpriteAdjustedX, heroSpriteAdjustedY, outlines);	
+
+		// minimap
+		let miniX = 10;
+		let miniY = 10;
+		let miniWidth = 100;
+		let miniHeight = 100;		
+		let miniCellWidth = miniWidth / mapW;
+		let miniCellHeight = miniHeight / mapH;
+		ctx.strokeStyle = "darkgrey";
+		ctx.lineWidth = 1;					
+		for (let mx = 0; mx < mapW; mx++) {
+			for (let my = 0; my < mapH; my++) {
+				let i = my * mapW + mx;
+				let mCell = map[i];
+				let wall = wallsMap[i];				
+				ctx.fillStyle = wall.length > 0 ? "grey" : "lightgrey";	
+				let miniCellx = miniX + mx * miniCellWidth;
+				let miniCelly = miniY + my * miniCellHeight;
+				ctx.fillRect(miniCellx, miniCelly, miniCellWidth, miniCellHeight);
+				ctx.strokeRect(miniCellx, miniCelly, miniCellWidth, miniCellHeight);
+			}
+		}
+		ctx.fillStyle = "blue";
+		ctx.fillRect(miniX + miniCellWidth * hero.mx - 1, miniY + miniCellHeight * hero.my - 1, 3, 3);
+		ctx.strokeStyle = "black";
+		ctx.strokeRect(miniX, miniY, miniWidth, miniHeight);		
 	};		
 
 	/*
@@ -231,7 +271,8 @@ $.isometricGame = (function() {
 		
 		let diffX = virtualTargetX - heroSprite.vix;
 		let diffY = heroSprite.viy - virtualTargetY;
-		let angle = Math.atan(diffY / diffX) / Math.PI * 180;
+		// aby to byl kruh, je potřebau diffY kompenzovat isometrické zkosení 1:2
+		let angle = Math.atan(diffY * 2 / diffX) / Math.PI * 180;
 		if (diffX >= 0 && diffY > 0) {
 			// ok
 		} else if (diffX < 0) {
@@ -241,9 +282,21 @@ $.isometricGame = (function() {
 		}
 		
 		if (diffX != 0 || diffY != 0) {
-			let shiftX = -1 * Math.sign(diffX) * delay * hero.speed;
-			// isometrické zkosení 1:2 musí snížit i rychlost
-			let shiftY = -1 * Math.sign(diffY) * delay * hero.speed / 2; 
+			let shiftX = 0;
+			let shiftY = 0;
+			if (directWalking) {
+				let rad = angle / 180 * Math.PI;
+				shiftX = Math.cos(rad) * delay * hero.speed;
+				// isometrické zkosení 1:2 musí snížit i rychlost
+				shiftY = Math.sin(rad) / 2 * delay * hero.speed;
+			} else {
+				shiftX = Math.sign(diffX) * delay * hero.speed;
+				// isometrické zkosení 1:2 musí snížit i rychlost
+				shiftY = Math.sign(diffY) * delay * hero.speed / 2; 
+			}
+			// jde se proti směru
+			shiftX *= -1;
+			shiftY *= -1;
 			let reductionX = diffX + shiftX;
 			let reductionY = diffY + shiftY;
 			if (Math.sign(reductionX) != Math.sign(diffX) || reductionX == 0) {
@@ -258,30 +311,42 @@ $.isometricGame = (function() {
 			}
 			
 			heroSprite.currentLoop = 1;
-						
-			//console.log("virtualTargetX " + virtualTargetX + " heroSprite.vix " + heroSprite.vix + " viewX " + viewX);
 			
-			let tolerance = 5;
+			let tolerancex = directWalking ? 10 : 5;
+			let tolerancey = tolerancex;
 			
-			if (angle >= 0 && angle <= tolerance || angle > (360 - tolerance) && angle <= 360) {
+			if (angle >= 0 && angle <= tolerancex || angle > (360 - tolerancex) && angle <= 360) {
 				hero.direction = 4; // right
-			} else if (angle > tolerance && angle <= (90 - tolerance)) {
+			} else if (angle > tolerancex && angle <= (90 - tolerancey)) {
 				hero.direction = 3; // right up
-			} else if (angle > (90 - tolerance) && angle <= (90 + tolerance)) {
+			} else if (angle > (90 - tolerancey) && angle <= (90 + tolerancey)) {
 				hero.direction = 2; // up
-			} else if (angle > (90 + tolerance) && angle <= (180 - tolerance)) {
+			} else if (angle > (90 + tolerancey) && angle <= (180 - tolerancex)) {
 				hero.direction = 1; // left up
-			} else if (angle > (180 - tolerance) && angle <= (180 + tolerance)) {
+			} else if (angle > (180 - tolerancex) && angle <= (180 + tolerancex)) {
 				hero.direction = 0; // left
-			} else if (angle > (180 + tolerance) && angle <= (270 - tolerance)) {
+			} else if (angle > (180 + tolerancex) && angle <= (270 - tolerancey)) {
 				hero.direction = 7; // left down
-			} else if (angle > (270 - tolerance) && angle <= (270 + tolerance)) {
+			} else if (angle > (270 - tolerancey) && angle <= (270 + tolerancey)) {
 				hero.direction = 6; // down
 			} else /* if (angle > 280 && angle <= 330) */ {
 				hero.direction = 5; // right down
 			}	
 
 			adjustView();			
+			
+			console.log("viewX: " + viewX);
+			console.log("viewY: " + viewY);			
+			console.log("virtualTargetX: " + virtualTargetX);
+			console.log("virtualTargetY: " + virtualTargetY);
+			console.log("heroSprite.vix: " + heroSprite.vix);
+			console.log("heroSprite.viy: " + heroSprite.viy);
+			
+			mapCoord = toMap(heroSprite.vix - halfWidth, heroSprite.viy - halfHeight);
+			//mapCoord = toMap(heroSprite.vix, heroSprite.viy);
+			hero.mx = mapCoord.mx;
+			hero.my = mapCoord.my;
+			console.log("mx: " + hero.mx + " my: " + hero.my);
 			
 		} else {
 			heroSprite.currentLoop = 0;
@@ -315,28 +380,18 @@ $.isometricGame = (function() {
 	*/
 	
 	let init = function() {					
-		let mx = 2;
-		let my = 2;
-		isoCenter = {
-			ix: mx * cellW / 2 + my * cellW / 2,
-			iy: my * cellH / 2 - mx * cellH / 2
-		};
-		
+		let mx = 2.5;
+		let my = 2.5;
+		hero.mx = mx;
+		hero.my = my;
 		viewX = 0;
 		viewY = 0;
-		virtualTargetX = halfWidth;
-		virtualTargetY = halfHeight;		
+		virtualTargetX = halfWidth + (mx * cellW / 2 + my * cellW / 2);
+		virtualTargetY = halfHeight + (my * cellH / 2 - mx * cellH / 2);	
 		heroSprite.vix = virtualTargetX;
-		heroSprite.viy = virtualTargetY;								
+		heroSprite.viy = virtualTargetY;	
+		adjustView();
 		
-		canvas.addEventListener("click", function (e) {								
-			let bound = canvas.getBoundingClientRect();
-			let targetX = e.clientX - bound.x;
-			let targetY = e.clientY - bound.y;			
-			virtualTargetX = targetX - viewX;
-			virtualTargetY = targetY - viewY;
-		});
-
 		// ground textures		
 		textures[0] = [];
 		// characters textures
@@ -413,6 +468,33 @@ $.isometricGame = (function() {
 		// https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
 		window.requestAnimationFrame(draw);		
 	};	
+	
+	let updateTarget = function(e) {
+		let bound = canvas.getBoundingClientRect();
+		let targetX = e.clientX - bound.x;
+		let targetY = e.clientY - bound.y;			
+		virtualTargetX = targetX - viewX;
+		virtualTargetY = targetY - viewY;
+	};
+	
+	canvas.addEventListener("mousedown", function (e) {
+		mousedown = true;
+		updateTarget(e);
+	}, false);
+ 
+	canvas.addEventListener("mouseup", function (e) {
+		mousedown = false;
+	}, false);
+	
+	canvas.addEventListener("mouseleave", function (e) {
+		mousedown = false;
+	}, false);
+	
+	canvas.addEventListener("mousemove", function (e) {
+		if (!mousedown) 
+			return;
+		updateTarget(e);
+	}, false);
 		
 	return {	
 		start: function() {					
@@ -425,6 +507,10 @@ $.isometricGame = (function() {
 		
 		changeOutlines: function(value) {
 			outlines = value;
+		},
+		
+		changeNavigation: function(value) {
+			directWalking = value;
 		},
 	};
 
