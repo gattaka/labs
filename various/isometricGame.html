@@ -1,6 +1,5 @@
 [HTML]<input type="checkbox" onchange="$.isometricGame.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
 <input type="checkbox" onchange="$.isometricGame.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
-<input type="checkbox" onchange="$.isometricGame.changeNavigation(this.checked)" style="width: 80px;" checked>Direct walking?</input>
 <div style="margin: 10px 0;">
 	<canvas id="canvasT" width="700" height="400"></canvas>
 </div>[/HTML]
@@ -21,11 +20,16 @@ $.isometricGame = (function() {
 	let directWalking = true;
 	let showNumbers = false;
 	
+	let miniX = 10;
+	let miniY = 10;
+	let miniWidth = 150;
+	let miniHeight = 150;	
+	
 	let viewX = 0;
 	let viewY = 0;
 	
-	let cellW = 128;
-	let cellH = 64;
+	let cellW = 64;
+	let cellH = 32;
 	
 	let loaded = false;
 	let loadingProgress = 0;
@@ -33,28 +37,43 @@ $.isometricGame = (function() {
 	
 	// mapa povrchů
 	let map = [
-		[0,0],[0,1],[0,4],[0,1],[0,2],[0,3],
-		[0,3],[0,0,1,48],[0,1,1,45],[0,5],[0,2],[0,3],
-		[0,0],[0,3,1,50],[0,5,1,47],[0,1],[0,5],[0,2],
-		[0,3],[0,2],[0,3],[0,5],[0,2],[0,3],
-		[0,0],[0,1],[0,4],[0,1],[0,3],[0,0],
+		[1,2],[1,1],[1,4],[1,1],[1,2],[1,3],[1,0],[1,1],[1,4],[1,1],[1,3],[1,0],
+		[1,3,0,28],[1,0,0,29],[1,1,0,29],[1,5,0,30],[1,2,0,28],[1,3,0,29],[1,2,0,30],[1,1,0,28],[1,5,0,30],[1,2,0,28],[1,3,0,45],[1,3],
+		[0,0],[0,3],[0,5],[0,1],[0,5],[0,2],[0,0],[0,1],[0,4],[0,1],[1,3,0,21],[1,0],
+		[0,3],[0,2],[0,3],[0,5],[0,2],[0,3],[0,3],[0,0,1,48],[0,1,1,45],[0,5],[1,2,0,22],[1,3],
+		[0,0],[0,1],[0,4],[0,1],[0,3],[0,0],[0,0],[0,3,1,50],[0,5,1,47],[0,1],[1,5,0,23],[1,2],
+		[0,3],[0,3],[0,0],[0,1],[0,5],[0,2],[0,3],[0,3],[0,2],[0,3],[1,5,0,21],[1,2],
+		[0,0],[0,3],[0,5],[0,1],[0,5],[0,2],[0,0],[0,1],[0,4],[0,1],[1,3,0,21],[1,0],
+		[0,3],[0,2],[0,3],[0,5],[0,2],[0,3],[0,3],[0,0,1,48],[0,1,1,45],[0,5],[1,2,0,22],[1,3],
+		[0,0],[0,1],[0,4],[0,1],[0,3],[0,0],[0,0],[0,3,1,50],[0,5,1,47],[0,1],[1,5,0,23],[1,2],
+		[0,3],[0,3],[0,0,1,48],[0,1,1,45],[0,5],[0,2],[0,3],[0,3],[0,2],[0,3],[1,5,0,21],[1,2],
 	];
 	let objectMap = [
-		[],[],[],[],[],[],
-		[1,0],[],[0,0],[],[],[],
-		[],[],[],[],[],[],
-		[],[],[],[],[],[],
-		[],[],[],[],[],[],
+		[],[],[],[],[],[],[],[],[],[],[],[],
+		[],[1,0],[],[0,0],[],[],[],[],[],[],[],[],
+		[],[],[],[],[],[],[],[],[],[],[],[],
+		[],[],[],[],[],[],[],[],[],[],[],[],
+		[],[],[],[],[],[],[],[],[],[],[],[],
+		[],[],[],[],[],[],[],[],[],[],[],[],
+		[],[],[],[],[],[],[],[],[],[],[],[],
+		[],[],[],[],[],[],[],[],[],[],[],[],
+		[],[],[],[],[],[],[],[],[],[],[],[],
+		[],[],[],[],[],[],[],[],[],[],[],[],
 	];
 	let wallsMap = [
-		[0,6],[0,8],[0,8],[0,8],[0,8],[0,3],
-		[0,0],[],[],[],[],[1,0],
-		[],[],[0,1],[0,3],[],[],
-		[],[],[],[],[],[],
-		[0,1],[0,8],[0,8],[0,8],[0,8],[0,3],
+		[0,9],[0,0],[0,18],[0,16],[0,18],[0,0],[0,0],[0,18],[0,0],[0,0],[0,18],[0,13],
+		[2,2],[],[],[],[],[],[],[],[],[],[],[0,29],
+		[2,10],[],[],[],[],[],[],[],[],[],[],[0,27],
+		[2,9],[],[],[],[1,0],[],[],[],[],[],[],[0,21],
+		[2,10],[],[],[],[],[],[],[],[],[],[],[0,1],
+		[2,9],[],[],[],[],[],[],[],[],[],[],[0,1],
+		[2,10],[],[],[],[],[],[],[1,0],[],[],[],[0,21],
+		[2,9],[],[],[],[],[],[],[],[],[],[],[0,29],
+		[2,10],[],[1,0],[],[],[],[],[],[],[],[],[0,27],
+		[2,5],[2,10],[2,8],[2,10],[2,8],[2,10],[2,8],[2,10],[2,8],[2,10],[2,3],[0,1],
 	];
-	let mapW = 6;
-	let mapH = 5;
+	let mapW = 12;
+	let mapH = 10;
 	
 	let mousedown = false;
 	
@@ -226,10 +245,6 @@ $.isometricGame = (function() {
 	};
 	
 	let drawMinimap = function() {
-		let miniX = 10;
-		let miniY = 10;
-		let miniWidth = 100;
-		let miniHeight = 100;		
 		let miniCellWidth = miniWidth / mapW;
 		let miniCellHeight = miniHeight / mapH;
 		ctx.strokeStyle = "darkgrey";
@@ -527,13 +542,13 @@ $.isometricGame = (function() {
 			let openItemMy = Math.floor(cIndex / mapW);
 			if (openItemMx > 0) {
 				neighbors.push(cIndex - 1) // left				
-				//if (openItemMy > 0) neighbors.push(cIndex - mapW - 1); // top left
-				//if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW - 1); // bottom left
+				if (openItemMy > 0) neighbors.push(cIndex - mapW - 1); // top left
+				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW - 1); // bottom left
 			}
 			if (openItemMx < mapW - 1) {
 				neighbors.push(cIndex + 1) // right
-				//if (openItemMy > 0) neighbors.push(cIndex - mapW + 1); // top right
-				//if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW + 1); // bottom right
+				if (openItemMy > 0) neighbors.push(cIndex - mapW + 1); // top right
+				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW + 1); // bottom right
 			}
 			if (openItemMy > 0) neighbors.push(cIndex - mapW); // top
 			if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW); // bottom
@@ -575,7 +590,7 @@ $.isometricGame = (function() {
 	let prepareNavigationSteps = function(mx, my, ix, iy) {
 		// krok v pořadí od cíle k počátku
 		target.steps = aStar(hero.mx, hero.my, mx, my);		
-		console.log("A* steps: " + target.steps);
+		//console.log("A* steps: " + target.steps);
 
 		// 0. cílový doplňuji sám, protože z A* vypadnou středové
 		// souřadnice a já chci dojít přímo k offsetovým hodnotám
@@ -646,15 +661,16 @@ $.isometricGame = (function() {
 		textures[3] = [];
 		
 		let list = [
-			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_128x64.png", 8, 7, cellW, cellH, 0, 0],
-			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_128x64.png", 8, 7, cellW, cellH, 0, 0],			
-			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_128x64.png", 8, 7, cellW, cellH, 0, 0],
+			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_64x32.png", 8, 7, cellW, cellH, 0, 0],
+			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_64x32.png", 8, 7, cellW, cellH, 0, 0],			
+			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_64x32.png", 8, 7, cellW, cellH, 0, 0],
 			[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 64, 128 - 32],			
 			//[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 0, 0],			
-			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 0],
-			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 0],
-			[3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 0, 64],			
-			[3, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 16, 128 + 64],			
+			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 16],
+			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 16],
+			[3, "https://www.gattserver.cz/fm-files/isometric-files/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16],		
+			[3, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 42, 128 + 64],		
+			[3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16],			
 		];
 		
 		for (let a = 0; a < list.length; a++) {
