@@ -496,8 +496,11 @@ $.isometricGame = (function() {
 			let minfScore = -1;
 			let openItem = open;
 			for (let o = 0; o < openCount; o++) {
-				if (minfScore == -1 || fScore[openItem.val] < minfScore)
+				let score = fScore[openItem.val];
+				if (minfScore == -1 || score < minfScore) {
 					min = openItem;
+					minfScore = score;
+				}
 				openItem = openItem.next;
 			}
 			
