@@ -50,7 +50,7 @@ $.isometricGame = (function() {
 		[],[0,1],[0,3],[],
 	];
 	let mapW = 4;
-	let mapH = 3;
+	let mapH = 4;
 	
 	let virtualTargetX;
 	let virtualTargetY;
@@ -105,24 +105,20 @@ $.isometricGame = (function() {
 	*/
 		
 	let toIso = function(mx, my) {
-		let a = viewX + halfWidth;
-		let b = viewY + halfHeight;
 		let w = cellW / 2;
 		let h = cellH / 2;
 		return {
-			ix: mx * w + my * w + a,  
-			iy: my * h - mx * h + b
+			ix: mx * w + my * w,  
+			iy: my * h - mx * h
 		};
 	};
 	
 	let toMap = function(ix, iy) {
-		let a = viewX + halfWidth;
-		let b = viewY + halfHeight;
 		let w = cellW / 2;
 		let h = cellH / 2;
-		let my = (iy + b) / (2 * h) + (ix - a) / (2 * w);		
+		let my = iy / (2 * h) + ix / (2 * w);		
 		return {
-			mx: (ix - my * w - a) / w,
+			mx: (ix - my * w) / w,
 			my: my
 		};
 	};	
@@ -135,8 +131,8 @@ $.isometricGame = (function() {
 		let tex = textures[groupId][spriteId];
 		let col = frame % tex.cols;
 		let row = Math.floor(frame / tex.cols);
-		let x = ix - tex.offsetX;
-		let y = iy - tex.offsetY;
+		let x = Math.floor(ix - tex.offsetX);
+		let y = Math.floor(iy - tex.offsetY);
 		ctx.drawImage(tex.canvas, 
 			col * tex.width, row * tex.height, tex.width, tex.height, 
 			x, y, tex.width, tex.height);
@@ -213,6 +209,8 @@ $.isometricGame = (function() {
 				let i = my * mapW + mx;
 				let mCell = map[i];
 				isoCell = toIso(mx, my);
+				isoCell.ix += viewX;
+				isoCell.iy += viewY;
 				isoCell.value = mCell;				
 				drawIsoCell(isoCell);			
 
@@ -231,9 +229,15 @@ $.isometricGame = (function() {
 		lastTime = timestamp;
 		
 		// hero								
-		let heroSpriteAdjustedX = heroSprite.vix + viewX;
-		let heroSpriteAdjustedY = heroSprite.viy + viewY;
+		let heroSpriteAdjustedX = Math.floor(heroSprite.vix + viewX);
+		let heroSpriteAdjustedY = Math.floor(heroSprite.viy + viewY);
 		drawImg(1, 0, animateHero(delay), heroSpriteAdjustedX, heroSpriteAdjustedY, outlines);	
+		if (outlines) {
+			ctx.fillStyle = "black";
+			ctx.fillRect(heroSpriteAdjustedX - 2, heroSpriteAdjustedY - 2, 5, 5);
+			ctx.fillStyle = "lime";
+			ctx.fillRect(heroSpriteAdjustedX - 1, heroSpriteAdjustedY - 1, 3, 3);
+		}
 
 		// minimap
 		let miniX = 10;
@@ -243,7 +247,7 @@ $.isometricGame = (function() {
 		let miniCellWidth = miniWidth / mapW;
 		let miniCellHeight = miniHeight / mapH;
 		ctx.strokeStyle = "darkgrey";
-		ctx.lineWidth = 1;					
+		ctx.lineWidth = 1;
 		for (let mx = 0; mx < mapW; mx++) {
 			for (let my = 0; my < mapH; my++) {
 				let i = my * mapW + mx;
@@ -252,12 +256,16 @@ $.isometricGame = (function() {
 				ctx.fillStyle = wall.length > 0 ? "grey" : "lightgrey";	
 				let miniCellx = miniX + mx * miniCellWidth;
 				let miniCelly = miniY + my * miniCellHeight;
-				ctx.fillRect(miniCellx, miniCelly, miniCellWidth, miniCellHeight);
-				ctx.strokeRect(miniCellx, miniCelly, miniCellWidth, miniCellHeight);
+				ctx.fillRect(Math.floor(miniCellx), Math.floor(miniCelly), Math.floor(miniCellWidth), Math.floor(miniCellHeight));
+				ctx.strokeRect(Math.floor(miniCellx), Math.floor(miniCelly), Math.floor(miniCellWidth), Math.floor(miniCellHeight));
 			}
 		}
-		ctx.fillStyle = "blue";
-		ctx.fillRect(miniX + miniCellWidth * hero.mx - 1, miniY + miniCellHeight * hero.my - 1, 3, 3);
+		ctx.fillStyle = "black"; 
+		ctx.fillRect(Math.floor(miniX + miniCellWidth * hero.mx - 2), Math.floor(miniY + miniCellHeight * hero.my - 2), 5, 5);
+		ctx.fillStyle = "lime";
+		ctx.fillRect(Math.floor(miniX + miniCellWidth * hero.mx - 1), Math.floor(miniY + miniCellHeight * hero.my - 1), 3, 3);
+		
+		ctx.lineWidth = 1;
 		ctx.strokeStyle = "black";
 		ctx.strokeRect(miniX, miniY, miniWidth, miniHeight);		
 	};		
@@ -302,12 +310,12 @@ $.isometricGame = (function() {
 			if (Math.sign(reductionX) != Math.sign(diffX) || reductionX == 0) {
 				heroSprite.vix = virtualTargetX;
 			} else {
-				heroSprite.vix -= shiftX;
+				heroSprite.vix = heroSprite.vix - shiftX;
 			}						
 			if (Math.sign(reductionY) != Math.sign(diffY) || reductionY == 0) {
 				heroSprite.viy = virtualTargetY;
 			} else {
-				heroSprite.viy += shiftY;
+				heroSprite.viy = heroSprite.viy + shiftY;
 			}
 			
 			heroSprite.currentLoop = 1;
@@ -342,7 +350,7 @@ $.isometricGame = (function() {
 			console.log("heroSprite.vix: " + heroSprite.vix);
 			console.log("heroSprite.viy: " + heroSprite.viy);
 			
-			mapCoord = toMap(heroSprite.vix - halfWidth, heroSprite.viy - halfHeight);
+			mapCoord = toMap(heroSprite.vix, heroSprite.viy);
 			//mapCoord = toMap(heroSprite.vix, heroSprite.viy);
 			hero.mx = mapCoord.mx;
 			hero.my = mapCoord.my;
@@ -381,16 +389,18 @@ $.isometricGame = (function() {
 	
 	let init = function() {					
 		let mx = 2.5;
-		let my = 2.5;
+		let my = 1.5;
 		hero.mx = mx;
 		hero.my = my;
 		viewX = 0;
 		viewY = 0;
-		virtualTargetX = halfWidth + (mx * cellW / 2 + my * cellW / 2);
-		virtualTargetY = halfHeight + (my * cellH / 2 - mx * cellH / 2);	
+		let iso = toIso(mx, my);
+		virtualTargetX = Math.floor(iso.ix);
+		virtualTargetY = Math.floor(iso.iy);
 		heroSprite.vix = virtualTargetX;
 		heroSprite.viy = virtualTargetY;	
-		adjustView();
+		viewX = halfWidth - virtualTargetX;
+		viewY = halfHeight - virtualTargetY;
 		
 		// ground textures		
 		textures[0] = [];
@@ -473,8 +483,8 @@ $.isometricGame = (function() {
 		let bound = canvas.getBoundingClientRect();
 		let targetX = e.clientX - bound.x;
 		let targetY = e.clientY - bound.y;			
-		virtualTargetX = targetX - viewX;
-		virtualTargetY = targetY - viewY;
+		virtualTargetX = Math.floor(targetX - viewX);
+		virtualTargetY = Math.floor(targetY - viewY);
 	};
 	
 	canvas.addEventListener("mousedown", function (e) {
