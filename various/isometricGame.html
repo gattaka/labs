@@ -1,4 +1,7 @@
-[HTML]<input type="checkbox" onchange="$.isometricGame.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
+[HTML]<head>
+	<script type="text/javascript" src="../libs/astar.js"></script>	
+</head>
+<input type="checkbox" onchange="$.isometricGame.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
 <input type="checkbox" onchange="$.isometricGame.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
 <div style="margin: 10px 0;">
 	<canvas id="canvasT" width="1024" height="600"></canvas>
@@ -467,124 +470,7 @@ $.isometricGame = (function() {
 	
 	/*
 	* PATHFINDING
-	*/	
-	
-	let aStarHeur = function(aMx, aMy, bMx, bMy) {
-		return Math.sqrt(Math.pow(aMx - bMx, 2) + Math.pow(aMy - bMy, 2));
-	};
-	
-	let aStar = function(fromMx, fromMy, toMx, toMy) {
-		fromMx = Math.floor(fromMx);
-		fromMy = Math.floor(fromMy);
-		toMx = Math.floor(toMx);
-		toMy = Math.floor(toMy);
-		let startIndex = fromMx + fromMy * mapW;
-		let endIndex = toMx + toMy * mapW;
-		
-		let openCount = 1;
-		let visited = [];
-		visited[startIndex] = true;
-		
-		let open = {
-			val: startIndex,
-			next: -1,
-			prev: -1,
-		};		
-		
-		let cameFrom = [];
-		
-		let constructList = function(finalIndex) {
-			let path = [];
-			let current = finalIndex;
-			while (current != startIndex) {
-				current = cameFrom[current];
-				path.push(current);
-			}
-			return path;
-		};		
-		
-		let gScore = [];
-		gScore[startIndex] = 0; 
-		
-		let fScore = [];
-		fScore[startIndex] = aStarHeur(fromMx, fromMy, toMx, toMy); 
-		
-		while (openCount > 0) {			
-			let min = {};
-			let minfScore = -1;
-			let openItem = open;
-			for (let o = 0; o < openCount; o++) {
-				let score = fScore[openItem.val];
-				if (minfScore == -1 || score < minfScore) {
-					min = openItem;
-					minfScore = score;
-				}
-				openItem = openItem.next;
-			}
-			
-			let cIndex = min.val;			
-			if (cIndex == endIndex)
-				return constructList(endIndex);
-
-			openCount--;
-			if (min.prev == -1) {
-				// byl první
-				open = min.next;
-				open.prev = -1;
-			} else if (min.next == -1) {
-				// byl poslední
-				min.prev.next = -1;
-			} else {
-				// byl uprostřed
-				min.prev.next = min.next;
-				min.next.prev = min.prev;
-			}
-			
-			let neighbors = [];
-			let openItemMx = cIndex % mapW;
-			let openItemMy = Math.floor(cIndex / mapW);
-			if (openItemMx > 0) {
-				neighbors.push(cIndex - 1) // left				
-				if (openItemMy > 0) neighbors.push(cIndex - mapW - 1); // top left
-				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW - 1); // bottom left
-			}
-			if (openItemMx < mapW - 1) {
-				neighbors.push(cIndex + 1) // right
-				if (openItemMy > 0) neighbors.push(cIndex - mapW + 1); // top right
-				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW + 1); // bottom right
-			}
-			if (openItemMy > 0) neighbors.push(cIndex - mapW); // top
-			if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW); // bottom
-			
-			for (let n = 0; n < neighbors.length; n++) {
-				let nIndex = neighbors[n];
-				if (!isCollision(nIndex)) {
-					let nMx = nIndex % mapW;
-					let nMy = Math.floor(nIndex / mapW);
-					let d = 1; //(nMx != openItemMx && nMy != openItemMy) ? 1.5 : 1;
-					let tScore = gScore[cIndex] + d; 
-					if (typeof gScore[nIndex] === "undefined" || tScore < gScore[nIndex]) {				
-						cameFrom[nIndex] = cIndex;
-						gScore[nIndex] = tScore;
-						fScore[nIndex] = gScore[nIndex] + aStarHeur(nMx, nMy, toMx, toMy); ;						
-						if (typeof visited[nIndex] === "undefined") {
-							visited[nIndex] = true;
-							open = {
-								val: nIndex,
-								next: open,
-								prev: -1,
-							};	
-							open.next.prev = open;
-							openCount++;
-						}
-					}
-				}
-			}						
-		}
-		
-		// cesta neexistuje
-		return [];
-	};
+	*/		
 	
 	let isCollision = function(index) {
 		return typeof wallsMap[index] !== "undefined" && wallsMap[index].length > 0;
@@ -592,7 +478,57 @@ $.isometricGame = (function() {
 	
 	let prepareNavigationSteps = function(mx, my, ix, iy) {
 		// krok v pořadí od cíle k počátku
-		target.steps = aStar(hero.mx, hero.my, mx, my);		
+		let heuristicFunc = function(aPoint, bPoint) {
+			return Math.sqrt(Math.pow(aPoint.mx - bPoint.mx, 2) + Math.pow(aPoint.my - bPoint.my, 2));
+		};	
+		
+		let distanceFunc = function(aPoint, bPoint) {			
+			return 1;
+		};
+		
+		let neighborsFunc = function(point) {
+			let neighbors = [];
+			if (point.mx > 0 && !isCollision(point.id - 1)) {
+				// left
+				neighbors.push({mx: point.mx - 1, my: point.my, id: point.id - 1});	
+				// top left
+				if (point.my > 0 && !isCollision(point.id - mapW - 1)) 
+					neighbors.push({mx: point.mx - 1, my: point.my - 1, id: point.id - mapW - 1});	
+				// bottom left
+				if (point.my < mapH - 1 && !isCollision(point.id + mapW - 1))
+					neighbors.push({mx: point.mx - 1, my: point.my + 1, id: point.id + mapW - 1});	
+			}
+			if (point.mx < mapW - 1 && !isCollision(point.id + 1)) {
+				// right				
+				neighbors.push({mx: point.mx + 1, my: point.my, id: point.id + 1});	
+				// top right
+				if (point.my > 0 && !isCollision(point.id - mapW + 1)) 					
+					neighbors.push({mx: point.mx + 1, my: point.my - 1, id: point.id - mapW + 1});	
+				// bottom right
+				if (point.my < mapH - 1 && !isCollision(point.id + mapW + 1)) 
+					neighbors.push({mx: point.mx + 1, my: point.my + 1, id: point.id + mapW + 1});	
+			}
+			// top
+			if (point.my > 0 && !isCollision(point.id - mapW)) 
+				neighbors.push({mx: point.mx, my: point.my - 1, id: point.id - mapW});	
+			// bottom
+			if (point.my < mapH - 1 && !isCollision(point.id + mapW)) 
+				neighbors.push({mx: point.mx, my: point.my + 1, id: point.id + mapW});	
+			return neighbors;
+		};
+		
+		
+		let pointA = {};
+		pointA.mx = Math.floor(hero.mx);
+		pointA.my = Math.floor(hero.my);
+		pointA.id = pointA.mx + pointA.my * mapW;		
+		
+		let pointB = {};
+		pointB.mx = Math.floor(mx);
+		pointB.my = Math.floor(my);
+		pointB.id = pointB.mx + pointB.my * mapW;
+
+		target.steps = $.GJSLibAStar.findPath(pointA, pointB, heuristicFunc, distanceFunc, neighborsFunc);		
 		//console.log("A* steps: " + target.steps);
 
 		// 0. cílový doplňuji sám, protože z A* vypadnou středové
@@ -605,8 +541,8 @@ $.isometricGame = (function() {
 		
 		// poslední krok nechci, protože na něm už stojím
 		for (let i = 0; i < target.steps.length - 1; i++) {
-			let smx = target.steps[i] % mapW + 0.5;
-			let smy = Math.floor(target.steps[i] / mapW) + 0.5;
+			let smx = target.steps[i].mx + 0.5;
+			let smy = target.steps[i].my + 0.5;
 			let siso = toIso(smx, smy);
 			target.mxSteps.push(smx);
 			target.mySteps.push(smy);
