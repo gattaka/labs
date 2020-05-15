@@ -33,7 +33,7 @@ $.isometricGame = (function() {
 	
 	let loaded = false;
 	let loadingProgress = 0;
-	let textures = [];
+	let textures = [];	
 	
 	// mapa povrchů
 	let map = [
@@ -133,6 +133,13 @@ $.isometricGame = (function() {
 		vixSteps: [],
 		viySteps: [],
 	};	
+	
+	let cursor = {
+		mx: 0, 
+		my: 0,
+		vix: 0,
+		viy: 0,		
+	};	
 		
 	/*
 	* COORD TRANSFORMATIONS
@@ -184,8 +191,9 @@ $.isometricGame = (function() {
 		}
 	};		
 	
-	let drawPolygon = function(xArr, yArr) {		
-		ctx.strokeStyle = "hsla(0,0%,0%,0.2)";
+	let drawPolygon = function(xArr, yArr, color, fill) {		
+		ctx.strokeStyle = color;
+		ctx.fillStyle = color;
 		ctx.lineWidth = 1;			
 		for (let d = 0; d < 2; d++) {
 			ctx.beginPath();
@@ -196,7 +204,11 @@ $.isometricGame = (function() {
 				else 
 					ctx.lineTo(xArr[ii], yArr[ii]);
 			}
-			ctx.stroke();
+			if (fill) {
+				ctx.fill();
+			} else {
+				ctx.stroke();
+			}
 		}
 	}
 	
@@ -207,7 +219,7 @@ $.isometricGame = (function() {
 		ctx.fillRect(Math.floor(x - 1), Math.floor(y - 1), 3, 3);
 	};
 		
-	let drawIsoCell = function(isoCell) {		
+	let drawIsoCell = function(isoCell, mx, my) {		
 		let x = [isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix + cellW, isoCell.ix + cellW / 2];
 		let y = [isoCell.iy, isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2];		
 		
@@ -222,7 +234,10 @@ $.isometricGame = (function() {
 			drawImg(0, isoCell.value[2], isoCell.value[3], isoCell.ix, isoCell.iy - cellH / 2, false);	
 		
 		if (outlines) 
-			drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]]);									
+			drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,0%,0.2)", false);
+		
+		if (mx == Math.floor(cursor.mx) && my == Math.floor(cursor.my))
+			drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(100,100%,50%,0.2)", true);
 	};
 		
 	let draw = function(timestamp) {
@@ -297,7 +312,7 @@ $.isometricGame = (function() {
 				isoCell.ix += viewX;
 				isoCell.iy += viewY;
 				isoCell.value = mCell;				
-				drawIsoCell(isoCell);
+				drawIsoCell(isoCell, mx, my);
 				isoCells[i] = isoCell;
 			}
 		}
@@ -604,15 +619,9 @@ $.isometricGame = (function() {
 	};
 	
 	let updateTarget = function(e) {
-		let bound = canvas.getBoundingClientRect();
-		let targetX = e.clientX - bound.x;
-		let targetY = e.clientY - bound.y;			
-		let ix = targetX - viewX;
-		let iy = targetY - viewY;
-		mapCoord = toMap(ix, iy);	
-		let i = Math.floor(mapCoord.my) * mapW + Math.floor(mapCoord.mx);
+		let i = Math.floor(cursor.my) * mapW + Math.floor(cursor.mx);
 		if (!isCollision(i))
-			prepareNavigationSteps(mapCoord.mx, mapCoord.my, ix, iy);		
+			prepareNavigationSteps(cursor.mx, cursor.my, cursor.vix, cursor.viy);		
 	};
 	
 	/*
@@ -731,6 +740,16 @@ $.isometricGame = (function() {
 	}, false);
 	
 	canvas.addEventListener("mousemove", function (e) {
+		let bound = canvas.getBoundingClientRect();
+		let targetX = e.clientX - bound.x;
+		let targetY = e.clientY - bound.y;			
+		let ix = targetX - viewX;
+		let iy = targetY - viewY;
+		mapCoord = toMap(ix, iy);	
+		cursor.mx = mapCoord.mx;
+		cursor.my = mapCoord.my;
+		cursor.vix = ix;
+		cursor.viy = iy;
 		if (!mousedown) 
 			return;
 		updateTarget(e);
