@@ -83,7 +83,8 @@ $.GIsoGame.IsoRenderer = {
 			for (let mx = currentLevel.getMapW() - 1; mx >= 0; mx--) {
 				for (let my = 0; my < currentLevel.getMapH(); my++) {				
 					let isoCell = isoCells[mx][my];
-					onCellRenderFunc(mx, my);					
+					if (onCellRenderFunc != undefined)
+						onCellRenderFunc(mx, my);					
 
 					let wall = currentLevel.getWallAtCoord(mx, my);
 					if (wall != undefined) 

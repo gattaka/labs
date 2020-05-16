@@ -3,14 +3,14 @@
 	<script type="text/javascript" src="./SpriteLoader.js"></script>
 	<script type="text/javascript" src="./LevelLoader.js"></script>
 	<script type="text/javascript" src="./GFXUtils.js"></script>
-	<script type="text/javascript" src="./GFXMinimap.js"></script>
+	<script type="text/javascript" src="./Minimap.js"></script>
 	<script type="text/javascript" src="./IsoRenderer.js"></script>	
 	<script type="text/javascript" src="./Configuration.js"></script>		
 </head>
 <input type="checkbox" onchange="$.GIsoGame.Game.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
 <input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
 <div style="margin: 10px 0;">
-	<canvas id="canvasT" width="1024" height="600"></canvas>
+	<canvas id="canvasT" style="width: 100%;" height="600"></canvas>
 </div>[/HTML]
 <script>
 var $ = $ || {};
@@ -19,10 +19,10 @@ $.GIsoGame.Game = (function() {
 
 	let canvas = document.getElementById("canvasT");
 	let ctx = canvas.getContext("2d");
-	let width = canvas.width;
-	let height = canvas.height;	
-	let halfWidth = width / 2;
-	let halfHeight = height / 2;
+	let width;
+	let height;
+	let halfWidth;
+	let halfHeight;
 	
 	let spriteLoader;
 	let levelLoader;
@@ -151,7 +151,7 @@ $.GIsoGame.Game = (function() {
 		
 		isoRenderer.update(delay, viewX, viewY);
 
-		$.GIsoGame.GFXMinimap.drawMinimap(ctx, currentLevel, target, hero);
+		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel, target, hero);
 	};		
 
 	/*
@@ -363,15 +363,27 @@ $.GIsoGame.Game = (function() {
 	* INIT
 	*/	
 	
-	let init = function() {							
+	let init = function() {	
+		canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+			
+		width = canvas.width;
+		height = canvas.height;	
+		halfWidth = width / 2;
+		halfHeight = height / 2;
+		
+		canvas.style.position = "absolute";
+		canvas.style.left = "0";
+		canvas.style.top = "0";
+		canvas.style.zIndex = "999";		
+	
 		currentLevel = $.GIsoGame.LevelLoader.createLevel();
 		
 		spriteLoader = $.GIsoGame.SpriteLoader.create();
 		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_64x32.png", 8, 7, cellW, cellH, 0, 0);
 		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_64x32.png", 8, 7, cellW, cellH, 0, 0);			
 		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_64x32.png", 8, 7, cellW, cellH, 0, 0);
-		spriteLoader.queueTexture(1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 64, 128 - 32);
-		//spriteLoader.queueTexture(1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 0, 0);
+		spriteLoader.queueTexture(1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 64, 128 - 32);		
 		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 16);
 		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 16);
 		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
@@ -448,11 +460,7 @@ $.GIsoGame.Game = (function() {
 		
 		changeOutlines: function(value) {
 			$.GIsoGame.Configuration.outlines = value;
-		},
-		
-		changeNavigation: function(value) {
-			$.GIsoGame.Configuration.directWalking = value;
-		},
+		},		
 	};
 
 })();

@@ -1,0 +1,156 @@
+[HTML]<head>
+	<script type="text/javascript" src="./SpriteLoader.js"></script>
+	<script type="text/javascript" src="./LevelLoader.js"></script>
+	<script type="text/javascript" src="./GFXUtils.js"></script>
+	<script type="text/javascript" src="./Minimap.js"></script>
+	<script type="text/javascript" src="./IsoRenderer.js"></script>	
+	<script type="text/javascript" src="./Configuration.js"></script>		
+</head>
+<div style="margin: 10px 0;">
+	<canvas id="canvasT" style="width: 100%;" height="600"></canvas>
+</div>[/HTML]
+<script>
+var $ = $ || {};
+$.GIsoGame = $.GIsoGame || {};
+$.GIsoGame.Editor = (function() {
+
+	let canvas = document.getElementById("canvasT");
+	let ctx = canvas.getContext("2d");
+	let width;
+	let height;
+	let halfWidth;
+	let halfHeight;
+	
+	let spriteLoader;
+	let levelLoader;
+	let currentLevel;
+	let isoRenderer;
+	
+	let lastTime = 0;
+	
+	let viewX = 0;
+	let viewY = 0;
+	
+	let cellW = 64;
+	let cellH = 32;	
+	
+	let mousedown = false;
+		
+	let cursor = {
+		mx: 0, 
+		my: 0,
+		vix: 0,
+		viy: 0,		
+	};		
+
+	/*
+	* DRAWING
+	*/	
+	
+	let draw = function(timestamp) {
+		drawScene(timestamp);
+		window.requestAnimationFrame(draw);
+	};
+			
+	let drawScene = function(timestamp) {	
+		if (!spriteLoader.isLoaded())
+			return;
+			
+		// Update času pro animace
+		let delay = timestamp - lastTime;
+		lastTime = timestamp;
+		
+		isoRenderer.update(delay, viewX, viewY);
+
+		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
+	};		
+	
+	let placeItem = function(e) {
+		// TODO
+	};
+
+	/*
+	* INIT
+	*/	
+	
+	let init = function() {	
+		canvas.width = window.innerWidth;
+        canvas.height = window.innerHeight;
+			
+		width = canvas.width;
+		height = canvas.height;	
+		halfWidth = width / 2;
+		halfHeight = height / 2;
+		
+		canvas.style.position = "absolute";
+		canvas.style.left = "0";
+		canvas.style.top = "0";
+		canvas.style.zIndex = "999";		
+	
+		currentLevel = $.GIsoGame.LevelLoader.createLevel();
+		
+		spriteLoader = $.GIsoGame.SpriteLoader.create();
+		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_64x32.png", 8, 7, cellW, cellH, 0, 0);
+		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_64x32.png", 8, 7, cellW, cellH, 0, 0);			
+		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_64x32.png", 8, 7, cellW, cellH, 0, 0);		
+		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 16);
+		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 16);
+		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
+		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 42, 128 + 64);
+		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);
+		
+		spriteLoader.load();
+			
+		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor);
+				
+		viewX = 0;
+		viewY = 0;
+		
+		viewX = halfWidth;
+		viewY = halfHeight;
+								
+		// https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
+		// https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-ref
+		// https://developer.mozilla.org/en-US/docs/Web/API/Performance/now
+		// https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
+		window.requestAnimationFrame(draw);		
+	};		
+	
+	canvas.addEventListener("mousedown", function (e) {
+		mousedown = true;
+		placeItem(e);
+	}, false);
+ 
+	canvas.addEventListener("mouseup", function (e) {
+		mousedown = false;
+	}, false);
+	
+	canvas.addEventListener("mouseleave", function (e) {
+		mousedown = false;
+	}, false);
+	
+	canvas.addEventListener("mousemove", function (e) {
+		let bound = canvas.getBoundingClientRect();
+		let targetX = e.clientX - bound.x;
+		let targetY = e.clientY - bound.y;			
+		let ix = targetX - viewX;
+		let iy = targetY - viewY;
+		mapCoord = isoRenderer.toMap(ix, iy);	
+		cursor.mx = mapCoord.mx;
+		cursor.my = mapCoord.my;
+		cursor.vix = ix;
+		cursor.viy = iy;
+		if (!mousedown) 
+			return;
+		placeItem(e);
+	}, false);
+		
+	return {	
+		start: function() {					
+			init();						
+		},	
+	};
+
+})();
+
+$.GIsoGame.Editor.start();</script>

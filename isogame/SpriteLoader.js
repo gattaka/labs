@@ -40,6 +40,9 @@ $.GIsoGame.SpriteLoader = {
 			load: function(){
 				for (let g = 0; g < textures.length; g++) {	
 					let group = textures[g];
+					// některá Id mohla být vynechána
+					if (group == undefined) 
+						continue;
 					for (let i = 0; i < group.length; i++) {
 						let texture = group[i];
 						let textureCanvas = document.createElement("canvas");
