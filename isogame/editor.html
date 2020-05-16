@@ -34,6 +34,17 @@ $.GIsoGame.Editor = (function() {
 	let cellW = 64;
 	let cellH = 32;	
 	
+	let menuBorder = 10;
+	
+	let texMenuOffset = 0;
+	let texMenuBorder = 10;
+	
+	let choosenTextureGroup = 0;
+	let choosenTextureSprite = 0;
+	let choosenTextureFrame = 0;
+	
+	let level;
+	
 	// T/F dle tlačítka myši
 	let mouseButtons = [];
 	let mouseDownX = 0;
@@ -66,13 +77,30 @@ $.GIsoGame.Editor = (function() {
 		lastTime = timestamp;	
 				
 		isoRenderer.update(delay, viewX, viewY);
+		
+		let menuHeight = 100;
+		
+		ctx.fillStyle = "grey";
+		ctx.fillRect(menuBorder, height - menuHeight - menuBorder, width - menuBorder * 2, menuHeight);
+		
+		let tex = spriteLoader.getTexture(0, 0);
+		for (let i = 0; i < tex.cols * tex.rows; i++) {
+			let col = i % tex.cols;
+			let row = Math.floor(i / tex.cols);
+			let x = Math.floor(width / 2 - tex.width / 2) + (i + texMenuOffset) * (tex.width + texMenuBorder);
+			let y = Math.floor(height - menuHeight / 2 - tex.height / 2 - menuBorder);
+			if (x > 0 && (x + tex.width) < width)
+				ctx.drawImage(tex.canvas, 
+					col * tex.width, row * tex.height, tex.width, tex.height, 
+					x, y, tex.width, tex.height);	
+		}
 
 		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
+		
+		if (mouseButtons[0] && cursor.mx < level.mapW && cursor.mx >= 0 && cursor.my < level.mapH && cursor.my >= 0)
+			level.grounds[Math.floor(cursor.mx) + Math.floor(cursor.my) * level.mapW] = [choosenTextureSprite, choosenTextureFrame];
+		
 	};		
-	
-	let placeItem = function(e) {
-		// TODO
-	};
 
 	/*
 	* INIT
@@ -81,6 +109,8 @@ $.GIsoGame.Editor = (function() {
 	let init = function() {	
 		canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
+		
+		$.GIsoGame.Configuration.outlines = true;
 			
 		width = canvas.width;
 		height = canvas.height;	
@@ -91,8 +121,16 @@ $.GIsoGame.Editor = (function() {
 		canvas.style.left = "0";
 		canvas.style.top = "0";
 		canvas.style.zIndex = "999";		
+				
+		level = {
+			mapW: 10,
+			mapH: 10,
+			grounds:[],
+			objects: [],
+			walls: []
+		}
 	
-		currentLevel = $.GIsoGame.LevelLoader.createLevel();
+		currentLevel = $.GIsoGame.LevelLoader.createLevel(level);
 		
 		spriteLoader = $.GIsoGame.SpriteLoader.create();
 		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_64x32.png", 8, 7, cellW, cellH, 0, 0);
@@ -106,10 +144,7 @@ $.GIsoGame.Editor = (function() {
 		
 		spriteLoader.load();
 			
-		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor);
-				
-		viewX = 0;
-		viewY = 0;
+		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor);		
 		
 		viewX = halfWidth;
 		viewY = halfHeight;

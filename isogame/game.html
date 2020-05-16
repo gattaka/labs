@@ -5,7 +5,8 @@
 	<script type="text/javascript" src="./GFXUtils.js"></script>
 	<script type="text/javascript" src="./Minimap.js"></script>
 	<script type="text/javascript" src="./IsoRenderer.js"></script>	
-	<script type="text/javascript" src="./Configuration.js"></script>		
+	<script type="text/javascript" src="./Configuration.js"></script>
+	<script type="text/javascript" src="./Level1.dat.js"></script>
 </head>
 <input type="checkbox" onchange="$.GIsoGame.Game.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
 <input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
@@ -377,7 +378,8 @@ $.GIsoGame.Game = (function() {
 		canvas.style.top = "0";
 		canvas.style.zIndex = "999";		
 	
-		currentLevel = $.GIsoGame.LevelLoader.createLevel();
+		let level1 = $.GIsoGame.Level1.create();
+		currentLevel = $.GIsoGame.LevelLoader.createLevel(level1);
 		
 		spriteLoader = $.GIsoGame.SpriteLoader.create();
 		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_64x32.png", 8, 7, cellW, cellH, 0, 0);
