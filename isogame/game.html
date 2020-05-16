@@ -4,6 +4,8 @@
 	<script type="text/javascript" src="./LevelLoader.js"></script>
 	<script type="text/javascript" src="./GFXUtils.js"></script>
 	<script type="text/javascript" src="./GFXMinimap.js"></script>
+	<script type="text/javascript" src="./IsoRenderer.js"></script>	
+	<script type="text/javascript" src="./Configuration.js"></script>		
 </head>
 <input type="checkbox" onchange="$.GIsoGame.Game.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
 <input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
@@ -25,13 +27,9 @@ $.GIsoGame.Game = (function() {
 	let spriteLoader;
 	let levelLoader;
 	let currentLevel;
+	let isoRenderer;
 	
 	let lastTime = 0;
-	
-	let centered = true;
-	let outlines = true;
-	let directWalking = true;
-	let showNumbers = false;
 	
 	let viewX = 0;
 	let viewY = 0;
@@ -104,94 +102,41 @@ $.GIsoGame.Game = (function() {
 		vix: 0,
 		viy: 0,		
 	};		
-		
-	/*
-	* COORD TRANSFORMATIONS
-	*/
-		
-	let toIso = function(mx, my) {
-		let w = cellW / 2;
-		let h = cellH / 2;
-		return {
-			ix: mx * w + my * w,  
-			iy: my * h - mx * h
-		};
-	};
-	
-	let toMap = function(ix, iy) {
-		let w = cellW / 2;
-		let h = cellH / 2;
-		let my = iy / (2 * h) + ix / (2 * w);		
-		return {
-			mx: (ix - my * w) / w,
-			my: my
-		};
-	};	
-	
+
 	/*
 	* DRAWING
-	*/
+	*/	
 	
-	let adjustView = function() {
-		if (centered) {
-			viewX = halfWidth - heroSprite.vix;
-			viewY = halfHeight - heroSprite.viy;
-		}
-	};
-	
-	let drawImg = function(groupId, spriteId, frame, ix, iy, showOutline) {
-		let tex = spriteLoader.getTexture(groupId, spriteId);
-		let col = frame % tex.cols;
-		let row = Math.floor(frame / tex.cols);
-		let x = Math.floor(ix - tex.offsetX);
-		let y = Math.floor(iy - tex.offsetY);
-		ctx.drawImage(tex.canvas, 
-			col * tex.width, row * tex.height, tex.width, tex.height, 
-			x, y, tex.width, tex.height);
-		if (showOutline) {
-			ctx.strokeStyle = "black";
-			ctx.lineWidth = 1;			
-			ctx.strokeRect(x, y, tex.width, tex.height);
-		}
-	};			
-		
-	let drawIsoCell = function(isoCell, mx, my) {		
-		let x = [isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix + cellW, isoCell.ix + cellW / 2];
-		let y = [isoCell.iy, isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2];		
-		
-		// Mimo view nemá cenu vykreslovat
-		if (x[2] < 0 || x[0] > width || y[1] > height || y[3] < 0)
-			return;
-					
-		drawImg(0, isoCell.value.spriteId, isoCell.value.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);	
-
-		// existuje přechod?
-		if (isoCell.value.layerSpriteId != undefined)
-			drawImg(0, isoCell.value.layerSpriteId, isoCell.value.layerFrameId, isoCell.ix, isoCell.iy - cellH / 2, false);	
-		
-		if (outlines) 
-			$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,0%,0.2)", false);
-		
-		if (mx == Math.floor(cursor.mx) && my == Math.floor(cursor.my))
-			$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(100,100%,50%,0.2)", true);
-	};
-		
-	let draw = function(timestamp) {
-		drawScene(timestamp);
-		window.requestAnimationFrame(draw);
-	};
-			
 	let drawHero = function() {							
 		let heroSpriteAdjustedX = Math.floor(heroSprite.vix + viewX);
 		let heroSpriteAdjustedY = Math.floor(heroSprite.viy + viewY);
-		drawImg(1, 0, heroSprite.currentFrame, heroSpriteAdjustedX, heroSpriteAdjustedY, outlines);	
-		if (outlines) 
+		isoRenderer.drawSprite(1, 0, heroSprite.currentFrame, heroSpriteAdjustedX, heroSpriteAdjustedY, $.GIsoGame.Configuration.outlines);	
+		if ($.GIsoGame.Configuration.outlines) 
 			$.GIsoGame.GFXUtils.drawPoint(ctx, heroSpriteAdjustedX, heroSpriteAdjustedY, "lime");			
 	};
 	
 	let drawTarget = function() {							
-		if (outlines)
+		if ($.GIsoGame.Configuration.outlines)
 			$.GIsoGame.GFXUtils.drawPoint(ctx, Math.floor(target.vix + viewX), Math.floor(target.viy + viewY), "yellow");			
+	};
+	
+	let onCellRenderFunc = function(mx, my) {
+		if (Math.floor(target.mx) == mx && Math.floor(target.my) == my)
+			drawTarget();
+		if (Math.floor(hero.mx) == mx && Math.floor(hero.my) == my)
+			drawHero();
+	};
+	
+	let adjustView = function() {
+		if ($.GIsoGame.Configuration.centered) {
+			viewX = halfWidth - heroSprite.vix;
+			viewY = halfHeight - heroSprite.viy;
+		}
+	};		
+		
+	let draw = function(timestamp) {
+		drawScene(timestamp);
+		window.requestAnimationFrame(draw);
 	};
 			
 	let drawScene = function(timestamp) {	
@@ -204,49 +149,7 @@ $.GIsoGame.Game = (function() {
 		
 		animateHero(delay);
 		
-		ctx.clearRect(0, 0, width, height);		
-		ctx.fillStyle = "black";
-		ctx.fillRect(0, 0, width, height);					
-
-		// map se musí vykreslovat v opačném pořadí, než je X, aby se bloky správně překrývaly
-		// nejprve všechny povrchové dílky
-		let isoCells = [];
-		for (let mx = currentLevel.getMapW() - 1; mx >= 0; mx--) {
-			isoCells[mx] = [];
-			for (let my = 0; my < currentLevel.getMapH(); my++) {								
-				let isoCell = toIso(mx, my);
-				isoCell.ix += viewX;
-				isoCell.iy += viewY;
-				isoCell.value = currentLevel.getGroundAtCoord(mx, my);				
-				drawIsoCell(isoCell, mx, my);
-				isoCells[mx][my] = isoCell;
-			}
-		}
-		
-		// poté zdi, objekty, postavy apod.
-		for (let mx = currentLevel.getMapW() - 1; mx >= 0; mx--) {
-			for (let my = 0; my < currentLevel.getMapH(); my++) {				
-				let isoCell = isoCells[mx][my];
-				if (Math.floor(target.mx) == mx && Math.floor(target.my) == my)
-					drawTarget();
-				if (Math.floor(hero.mx) == mx && Math.floor(hero.my) == my)
-					drawHero();
-
-				let wall = currentLevel.getWallAtCoord(mx, my);
-				if (wall != undefined) 
-					drawImg(3, wall.spriteId, wall.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);	
-				
-				let object = currentLevel.getObjectAtCoord(mx, my);
-				if (object != undefined && object.length > 0) 
-					drawImg(2, object.spriteId, object.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);
-								
-				if (showNumbers) {
-					ctx.font = "30px Arial";
-					ctx.fillStyle = "white";
-					ctx.fillText(i, Math.floor(isoCell.ix + cellW / 3), Math.floor(isoCell.iy + cellH / 4));
-				}
-			}
-		}
+		isoRenderer.update(delay, viewX, viewY);
 
 		$.GIsoGame.GFXMinimap.drawMinimap(ctx, currentLevel, target, hero);
 	};		
@@ -283,17 +186,11 @@ $.GIsoGame.Game = (function() {
 		
 		if (diffX != 0 || diffY != 0) {
 			let shiftX = 0;
-			let shiftY = 0;
-			if (directWalking) {
-				let rad = angle / 180 * Math.PI;
-				shiftX = Math.cos(rad) * delay * hero.speed;
-				// isometrické zkosení 1:2 musí snížit i rychlost
-				shiftY = Math.sin(rad) / 2 * delay * hero.speed;
-			} else {
-				shiftX = Math.sign(diffX) * delay * hero.speed;
-				// isometrické zkosení 1:2 musí snížit i rychlost
-				shiftY = Math.sign(diffY) * delay * hero.speed / 2; 
-			}
+			let shiftY = 0;			
+			let rad = angle / 180 * Math.PI;
+			shiftX = Math.cos(rad) * delay * hero.speed;
+			// isometrické zkosení 1:2 musí snížit i rychlost
+			shiftY = Math.sin(rad) / 2 * delay * hero.speed;
 			// jde se proti směru
 			shiftX *= -1;
 			shiftY *= -1;
@@ -312,7 +209,7 @@ $.GIsoGame.Game = (function() {
 			
 			heroSprite.currentLoop = 1;
 			
-			let tolerancex = directWalking ? 10 : 5;
+			let tolerancex = 10;
 			let tolerancey = tolerancex;
 			
 			if (angle >= 0 && angle <= tolerancex || angle > (360 - tolerancex) && angle <= 360) {
@@ -335,7 +232,7 @@ $.GIsoGame.Game = (function() {
 
 			adjustView();			
 						
-			mapCoord = toMap(heroSprite.vix, heroSprite.viy);			
+			mapCoord = isoRenderer.toMap(heroSprite.vix, heroSprite.viy);			
 			hero.mx = mapCoord.mx;
 			hero.my = mapCoord.my;
 			
@@ -374,8 +271,10 @@ $.GIsoGame.Game = (function() {
 	* PATHFINDING
 	*/		
 	
-	let isCollision = function(index) {
-		return currentLevel.getWallAtIndex(index) != undefined;
+	let isCollision = function(mx, my) {
+		return mx < 0 || mx >= currentLevel.getMapW() 
+			|| my < 0 || my >= currentLevel.getMapH() 
+			|| currentLevel.getWallAtCoord(Math.floor(mx), Math.floor(my)) != undefined;
 	};
 	
 	let prepareNavigationSteps = function(mx, my, ix, iy) {
@@ -390,36 +289,35 @@ $.GIsoGame.Game = (function() {
 		
 		let neighborsFunc = function(point) {
 			let neighbors = [];
-			if (point.mx > 0 && !isCollision(point.id - 1)) {
+			if (!isCollision(point.mx - 1, point.my)) {
 				// left
 				neighbors.push({mx: point.mx - 1, my: point.my, id: point.id - 1});	
 				// top left
-				if (point.my > 0 && !isCollision(point.id - currentLevel.getMapW() - 1)) 
+				if (!isCollision(point.mx - 1, point.my - 1)) 
 					neighbors.push({mx: point.mx - 1, my: point.my - 1, id: point.id - currentLevel.getMapW() - 1});	
 				// bottom left
-				if (point.my < currentLevel.getMapH() - 1 && !isCollision(point.id + currentLevel.getMapW() - 1))
+				if (!isCollision(point.mx - 1, point.my + 1))
 					neighbors.push({mx: point.mx - 1, my: point.my + 1, id: point.id + currentLevel.getMapW() - 1});	
 			}
-			if (point.mx < currentLevel.getMapW() - 1 && !isCollision(point.id + 1)) {
+			if (!isCollision(point.mx + 1, point.my)) {
 				// right				
 				neighbors.push({mx: point.mx + 1, my: point.my, id: point.id + 1});	
 				// top right
-				if (point.my > 0 && !isCollision(point.id - currentLevel.getMapW() + 1)) 					
+				if (!isCollision(point.mx + 1, point.my - 1)) 					
 					neighbors.push({mx: point.mx + 1, my: point.my - 1, id: point.id - currentLevel.getMapW() + 1});	
 				// bottom right
-				if (point.my < currentLevel.getMapH() - 1 && !isCollision(point.id + currentLevel.getMapW() + 1)) 
+				if (!isCollision(point.mx + 1, point.my + 1)) 
 					neighbors.push({mx: point.mx + 1, my: point.my + 1, id: point.id + currentLevel.getMapW() + 1});	
 			}
 			// top
-			if (point.my > 0 && !isCollision(point.id - currentLevel.getMapW())) 
+			if (!isCollision(point.mx, point.my - 1)) 
 				neighbors.push({mx: point.mx, my: point.my - 1, id: point.id - currentLevel.getMapW()});	
 			// bottom
-			if (point.my < currentLevel.getMapH() - 1 && !isCollision(point.id + currentLevel.getMapW())) 
+			if (!isCollision(point.mx, point.my + 1)) 
 				neighbors.push({mx: point.mx, my: point.my + 1, id: point.id + currentLevel.getMapW()});	
 			return neighbors;
 		};
-		
-		
+				
 		let pointA = {};
 		pointA.mx = Math.floor(hero.mx);
 		pointA.my = Math.floor(hero.my);
@@ -445,7 +343,7 @@ $.GIsoGame.Game = (function() {
 		for (let i = 0; i < target.steps.length - 1; i++) {
 			let smx = target.steps[i].mx + 0.5;
 			let smy = target.steps[i].my + 0.5;
-			let siso = toIso(smx, smy);
+			let siso = isoRenderer.toIso(smx, smy);
 			target.mxSteps.push(smx);
 			target.mySteps.push(smy);
 			target.vixSteps.push(siso.ix);
@@ -456,15 +354,14 @@ $.GIsoGame.Game = (function() {
 		nextTargetStep();
 	};
 	
-	let updateTarget = function(e) {
-		let i = Math.floor(cursor.my) * currentLevel.getMapW() + Math.floor(cursor.mx);
-		if (!isCollision(i))
+	let updateTarget = function(e) {		
+		if (!isCollision(cursor.mx, cursor.my))
 			prepareNavigationSteps(cursor.mx, cursor.my, cursor.vix, cursor.viy);		
 	};
 	
 	/*
 	* INIT
-	*/
+	*/	
 	
 	let init = function() {							
 		currentLevel = $.GIsoGame.LevelLoader.createLevel();
@@ -482,6 +379,8 @@ $.GIsoGame.Game = (function() {
 		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);
 		
 		spriteLoader.load();
+			
+		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor, onCellRenderFunc);
 		
 		let mx = 2.5;
 		let my = 1.5;
@@ -493,7 +392,7 @@ $.GIsoGame.Game = (function() {
 		viewX = 0;
 		viewY = 0;
 		
-		let iso = toIso(mx, my);
+		let iso = isoRenderer.toIso(mx, my);
 		target.vix = Math.floor(iso.ix);
 		target.viy = Math.floor(iso.iy);
 		heroSprite.vix = target.vix;
@@ -528,7 +427,7 @@ $.GIsoGame.Game = (function() {
 		let targetY = e.clientY - bound.y;			
 		let ix = targetX - viewX;
 		let iy = targetY - viewY;
-		mapCoord = toMap(ix, iy);	
+		mapCoord = isoRenderer.toMap(ix, iy);	
 		cursor.mx = mapCoord.mx;
 		cursor.my = mapCoord.my;
 		cursor.vix = ix;
@@ -544,15 +443,15 @@ $.GIsoGame.Game = (function() {
 		},		
 		
 		changeCentered: function(value) {
-			centered = value;
+			$.GIsoGame.Configuration.centered = value;
 		},
 		
 		changeOutlines: function(value) {
-			outlines = value;
+			$.GIsoGame.Configuration.outlines = value;
 		},
 		
 		changeNavigation: function(value) {
-			directWalking = value;
+			$.GIsoGame.Configuration.directWalking = value;
 		},
 	};
 
