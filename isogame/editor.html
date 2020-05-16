@@ -36,7 +36,13 @@ $.GIsoGame.Editor = (function() {
 	
 	let mousedown = false;
 		
+	let scrollDelay = 10;
+	let scrollTimer = 0;
+	let scrollSpeed = 10;
+	let scrollBorder = 100;
 	let cursor = {
+		sx: 0,
+		sy: 0,
 		mx: 0, 
 		my: 0,
 		vix: 0,
@@ -58,7 +64,20 @@ $.GIsoGame.Editor = (function() {
 			
 		// Update času pro animace
 		let delay = timestamp - lastTime;
-		lastTime = timestamp;
+		lastTime = timestamp;	
+		
+		scrollTimer -= delay;
+		if (scrollTimer <= 0) {				
+			scrollTimer = scrollDelay;
+			let scrollX = cursor.sx < scrollBorder ? 1 : (cursor.sx > width - scrollBorder ? -1 : 0);
+			let scrollY = cursor.sy < scrollBorder ? 1 : (cursor.sy > height - scrollBorder ? -1 : 0);
+			if (scrollX != 0 || scrollY != 0) {
+				let scrollXPower = (scrollBorder - (scrollX == 1 ? cursor.sx : (width - cursor.sx))) / scrollBorder;
+				let scrollYPower = (scrollBorder - (scrollY == 1 ? cursor.sy : (height - cursor.sy))) / scrollBorder;
+				viewX += scrollXPower * scrollSpeed * scrollX;
+				viewY += scrollYPower * scrollSpeed * scrollY;
+			}			
+		}
 		
 		isoRenderer.update(delay, viewX, viewY);
 
@@ -131,10 +150,10 @@ $.GIsoGame.Editor = (function() {
 	
 	canvas.addEventListener("mousemove", function (e) {
 		let bound = canvas.getBoundingClientRect();
-		let targetX = e.clientX - bound.x;
-		let targetY = e.clientY - bound.y;			
-		let ix = targetX - viewX;
-		let iy = targetY - viewY;
+		cursor.sx = e.clientX - bound.x;
+		cursor.sy = e.clientY - bound.y;
+		let ix = cursor.sx - viewX;
+		let iy = cursor.sy - viewY;
 		mapCoord = isoRenderer.toMap(ix, iy);	
 		cursor.mx = mapCoord.mx;
 		cursor.my = mapCoord.my;
