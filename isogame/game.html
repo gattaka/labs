@@ -1,13 +1,18 @@
 [HTML]<head>
 	<script type="text/javascript" src="../libs/astar.js"></script>	
+	<script type="text/javascript" src="./SpriteLoader.js"></script>
+	<script type="text/javascript" src="./LevelLoader.js"></script>
+	<script type="text/javascript" src="./GFXUtils.js"></script>	
 </head>
-<input type="checkbox" onchange="$.isometricGame.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
-<input type="checkbox" onchange="$.isometricGame.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
+<input type="checkbox" onchange="$.GIsoGame.Game.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
+<input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
 <div style="margin: 10px 0;">
 	<canvas id="canvasT" width="1024" height="600"></canvas>
 </div>[/HTML]
-<script>var $ = $ || {};
-$.isometricGame = (function() {
+<script>
+var $ = $ || {};
+$.GIsoGame = $.GIsoGame || {};
+$.GIsoGame.Game = (function() {
 
 	let canvas = document.getElementById("canvasT");
 	let ctx = canvas.getContext("2d");
@@ -15,6 +20,10 @@ $.isometricGame = (function() {
 	let height = canvas.height;	
 	let halfWidth = width / 2;
 	let halfHeight = height / 2;
+	
+	let spriteLoader;
+	let levelLoader;
+	let currentLevel;
 	
 	let lastTime = 0;
 	
@@ -32,51 +41,7 @@ $.isometricGame = (function() {
 	let viewY = 0;
 	
 	let cellW = 64;
-	let cellH = 32;
-	
-	let loaded = false;
-	let loadingProgress = 0;
-	let textures = [];	
-	
-	// mapa povrchů
-	let map = [
-		[1,2],[1,1],[1,4],[1,1],[1,2],[1,3],[1,0],[1,1],[1,4],[1,1],[1,3],[1,0],
-		[1,3,0,28],[1,0,0,29],[1,1,0,29],[1,5,0,30],[1,2,0,28],[1,3,0,29],[1,2,0,30],[1,1,0,28],[1,5,0,30],[1,2,0,28],[1,3,0,45],[1,3],
-		[0,0],[0,3],[0,5],[0,1],[0,5],[0,2],[0,0],[0,1],[0,4],[0,1],[1,3,0,21],[1,0],
-		[0,3],[0,2],[0,3],[0,5],[0,2],[0,3],[0,3],[0,0,1,48],[0,1,1,45],[0,5],[1,2,0,22],[1,3],
-		[0,0],[0,1],[0,4],[0,1],[0,3],[0,0],[0,0],[0,3,1,50],[0,5,1,47],[0,1],[1,5,0,23],[1,2],
-		[0,3],[0,3],[0,0],[0,1],[0,5],[0,2],[0,3],[0,3],[0,2],[0,3],[1,5,0,21],[1,2],
-		[0,0],[0,3],[0,5],[0,1],[0,5],[0,2],[0,0],[0,1],[0,4],[0,1],[1,3,0,21],[1,0],
-		[0,3],[0,2],[0,3],[0,5],[0,2],[0,3],[0,3],[0,0,1,48],[0,1,1,45],[0,5],[1,2,0,22],[1,3],
-		[0,0],[0,1],[0,4],[0,1],[0,3],[0,0],[0,0],[0,3,1,50],[0,5,1,47],[0,1],[1,5,0,23],[1,2],
-		[0,3],[0,3],[0,0,1,48],[0,1,1,45],[0,5],[0,2],[0,3],[0,3],[0,2],[0,3],[1,5,0,21],[1,2],
-	];
-	let objectMap = [
-		[],[],[],[],[],[],[],[],[],[],[],[],
-		[],[1,0],[],[0,0],[],[],[],[],[],[],[],[],
-		[],[],[],[],[],[],[],[],[],[],[],[],
-		[],[],[],[],[],[],[],[],[],[],[],[],
-		[],[],[],[],[],[],[],[],[],[],[],[],
-		[],[],[],[],[],[],[],[],[],[],[],[],
-		[],[],[],[],[],[],[],[],[],[],[],[],
-		[],[],[],[],[],[],[],[],[],[],[],[],
-		[],[],[],[],[],[],[],[],[],[],[],[],
-		[],[],[],[],[],[],[],[],[],[],[],[],
-	];
-	let wallsMap = [
-		[0,9],[0,0],[0,18],[0,16],[0,18],[0,0],[0,0],[0,18],[0,0],[0,0],[0,18],[0,13],
-		[2,2],[],[],[],[],[],[],[],[],[],[],[0,29],
-		[2,10],[],[],[],[],[],[],[],[],[],[],[0,27],
-		[2,9],[],[],[],[1,0],[],[],[],[],[],[],[0,21],
-		[2,10],[],[],[],[],[],[],[],[],[],[],[0,1],
-		[2,9],[],[],[],[],[],[],[],[],[],[],[0,1],
-		[2,10],[],[],[],[],[],[],[1,0],[],[],[],[0,21],
-		[2,9],[],[],[],[],[],[],[],[],[],[],[0,29],
-		[2,10],[],[1,0],[],[],[],[],[],[],[],[],[0,27],
-		[2,5],[2,10],[2,8],[2,10],[2,8],[2,10],[2,8],[2,10],[2,8],[2,10],[2,3],[0,1],
-	];
-	let mapW = 12;
-	let mapH = 10;
+	let cellH = 32;	
 	
 	let mousedown = false;
 	
@@ -142,7 +107,7 @@ $.isometricGame = (function() {
 		my: 0,
 		vix: 0,
 		viy: 0,		
-	};	
+	};		
 		
 	/*
 	* COORD TRANSFORMATIONS
@@ -179,7 +144,7 @@ $.isometricGame = (function() {
 	};
 	
 	let drawImg = function(groupId, spriteId, frame, ix, iy, showOutline) {
-		let tex = textures[groupId][spriteId];
+		let tex = spriteLoader.getTexture(groupId, spriteId);
 		let col = frame % tex.cols;
 		let row = Math.floor(frame / tex.cols);
 		let x = Math.floor(ix - tex.offsetX);
@@ -192,35 +157,7 @@ $.isometricGame = (function() {
 			ctx.lineWidth = 1;			
 			ctx.strokeRect(x, y, tex.width, tex.height);
 		}
-	};		
-	
-	let drawPolygon = function(xArr, yArr, color, fill) {		
-		ctx.strokeStyle = color;
-		ctx.fillStyle = color;
-		ctx.lineWidth = 1;			
-		for (let d = 0; d < 2; d++) {
-			ctx.beginPath();
-			for (let i = 0; i < xArr.length + 1; i++) {
-				let ii = i % xArr.length;
-				if (i == 0) 
-					ctx.moveTo(xArr[ii], yArr[ii]);
-				else 
-					ctx.lineTo(xArr[ii], yArr[ii]);
-			}
-			if (fill) {
-				ctx.fill();
-			} else {
-				ctx.stroke();
-			}
-		}
-	}
-	
-	let drawPoint = function(x, y, color) {
-		ctx.fillStyle = "black";
-		ctx.fillRect(Math.floor(x - 2), Math.floor(y - 2), 5, 5);
-		ctx.fillStyle = color;
-		ctx.fillRect(Math.floor(x - 1), Math.floor(y - 1), 3, 3);
-	};
+	};			
 		
 	let drawIsoCell = function(isoCell, mx, my) {		
 		let x = [isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix + cellW, isoCell.ix + cellW / 2];
@@ -229,18 +166,18 @@ $.isometricGame = (function() {
 		// Mimo view nemá cenu vykreslovat
 		if (x[2] < 0 || x[0] > width || y[1] > height || y[3] < 0)
 			return;
-			
-		drawImg(0, isoCell.value[0], isoCell.value[1], isoCell.ix, isoCell.iy - cellH / 2, false);	
+					
+		drawImg(0, isoCell.value.spriteId, isoCell.value.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);	
 
 		// existuje přechod?
-		if (isoCell.value.length > 2)
-			drawImg(0, isoCell.value[2], isoCell.value[3], isoCell.ix, isoCell.iy - cellH / 2, false);	
+		if (isoCell.value.layerSpriteId != undefined)
+			drawImg(0, isoCell.value.layerSpriteId, isoCell.value.layerFrameId, isoCell.ix, isoCell.iy - cellH / 2, false);	
 		
 		if (outlines) 
-			drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,0%,0.2)", false);
+			$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,0%,0.2)", false);
 		
 		if (mx == Math.floor(cursor.mx) && my == Math.floor(cursor.my))
-			drawPolygon([x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(100,100%,50%,0.2)", true);
+			$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(100,100%,50%,0.2)", true);
 	};
 		
 	let draw = function(timestamp) {
@@ -253,37 +190,34 @@ $.isometricGame = (function() {
 		let heroSpriteAdjustedY = Math.floor(heroSprite.viy + viewY);
 		drawImg(1, 0, heroSprite.currentFrame, heroSpriteAdjustedX, heroSpriteAdjustedY, outlines);	
 		if (outlines) 
-			drawPoint(heroSpriteAdjustedX, heroSpriteAdjustedY, "lime");			
+			$.GIsoGame.GFXUtils.drawPoint(ctx, heroSpriteAdjustedX, heroSpriteAdjustedY, "lime");			
 	};
 	
 	let drawTarget = function() {							
-		if (outlines) {
-			drawPoint(Math.floor(target.vix + viewX), Math.floor(target.viy + viewY), "yellow");	
-		}	
+		if (outlines)
+			$.GIsoGame.GFXUtils.drawPoint(ctx, Math.floor(target.vix + viewX), Math.floor(target.viy + viewY), "yellow");			
 	};
 	
 	let drawMinimap = function() {
-		let miniCellWidth = miniWidth / mapW;
-		let miniCellHeight = miniHeight / mapH;
+		let miniCellWidth = miniWidth / currentLevel.getMapW();
+		let miniCellHeight = miniHeight / currentLevel.getMapH();
 		ctx.strokeStyle = "darkgrey";
 		ctx.lineWidth = 1;
-		for (let mx = 0; mx < mapW; mx++) {
-			for (let my = 0; my < mapH; my++) {
-				let i = my * mapW + mx;
-				let mCell = map[i];
-				let wall = wallsMap[i];				
-				ctx.fillStyle = wall.length > 0 ? "grey" : "lightgrey";	
+		for (let mx = 0; mx < currentLevel.getMapW(); mx++) {
+			for (let my = 0; my < currentLevel.getMapH(); my++) {
+				let wall = currentLevel.getWallAtCoord(mx, my);				
+				ctx.fillStyle = wall != undefined ? "grey" : "lightgrey";	
 				let miniCellx = miniX + mx * miniCellWidth;
 				let miniCelly = miniY + my * miniCellHeight;
 				ctx.fillRect(Math.floor(miniCellx), Math.floor(miniCelly), Math.floor(miniCellWidth), Math.floor(miniCellHeight));
 				ctx.strokeRect(Math.floor(miniCellx), Math.floor(miniCelly), Math.floor(miniCellWidth), Math.floor(miniCellHeight));
 			}
 		}
-		drawPoint(miniX + miniCellWidth * target.mx, miniY + miniCellHeight * target.my, "yellow");
-		drawPoint(miniX + miniCellWidth * hero.mx, miniY + miniCellHeight * hero.my, "lime");
+		$.GIsoGame.GFXUtils.drawPoint(ctx, miniX + miniCellWidth * target.mx, miniY + miniCellHeight * target.my, "yellow");
+		$.GIsoGame.GFXUtils.drawPoint(ctx, miniX + miniCellWidth * hero.mx, miniY + miniCellHeight * hero.my, "lime");
 		
 		for (let s = 0; s < target.mxSteps.length; s++)
-			drawPoint(miniX + miniCellWidth * target.mxSteps[s], miniY + miniCellHeight * target.mySteps[s], "purple");		
+			$.GIsoGame.GFXUtils.drawPoint(ctx, miniX + miniCellWidth * target.mxSteps[s], miniY + miniCellHeight * target.mySteps[s], "purple");		
 
 		ctx.lineWidth = 1;
 		ctx.strokeStyle = "black";
@@ -291,7 +225,7 @@ $.isometricGame = (function() {
 	};
 			
 	let drawScene = function(timestamp) {	
-		if (!loaded)
+		if (!spriteLoader.isLoaded())
 			return;
 			
 		// Update času pro animace
@@ -306,37 +240,35 @@ $.isometricGame = (function() {
 
 		// map se musí vykreslovat v opačném pořadí, než je X, aby se bloky správně překrývaly
 		// nejprve všechny povrchové dílky
-		let isoCells = [];		
-		for (let mx = mapW - 1; mx >= 0; mx--) {
-			for (let my = 0; my < mapH; my++) {
-				let i = my * mapW + mx;
-				let mCell = map[i];
+		let isoCells = [];
+		for (let mx = currentLevel.getMapW() - 1; mx >= 0; mx--) {
+			isoCells[mx] = [];
+			for (let my = 0; my < currentLevel.getMapH(); my++) {								
 				let isoCell = toIso(mx, my);
 				isoCell.ix += viewX;
 				isoCell.iy += viewY;
-				isoCell.value = mCell;				
+				isoCell.value = currentLevel.getGroundAtCoord(mx, my);				
 				drawIsoCell(isoCell, mx, my);
-				isoCells[i] = isoCell;
+				isoCells[mx][my] = isoCell;
 			}
 		}
 		
 		// poté zdi, objekty, postavy apod.
-		for (let mx = mapW - 1; mx >= 0; mx--) {
-			for (let my = 0; my < mapH; my++) {
-				let i = my * mapW + mx;
-				let isoCell = isoCells[i];
+		for (let mx = currentLevel.getMapW() - 1; mx >= 0; mx--) {
+			for (let my = 0; my < currentLevel.getMapH(); my++) {				
+				let isoCell = isoCells[mx][my];
 				if (Math.floor(target.mx) == mx && Math.floor(target.my) == my)
 					drawTarget();
 				if (Math.floor(hero.mx) == mx && Math.floor(hero.my) == my)
 					drawHero();
 
-				let wall = wallsMap[i];
-				if (wall.length > 0) 
-					drawImg(3, wall[0], wall[1], isoCell.ix, isoCell.iy - cellH / 2, false);	
+				let wall = currentLevel.getWallAtCoord(mx, my);
+				if (wall != undefined) 
+					drawImg(3, wall.spriteId, wall.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);	
 				
-				let object = objectMap[i];
-				if (object.length > 0) 
-					drawImg(2, object[0], object[1], isoCell.ix, isoCell.iy - cellH / 2, false);
+				let object = currentLevel.getObjectAtCoord(mx, my);
+				if (object != undefined && object.length > 0) 
+					drawImg(2, object.spriteId, object.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);
 								
 				if (showNumbers) {
 					ctx.font = "30px Arial";
@@ -473,7 +405,7 @@ $.isometricGame = (function() {
 	*/		
 	
 	let isCollision = function(index) {
-		return typeof wallsMap[index] !== "undefined" && wallsMap[index].length > 0;
+		return currentLevel.getWallAtIndex(index) != undefined;
 	};
 	
 	let prepareNavigationSteps = function(mx, my, ix, iy) {
@@ -492,28 +424,28 @@ $.isometricGame = (function() {
 				// left
 				neighbors.push({mx: point.mx - 1, my: point.my, id: point.id - 1});	
 				// top left
-				if (point.my > 0 && !isCollision(point.id - mapW - 1)) 
-					neighbors.push({mx: point.mx - 1, my: point.my - 1, id: point.id - mapW - 1});	
+				if (point.my > 0 && !isCollision(point.id - currentLevel.getMapW() - 1)) 
+					neighbors.push({mx: point.mx - 1, my: point.my - 1, id: point.id - currentLevel.getMapW() - 1});	
 				// bottom left
-				if (point.my < mapH - 1 && !isCollision(point.id + mapW - 1))
-					neighbors.push({mx: point.mx - 1, my: point.my + 1, id: point.id + mapW - 1});	
+				if (point.my < currentLevel.getMapH() - 1 && !isCollision(point.id + currentLevel.getMapW() - 1))
+					neighbors.push({mx: point.mx - 1, my: point.my + 1, id: point.id + currentLevel.getMapW() - 1});	
 			}
-			if (point.mx < mapW - 1 && !isCollision(point.id + 1)) {
+			if (point.mx < currentLevel.getMapW() - 1 && !isCollision(point.id + 1)) {
 				// right				
 				neighbors.push({mx: point.mx + 1, my: point.my, id: point.id + 1});	
 				// top right
-				if (point.my > 0 && !isCollision(point.id - mapW + 1)) 					
-					neighbors.push({mx: point.mx + 1, my: point.my - 1, id: point.id - mapW + 1});	
+				if (point.my > 0 && !isCollision(point.id - currentLevel.getMapW() + 1)) 					
+					neighbors.push({mx: point.mx + 1, my: point.my - 1, id: point.id - currentLevel.getMapW() + 1});	
 				// bottom right
-				if (point.my < mapH - 1 && !isCollision(point.id + mapW + 1)) 
-					neighbors.push({mx: point.mx + 1, my: point.my + 1, id: point.id + mapW + 1});	
+				if (point.my < currentLevel.getMapH() - 1 && !isCollision(point.id + currentLevel.getMapW() + 1)) 
+					neighbors.push({mx: point.mx + 1, my: point.my + 1, id: point.id + currentLevel.getMapW() + 1});	
 			}
 			// top
-			if (point.my > 0 && !isCollision(point.id - mapW)) 
-				neighbors.push({mx: point.mx, my: point.my - 1, id: point.id - mapW});	
+			if (point.my > 0 && !isCollision(point.id - currentLevel.getMapW())) 
+				neighbors.push({mx: point.mx, my: point.my - 1, id: point.id - currentLevel.getMapW()});	
 			// bottom
-			if (point.my < mapH - 1 && !isCollision(point.id + mapW)) 
-				neighbors.push({mx: point.mx, my: point.my + 1, id: point.id + mapW});	
+			if (point.my < currentLevel.getMapH() - 1 && !isCollision(point.id + currentLevel.getMapW())) 
+				neighbors.push({mx: point.mx, my: point.my + 1, id: point.id + currentLevel.getMapW()});	
 			return neighbors;
 		};
 		
@@ -521,12 +453,12 @@ $.isometricGame = (function() {
 		let pointA = {};
 		pointA.mx = Math.floor(hero.mx);
 		pointA.my = Math.floor(hero.my);
-		pointA.id = pointA.mx + pointA.my * mapW;		
+		pointA.id = pointA.mx + pointA.my * currentLevel.getMapW();		
 		
 		let pointB = {};
 		pointB.mx = Math.floor(mx);
 		pointB.my = Math.floor(my);
-		pointB.id = pointB.mx + pointB.my * mapW;
+		pointB.id = pointB.mx + pointB.my * currentLevel.getMapW();
 
 		target.steps = $.GJSLibAStar.findPath(pointA, pointB, heuristicFunc, distanceFunc, neighborsFunc);		
 		//console.log("A* steps: " + target.steps);
@@ -555,7 +487,7 @@ $.isometricGame = (function() {
 	};
 	
 	let updateTarget = function(e) {
-		let i = Math.floor(cursor.my) * mapW + Math.floor(cursor.mx);
+		let i = Math.floor(cursor.my) * currentLevel.getMapW() + Math.floor(cursor.mx);
 		if (!isCollision(i))
 			prepareNavigationSteps(cursor.mx, cursor.my, cursor.vix, cursor.viy);		
 	};
@@ -564,7 +496,23 @@ $.isometricGame = (function() {
 	* INIT
 	*/
 	
-	let init = function() {					
+	let init = function() {							
+		currentLevel = $.GIsoGame.LevelLoader.createLevel();
+		
+		spriteLoader = $.GIsoGame.SpriteLoader.create();
+		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_64x32.png", 8, 7, cellW, cellH, 0, 0);
+		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_64x32.png", 8, 7, cellW, cellH, 0, 0);			
+		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_64x32.png", 8, 7, cellW, cellH, 0, 0);
+		spriteLoader.queueTexture(1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 64, 128 - 32);
+		//spriteLoader.queueTexture(1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 0, 0);
+		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 16);
+		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 16);
+		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
+		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 42, 128 + 64);
+		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);
+		
+		spriteLoader.load();
+		
 		let mx = 2.5;
 		let my = 1.5;
 		hero.mx = mx;
@@ -583,78 +531,7 @@ $.isometricGame = (function() {
 		viewX = halfWidth - target.vix;
 		viewY = halfHeight - target.viy;
 		prepareNavigationSteps(mx, my, target.vix, target.viy); 
-		
-		// ground textures		
-		textures[0] = [];
-		// characters textures
-		textures[1] = [];
-		// object textures
-		textures[2] = [];
-		// walls textures
-		textures[3] = [];
-		
-		let list = [
-			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_64x32.png", 8, 7, cellW, cellH, 0, 0],
-			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_64x32.png", 8, 7, cellW, cellH, 0, 0],			
-			[0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_64x32.png", 8, 7, cellW, cellH, 0, 0],
-			[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 64, 128 - 32],			
-			//[1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 0, 0],			
-			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 16],
-			[2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 16],
-			[3, "https://www.gattserver.cz/fm-files/isometric-files/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16],		
-			[3, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 42, 128 + 64],		
-			[3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16],			
-		];
-		
-		for (let a = 0; a < list.length; a++) {
-			let item = list[a];
-			textures[item[0]].push({
-				src: item[1],
-				cols: item[2], 
-				rows: item[3],
-				width: item[4],
-				height: item[5],
-				offsetX: item[6],
-				offsetY: item[7],
-			});
-			loadingProgress++;
-		}
-		
-		for (let g = 0; g < textures.length; g++) {	
-			let group = textures[g];
-			for (let i = 0; i < group.length; i++) {
-				let texture = group[i];
-				let textureCanvas = document.createElement("canvas");
-				textureCanvas.width = texture.width * texture.cols;
-				textureCanvas.height = texture.height * texture.rows;
-				
-				let textureCtx = textureCanvas.getContext("2d");
-				let subCanvasSmoothing = false;
-				textureCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
-				textureCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
-				textureCtx.imageSmoothingEnabled = subCanvasSmoothing;
-				textureCtx.msImageSmoothingEnabled = subCanvasSmoothing; 
-				
-				texture.canvas = textureCanvas;
-				texture.ctx = textureCtx;
-				textureImg = new Image();			
-				(function() {
-					let seafImg = textureImg;
-					let seafGroup = g;
-					let seafIndex = i;
-					textureImg.onload = function() {
-						loadingProgress--;
-						if (loadingProgress == 0)
-							loaded = true;
-						let tex = textures[seafGroup][seafIndex];
-						tex.ctx.drawImage(seafImg, 0, 0);
-						tex.imageData = tex.ctx.getImageData(0, 0, textureCanvas.width, textureCanvas.height);
-					}
-				})();
-				textureImg.src = texture.src;
-			}
-		}
-				
+						
 		// https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
 		// https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-ref
 		// https://developer.mozilla.org/en-US/docs/Web/API/Performance/now
@@ -711,4 +588,4 @@ $.isometricGame = (function() {
 
 })();
 
-$.isometricGame.start();</script>
+$.GIsoGame.Game.start();</script>
