@@ -34,12 +34,11 @@ $.GIsoGame.Editor = (function() {
 	let cellW = 64;
 	let cellH = 32;	
 	
-	let mousedown = false;
+	// T/F dle tlačítka myši
+	let mouseButtons = [];
+	let mouseDownX = 0;
+	let mouseDownY = 0;
 		
-	let scrollDelay = 10;
-	let scrollTimer = 0;
-	let scrollSpeed = 10;
-	let scrollBorder = 100;
 	let cursor = {
 		sx: 0,
 		sy: 0,
@@ -65,20 +64,7 @@ $.GIsoGame.Editor = (function() {
 		// Update času pro animace
 		let delay = timestamp - lastTime;
 		lastTime = timestamp;	
-		
-		scrollTimer -= delay;
-		if (scrollTimer <= 0) {				
-			scrollTimer = scrollDelay;
-			let scrollX = cursor.sx < scrollBorder ? 1 : (cursor.sx > width - scrollBorder ? -1 : 0);
-			let scrollY = cursor.sy < scrollBorder ? 1 : (cursor.sy > height - scrollBorder ? -1 : 0);
-			if (scrollX != 0 || scrollY != 0) {
-				let scrollXPower = (scrollBorder - (scrollX == 1 ? cursor.sx : (width - cursor.sx))) / scrollBorder;
-				let scrollYPower = (scrollBorder - (scrollY == 1 ? cursor.sy : (height - cursor.sy))) / scrollBorder;
-				viewX += scrollXPower * scrollSpeed * scrollX;
-				viewY += scrollYPower * scrollSpeed * scrollY;
-			}			
-		}
-		
+				
 		isoRenderer.update(delay, viewX, viewY);
 
 		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
@@ -135,17 +121,22 @@ $.GIsoGame.Editor = (function() {
 		window.requestAnimationFrame(draw);		
 	};		
 	
+	let mouseButtonChange = function(down, e) {
+		mouseButtons[e.button] = down;				
+	};
+	
 	canvas.addEventListener("mousedown", function (e) {
-		mousedown = true;
-		placeItem(e);
+		mouseButtonChange(true, e);
+		mouseDownX = cursor.sx;
+		mouseDownY = cursor.sy;
 	}, false);
  
 	canvas.addEventListener("mouseup", function (e) {
-		mousedown = false;
+		mouseButtonChange(false, e);
 	}, false);
 	
 	canvas.addEventListener("mouseleave", function (e) {
-		mousedown = false;
+		mouseButtonChange(false, e);
 	}, false);
 	
 	canvas.addEventListener("mousemove", function (e) {
@@ -159,9 +150,12 @@ $.GIsoGame.Editor = (function() {
 		cursor.my = mapCoord.my;
 		cursor.vix = ix;
 		cursor.viy = iy;
-		if (!mousedown) 
-			return;
-		placeItem(e);
+		if (mouseButtons[1]) {
+			viewX += cursor.sx - mouseDownX;
+			viewY += cursor.sy - mouseDownY;
+			mouseDownX = cursor.sx;
+			mouseDownY = cursor.sy;
+		}
 	}, false);
 		
 	return {	
