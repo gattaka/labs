@@ -55,10 +55,10 @@ $.GIsoGame.IsoRenderer = {
 			}
 			
 			if ($.GIsoGame.Configuration.outlines) 
-				$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,20%,0.5)", false);
+				$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,20%,0.7)", false);
 			
 			if (mx == Math.floor(cursor.mx) && my == Math.floor(cursor.my))
-				$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(100,100%,50%,0.2)", true);
+				$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0] + 4, x[1], x[2] - 4, x[3]], [y[0], y[1] + 2, y[2], y[3] - 2], "hsla(100,100%,50%,0.4)", false, 2);
 		};		
 		
 		let innerUpdate = function(delay, viewX, viewY) {

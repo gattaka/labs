@@ -34,10 +34,11 @@ $.GIsoGame.Editor = (function() {
 	let cellW = 64;
 	let cellH = 32;	
 	
-	let menuBorder = 10;
-	
+	let menuMargin = 10;
+	let menuBorder = 2;
+	let texMenuHeight = 100;
 	let texMenuOffset = 0;
-	let texMenuBorder = 10;
+	let texMenuBorder = 20;
 	
 	let choosenTextureGroup = 0;
 	let choosenTextureSprite = 0;
@@ -67,6 +68,47 @@ $.GIsoGame.Editor = (function() {
 		drawScene(timestamp);
 		window.requestAnimationFrame(draw);
 	};
+	
+	let drawTilesMenu = function() {
+		let texMenuFromX = menuMargin;
+		let texMenuToX = width - menuMargin;
+		let texMenuFromY = height - menuMargin - texMenuHeight;
+		let texMenuToY = height - menuMargin;
+		
+		ctx.fillStyle = "#333";		
+		ctx.fillRect(texMenuFromX, texMenuFromY, texMenuToX - texMenuFromX, texMenuToY - texMenuFromY);
+		
+		// zmenšení aktivní plochy menu, aby se v ní dalo pracovat s položkami
+		texMenuFromX += menuBorder;
+		texMenuToX -= menuBorder;
+		texMenuFromY += menuBorder;
+		texMenuToY -= menuBorder;
+		let texMenuHalfHeight = texMenuHeight / 2 - menuBorder;
+		
+		ctx.fillStyle = "#222";		
+		ctx.fillRect(texMenuFromX, texMenuFromY, texMenuToX - texMenuFromX, texMenuToY - texMenuFromY);
+		
+		let tex = spriteLoader.getTexture(0, 0);		
+		ctx.fillStyle = "#333";		
+		ctx.fillRect(width / 2 - tex.width / 2 - texMenuBorder / 2, texMenuFromY, tex.width + texMenuBorder, texMenuToY - texMenuFromY);
+		
+		for (let i = 0; i < tex.cols * tex.rows; i++) {			
+			let col = i % tex.cols;
+			let row = Math.floor(i / tex.cols);
+			let x = Math.floor(width / 2 - tex.width / 2) + (i + texMenuOffset) * (tex.width + texMenuBorder);
+			let y = Math.floor(texMenuFromY + texMenuHalfHeight - tex.height / 2);
+			let leftOverlap = texMenuFromX - x;
+			let rightOverlap = x + tex.width - texMenuToX;
+			if ((leftOverlap < 0 || rightOverlap < 0) && leftOverlap < tex.width && rightOverlap < tex.width) {
+				let leftTrim = leftOverlap > 0 ? leftOverlap : 0;
+				let rightTrim = rightOverlap > 0 ? rightOverlap : 0;
+				let trimWidth = tex.width - leftTrim - rightTrim;
+				ctx.drawImage(tex.canvas, 
+					col * tex.width + leftTrim, row * tex.height, trimWidth, tex.height, 
+					x, y, trimWidth, tex.height);	
+			}
+		}
+	};
 			
 	let drawScene = function(timestamp) {	
 		if (!spriteLoader.isLoaded())
@@ -78,25 +120,7 @@ $.GIsoGame.Editor = (function() {
 				
 		isoRenderer.update(delay, viewX, viewY);
 		
-		let menuHeight = 100;
-		
-		ctx.fillStyle = "#222";
-		ctx.fillRect(menuBorder, height - menuHeight - menuBorder, width - menuBorder * 2, menuHeight);
-		ctx.lineWidth = 2;
-		ctx.strokeStyle = "#444";
-		ctx.strokeRect(menuBorder, height - menuHeight - menuBorder, width - menuBorder * 2, menuHeight);
-		
-		let tex = spriteLoader.getTexture(0, 0);
-		for (let i = 0; i < tex.cols * tex.rows; i++) {
-			let col = i % tex.cols;
-			let row = Math.floor(i / tex.cols);
-			let x = Math.floor(width / 2 - tex.width / 2) + (i + texMenuOffset) * (tex.width + texMenuBorder);
-			let y = Math.floor(height - menuHeight / 2 - tex.height / 2 - menuBorder);
-			if (x > 0 && (x + tex.width) < width)
-				ctx.drawImage(tex.canvas, 
-					col * tex.width, row * tex.height, tex.width, tex.height, 
-					x, y, tex.width, tex.height);	
-		}
+		drawTilesMenu();		
 
 		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
 		
@@ -105,8 +129,7 @@ $.GIsoGame.Editor = (function() {
 				let val = mouseButtons[0] ? [choosenTextureSprite, choosenTextureFrame] : undefined;
 				level.grounds[Math.floor(cursor.mx) + Math.floor(cursor.my) * level.mapW] = val;
 			}
-		}
-		
+		}		
 	};		
 
 	/*
