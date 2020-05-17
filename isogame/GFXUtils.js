@@ -1,24 +1,22 @@
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.GFXUtils = {	
-	drawPolygon: function(ctx, xArr, yArr, color, fill) {		
+	drawPolygon: function(ctx, xArr, yArr, color, fill, lineWidth) {		
 		ctx.strokeStyle = color;
-		ctx.fillStyle = color;
-		ctx.lineWidth = 1;			
-		for (let d = 0; d < 2; d++) {
-			ctx.beginPath();
-			for (let i = 0; i < xArr.length + 1; i++) {
-				let ii = i % xArr.length;
-				if (i == 0) 
-					ctx.moveTo(xArr[ii], yArr[ii]);
-				else 
-					ctx.lineTo(xArr[ii], yArr[ii]);
-			}
-			if (fill) {
-				ctx.fill();
-			} else {
-				ctx.stroke();
-			}
+		ctx.fillStyle = color;		
+		ctx.lineWidth = lineWidth == undefined ? 1 : lineWidth;					
+		ctx.beginPath();
+		for (let i = 0; i < xArr.length + 2; i++) {
+			let ii = i % xArr.length;
+			if (i == 0) 
+				ctx.moveTo(xArr[ii], yArr[ii]);
+			else 
+				ctx.lineTo(xArr[ii], yArr[ii]);
+		}
+		if (fill) {
+			ctx.fill();
+		} else {
+			ctx.stroke();
 		}
 	},
 	
