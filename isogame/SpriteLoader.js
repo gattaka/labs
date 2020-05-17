@@ -36,6 +36,10 @@ $.GIsoGame.SpriteLoader = {
 				return textures[group][id];
 			},
 			
+			getGroupSize: function(group) {
+				return textures[group].length;
+			},
+			
 			// async
 			load: function(){
 				for (let g = 0; g < textures.length; g++) {	

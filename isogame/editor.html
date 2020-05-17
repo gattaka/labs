@@ -36,14 +36,26 @@ $.GIsoGame.Editor = (function() {
 	
 	let menuMargin = 10;
 	let menuBorder = 2;
+	let menuItemBorder = 10;
 	
-	let tilesMenu = {
+	let spritesMenu = {
+		dragTargetId: 2,
 		x: 0,
 		y: 0,
 		width: 0,
 		height: 100,
+		itemWidth: 64,
 		dragOffset: 0,
-		itemBorder: 10
+	};
+	
+	let tilesMenu = {
+		dragTargetId: 1,
+		x: 0,
+		y: 0,
+		width: 0,
+		height: 100,
+		itemWidth: 64,
+		dragOffset: 0,
 	};
 	
 	let choosenTextureGroup = 0;
@@ -78,56 +90,83 @@ $.GIsoGame.Editor = (function() {
 		window.requestAnimationFrame(draw);
 	};
 	
-	let drawTilesMenu = function() {		
+	let drawSpritesMenu = function() {		
+		let texDetailFunc = function(i) {
+			return {
+				tex: spriteLoader.getTexture(0, i),
+				col: 0,
+				row: 0
+			};
+		};
+		let chooseItemFunc = function(id) {
+			choosenTextureSprite = id;
+		};
+		drawItemsMenu(spritesMenu, spriteLoader.getGroupSize(0), texDetailFunc, chooseItemFunc);
+	};
+	
+	let drawTilesMenu = function() {
+		let tex = spriteLoader.getTexture(0, choosenTextureSprite);
+		let texDetailFunc = function(i) {
+			return {
+				tex: tex,
+				col: i % tex.cols,
+				row: Math.floor(i / tex.cols)
+			};
+		};
+		let chooseItemFunc = function(id) {
+			choosenTextureFrame = id;
+		};
+		drawItemsMenu(tilesMenu, tex.cols * tex.rows, texDetailFunc, chooseItemFunc);
+	};
+	
+	let drawItemsMenu = function(menu, itemsCount, texDetailFunc, chooseItemFunc) {		
 		ctx.fillStyle = "#333";		
-		ctx.fillRect(tilesMenu.x, tilesMenu.y, tilesMenu.width, tilesMenu.height);
+		ctx.fillRect(menu.x, menu.y, menu.width, menu.height);
 		
 		// zmenšení aktivní plochy menu, aby se v ní dalo pracovat s položkami
-		let fromX = tilesMenu.x + menuBorder;
-		let toX = tilesMenu.x + tilesMenu.width - menuBorder;
-		let fromY = tilesMenu.y + menuBorder;
-		let toY = tilesMenu.y + tilesMenu.height - menuBorder;
-		
-		let tex = spriteLoader.getTexture(0, 0);		
+		let fromX = menu.x + menuBorder;
+		let toX = menu.x + menu.width - menuBorder;
+		let fromY = menu.y + menuBorder;
+		let toY = menu.y + menu.height - menuBorder;
 		
 		ctx.fillStyle = "#222";		
 		ctx.fillRect(fromX, fromY, toX - fromX, toY - fromY);
 		
-		let itemWidth = tex.width + tilesMenu.itemBorder * 2;
+		let itemWidth = menu.itemWidth + menuItemBorder * 2;
 		let itemsStartX = Math.floor(width / 2 - itemWidth / 2);
-		let itemsStartY = Math.floor(fromY + tilesMenu.height / 2 - menuBorder - tex.height / 2);
 		
 		ctx.fillStyle = "#333";		
 		ctx.fillRect(itemsStartX, fromY, itemWidth, toY - fromY);
 		
-		if (mouseButtons[0] && dragTargetId == 1) {
+		if (mouseButtons[0] && dragTargetId == menu.dragTargetId) {
 			let diff = cursor.sx - itemsStartX;
-			tilesMenu.dragOffset -= Math.floor(diff / itemWidth) * itemWidth;
+			menu.dragOffset -= Math.floor(diff / itemWidth) * itemWidth;
 			mouseButtons[0] = false;
 		}
 		
-		choosenTextureFrame = Math.floor(-tilesMenu.dragOffset / itemWidth);
-		if (choosenTextureFrame < 0) {
-			tilesMenu.dragOffset += itemWidth * choosenTextureFrame;
-			choosenTextureFrame = 0;			
-		} else if (choosenTextureFrame >= tex.cols * tex.rows) {
-			tilesMenu.dragOffset += itemWidth * (choosenTextureFrame - tex.cols * tex.rows);
-			choosenTextureFrame = tex.cols * tex.rows - 1;
+		let choosenItemId = Math.floor(-menu.dragOffset / itemWidth);
+		if (choosenItemId < 0) {
+			menu.dragOffset += itemWidth * choosenItemId;
+			choosenItemId = 0;			
+		} else if (choosenItemId >= itemsCount) {
+			menu.dragOffset += itemWidth * (choosenItemId - itemsCount);
+			choosenItemId = itemsCount - 1;
 		}
+		chooseItemFunc(choosenItemId);
 		
-		for (let i = 0; i < tex.cols * tex.rows; i++) {			
-			let col = i % tex.cols;
-			let row = Math.floor(i / tex.cols);
-			let x = itemsStartX + tilesMenu.itemBorder + (i - choosenTextureFrame) * itemWidth;			
+		for (let i = 0; i < itemsCount; i++) {	
+			let texDetail = texDetailFunc(i);			
+			let x = itemsStartX + menuItemBorder + (i - choosenItemId) * itemWidth;			
 			let leftOverlap = fromX - x;
-			let rightOverlap = x + tex.width - toX;
-			if ((leftOverlap < 0 || rightOverlap < 0) && leftOverlap < tex.width && rightOverlap < tex.width) {
+			let rightOverlap = x + texDetail.tex.width - toX;
+			let itemsStartY = Math.floor(fromY + menu.height / 2 - menuBorder - texDetail.tex.height / 2);
+			if ((leftOverlap < 0 || rightOverlap < 0) && leftOverlap < texDetail.tex.width && rightOverlap < texDetail.tex.width) {
 				let leftTrim = leftOverlap > 0 ? leftOverlap : 0;
 				let rightTrim = rightOverlap > 0 ? rightOverlap : 0;
-				let trimWidth = tex.width - leftTrim - rightTrim;
-				ctx.drawImage(tex.canvas, 
-					col * tex.width + leftTrim, row * tex.height, trimWidth, tex.height, 
-					x + leftTrim, itemsStartY, trimWidth, tex.height);	
+				let trimWidth = texDetail.tex.width - leftTrim - rightTrim;
+				ctx.drawImage(texDetail.tex.canvas, 
+					texDetail.col * texDetail.tex.width + leftTrim, texDetail.row * texDetail.tex.height, trimWidth, texDetail.tex.height, 
+					x + leftTrim, itemsStartY, trimWidth, texDetail.tex.height);	
 			}
 		}
 	};
@@ -142,15 +181,15 @@ $.GIsoGame.Editor = (function() {
 				
 		isoRenderer.update(delay, viewX, viewY);
 		
+		drawSpritesMenu();
 		drawTilesMenu();		
 
 		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
 		
-		if (cursor.mx < level.mapW && cursor.mx >= 0 && cursor.my < level.mapH && cursor.my >= 0) {
-			if (mouseButtons[0] || mouseButtons[2]) {
-				let val = mouseButtons[0] ? [choosenTextureSprite, choosenTextureFrame] : undefined;
-				level.grounds[Math.floor(cursor.mx) + Math.floor(cursor.my) * level.mapW] = val;
-			}
+		if (cursor.mx < level.mapW && cursor.mx >= 0 && cursor.my < level.mapH && cursor.my >= 0
+			&& (mouseButtons[0] || mouseButtons[2])) {
+			let val = mouseButtons[0] ? [choosenTextureSprite, choosenTextureFrame] : undefined;
+			level.grounds[Math.floor(cursor.mx) + Math.floor(cursor.my) * level.mapW] = val;		
 		}		
 	};		
 	
@@ -159,21 +198,29 @@ $.GIsoGame.Editor = (function() {
 	*/
 	
 	let dragMove = function() {
+		let diffX = cursor.sx - cursor.lastSx;
+		let diffY = cursor.sy - cursor.lastSy;
 		switch (dragTargetId) {
 		case 0:
-			viewX += cursor.sx - cursor.lastSx;
-			viewY += cursor.sy - cursor.lastSy;
+			viewX += diffX;
+			viewY += diffY;
 			break;
 		case 1:
-			tilesMenu.dragOffset += cursor.sx - cursor.lastSx;
+			tilesMenu.dragOffset += diffX;
 			break;
+		case 2:
+			spritesMenu.dragOffset += diffX;
+			break;		
 		} 
 	};
 	
 	let mouseButtonChange = function(down, button) {
 		mouseButtons[button] = down;		
 		if (down) {
-			if (cursor.sx > tilesMenu.x && cursor.sx < tilesMenu.x + tilesMenu.width 
+			if (cursor.sx > spritesMenu.x && cursor.sx < spritesMenu.x + spritesMenu.width 
+				&& cursor.sy > spritesMenu.y && cursor.sy < spritesMenu.y + spritesMenu.height) {				
+				dragTargetId = 2; // sprites menu 
+			} else if (cursor.sx > tilesMenu.x && cursor.sx < tilesMenu.x + tilesMenu.width 
 				&& cursor.sy > tilesMenu.y && cursor.sy < tilesMenu.y + tilesMenu.height) {				
 				dragTargetId = 1; // tiles menu 
 			} else {
@@ -237,6 +284,10 @@ $.GIsoGame.Editor = (function() {
 		tilesMenu.x = menuMargin;
 		tilesMenu.width = width - menuMargin * 2;
 		tilesMenu.y = height - menuMargin - tilesMenu.height;		
+		
+		spritesMenu.x = menuMargin;
+		spritesMenu.width = width - menuMargin * 2;
+		spritesMenu.y = tilesMenu.y - menuMargin - tilesMenu.height;	
 		
 		canvas.style.position = "absolute";
 		canvas.style.left = "0";
