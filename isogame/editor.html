@@ -80,8 +80,11 @@ $.GIsoGame.Editor = (function() {
 		
 		let menuHeight = 100;
 		
-		ctx.fillStyle = "grey";
+		ctx.fillStyle = "#222";
 		ctx.fillRect(menuBorder, height - menuHeight - menuBorder, width - menuBorder * 2, menuHeight);
+		ctx.lineWidth = 2;
+		ctx.strokeStyle = "#444";
+		ctx.strokeRect(menuBorder, height - menuHeight - menuBorder, width - menuBorder * 2, menuHeight);
 		
 		let tex = spriteLoader.getTexture(0, 0);
 		for (let i = 0; i < tex.cols * tex.rows; i++) {
@@ -97,8 +100,12 @@ $.GIsoGame.Editor = (function() {
 
 		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
 		
-		if (mouseButtons[0] && cursor.mx < level.mapW && cursor.mx >= 0 && cursor.my < level.mapH && cursor.my >= 0)
-			level.grounds[Math.floor(cursor.mx) + Math.floor(cursor.my) * level.mapW] = [choosenTextureSprite, choosenTextureFrame];
+		if (cursor.mx < level.mapW && cursor.mx >= 0 && cursor.my < level.mapH && cursor.my >= 0) {
+			if (mouseButtons[0] || mouseButtons[2]) {
+				let val = mouseButtons[0] ? [choosenTextureSprite, choosenTextureFrame] : undefined;
+				level.grounds[Math.floor(cursor.mx) + Math.floor(cursor.my) * level.mapW] = val;
+			}
+		}
 		
 	};		
 
@@ -159,6 +166,13 @@ $.GIsoGame.Editor = (function() {
 	let mouseButtonChange = function(down, e) {
 		mouseButtons[e.button] = down;				
 	};
+	
+	canvas.addEventListener('contextmenu', function(e) {
+		if (e.button == 2) {
+		  // Block right-click menu thru preventing default action.
+		  e.preventDefault();
+		}
+	 });
 	
 	canvas.addEventListener("mousedown", function (e) {
 		mouseButtonChange(true, e);
