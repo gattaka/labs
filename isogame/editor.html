@@ -36,9 +36,15 @@ $.GIsoGame.Editor = (function() {
 	
 	let menuMargin = 10;
 	let menuBorder = 2;
-	let texMenuHeight = 100;
-	let texMenuOffset = 0;
-	let texMenuBorder = 20;
+	
+	let tilesMenu = {
+		x: 0,
+		y: 0,
+		width: 0,
+		height: 100,
+		dragOffset: 0,
+		itemBorder: 20
+	};
 	
 	let choosenTextureGroup = 0;
 	let choosenTextureSprite = 0;
@@ -48,10 +54,13 @@ $.GIsoGame.Editor = (function() {
 	
 	// T/F dle tlačítka myši
 	let mouseButtons = [];
-	let mouseDownX = 0;
-	let mouseDownY = 0;
+	
+	// na které části UI je prováděn mouse-drag
+	let dragTargetId = -1;
 		
 	let cursor = {
+		lastSx: 0,
+		lastSy: 0,
 		sx: 0,
 		sy: 0,
 		mx: 0, 
@@ -69,43 +78,47 @@ $.GIsoGame.Editor = (function() {
 		window.requestAnimationFrame(draw);
 	};
 	
-	let drawTilesMenu = function() {
-		let texMenuFromX = menuMargin;
-		let texMenuToX = width - menuMargin;
-		let texMenuFromY = height - menuMargin - texMenuHeight;
-		let texMenuToY = height - menuMargin;
-		
+	let drawTilesMenu = function() {		
 		ctx.fillStyle = "#333";		
-		ctx.fillRect(texMenuFromX, texMenuFromY, texMenuToX - texMenuFromX, texMenuToY - texMenuFromY);
+		ctx.fillRect(tilesMenu.x, tilesMenu.y, tilesMenu.width, tilesMenu.height);
 		
 		// zmenšení aktivní plochy menu, aby se v ní dalo pracovat s položkami
-		texMenuFromX += menuBorder;
-		texMenuToX -= menuBorder;
-		texMenuFromY += menuBorder;
-		texMenuToY -= menuBorder;
-		let texMenuHalfHeight = texMenuHeight / 2 - menuBorder;
+		let fromX = tilesMenu.x + menuBorder;
+		let toX = tilesMenu.x + tilesMenu.width - menuBorder;
+		let fromY = tilesMenu.y + menuBorder;
+		let toY = tilesMenu.y + tilesMenu.height - menuBorder;
+		let innerHeight = tilesMenu.height / 2 - menuBorder;
 		
 		ctx.fillStyle = "#222";		
-		ctx.fillRect(texMenuFromX, texMenuFromY, texMenuToX - texMenuFromX, texMenuToY - texMenuFromY);
+		ctx.fillRect(fromX, fromY, toX - fromX, toY - fromY);
 		
 		let tex = spriteLoader.getTexture(0, 0);		
 		ctx.fillStyle = "#333";		
-		ctx.fillRect(width / 2 - tex.width / 2 - texMenuBorder / 2, texMenuFromY, tex.width + texMenuBorder, texMenuToY - texMenuFromY);
+		ctx.fillRect(width / 2 - tex.width / 2 - tilesMenu.itemBorder / 2, fromY, tex.width + tilesMenu.itemBorder, toY - fromY);
+		
+		choosenTextureFrame = Math.floor(-tilesMenu.dragOffset / (tex.width + tilesMenu.itemBorder));
+		if (choosenTextureFrame < 0) {
+			tilesMenu.dragOffset += (tex.width + tilesMenu.itemBorder) * choosenTextureFrame;
+			choosenTextureFrame = 0;			
+		} else if (choosenTextureFrame >= tex.cols * tex.rows) {
+			tilesMenu.dragOffset += (tex.width + tilesMenu.itemBorder) * (choosenTextureFrame - tex.cols * tex.rows);
+			choosenTextureFrame = tex.cols * tex.rows - 1;
+		}
 		
 		for (let i = 0; i < tex.cols * tex.rows; i++) {			
 			let col = i % tex.cols;
 			let row = Math.floor(i / tex.cols);
-			let x = Math.floor(width / 2 - tex.width / 2) + (i + texMenuOffset) * (tex.width + texMenuBorder);
-			let y = Math.floor(texMenuFromY + texMenuHalfHeight - tex.height / 2);
-			let leftOverlap = texMenuFromX - x;
-			let rightOverlap = x + tex.width - texMenuToX;
+			let x = Math.floor(width / 2 - tex.width / 2) + (i - choosenTextureFrame) * (tex.width + tilesMenu.itemBorder);
+			let y = Math.floor(fromY + innerHeight - tex.height / 2);
+			let leftOverlap = fromX - x;
+			let rightOverlap = x + tex.width - toX;
 			if ((leftOverlap < 0 || rightOverlap < 0) && leftOverlap < tex.width && rightOverlap < tex.width) {
 				let leftTrim = leftOverlap > 0 ? leftOverlap : 0;
 				let rightTrim = rightOverlap > 0 ? rightOverlap : 0;
 				let trimWidth = tex.width - leftTrim - rightTrim;
 				ctx.drawImage(tex.canvas, 
 					col * tex.width + leftTrim, row * tex.height, trimWidth, tex.height, 
-					x, y, trimWidth, tex.height);	
+					x + leftTrim, y, trimWidth, tex.height);	
 			}
 		}
 	};
@@ -131,6 +144,71 @@ $.GIsoGame.Editor = (function() {
 			}
 		}		
 	};		
+	
+	/*
+	* CONTROLS
+	*/
+	
+	let dragMove = function() {
+		switch (dragTargetId) {
+		case 0:
+			viewX += cursor.sx - cursor.lastSx;
+			viewY += cursor.sy - cursor.lastSy;
+			break;
+		case 1:
+			tilesMenu.dragOffset += cursor.sx - cursor.lastSx;
+			break;
+		} 
+	};
+	
+	let mouseButtonChange = function(down, button) {
+		mouseButtons[button] = down;		
+		if (down) {
+			if (cursor.sx > tilesMenu.x && cursor.sx < tilesMenu.x + tilesMenu.width 
+				&& cursor.sy > tilesMenu.y && cursor.sy < tilesMenu.y + tilesMenu.height) {
+				dragTargetId = 1; // tiles menu 
+			} else {
+				dragTargetId = 0; // plocha
+			}
+		}
+	};
+	
+	canvas.addEventListener('contextmenu', function(e) {
+		// Block right-click menu thru preventing default action.
+		if (e.button == 2) 
+		  e.preventDefault();		
+	 });
+	
+	canvas.addEventListener("mousedown", function (e) {
+		mouseButtonChange(true, e.button);
+	}, false);
+ 
+	canvas.addEventListener("mouseup", function (e) {
+		mouseButtonChange(false, e.button);
+	}, false);
+	
+	canvas.addEventListener("mouseleave", function (e) {
+		mouseButtonChange(false, 0);
+		mouseButtonChange(false, 1);
+		mouseButtonChange(false, 2);
+	}, false);
+	
+	canvas.addEventListener("mousemove", function (e) {
+		let bound = canvas.getBoundingClientRect();
+		cursor.lastSx = cursor.sx;
+		cursor.lastSy = cursor.sy;
+		cursor.sx = e.clientX - bound.x;
+		cursor.sy = e.clientY - bound.y;
+		let ix = cursor.sx - viewX;
+		let iy = cursor.sy - viewY;
+		mapCoord = isoRenderer.toMap(ix, iy);	
+		cursor.mx = mapCoord.mx;
+		cursor.my = mapCoord.my;
+		cursor.vix = ix;
+		cursor.viy = iy;
+		if (mouseButtons[1]) 
+			dragMove();				
+	}, false);
 
 	/*
 	* INIT
@@ -146,6 +224,10 @@ $.GIsoGame.Editor = (function() {
 		height = canvas.height;	
 		halfWidth = width / 2;
 		halfHeight = height / 2;
+		
+		tilesMenu.x = menuMargin;
+		tilesMenu.width = width - menuMargin * 2;
+		tilesMenu.y = height - menuMargin - tilesMenu.height;		
 		
 		canvas.style.position = "absolute";
 		canvas.style.left = "0";
@@ -185,50 +267,6 @@ $.GIsoGame.Editor = (function() {
 		// https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
 		window.requestAnimationFrame(draw);		
 	};		
-	
-	let mouseButtonChange = function(down, e) {
-		mouseButtons[e.button] = down;				
-	};
-	
-	canvas.addEventListener('contextmenu', function(e) {
-		if (e.button == 2) {
-		  // Block right-click menu thru preventing default action.
-		  e.preventDefault();
-		}
-	 });
-	
-	canvas.addEventListener("mousedown", function (e) {
-		mouseButtonChange(true, e);
-		mouseDownX = cursor.sx;
-		mouseDownY = cursor.sy;
-	}, false);
- 
-	canvas.addEventListener("mouseup", function (e) {
-		mouseButtonChange(false, e);
-	}, false);
-	
-	canvas.addEventListener("mouseleave", function (e) {
-		mouseButtonChange(false, e);
-	}, false);
-	
-	canvas.addEventListener("mousemove", function (e) {
-		let bound = canvas.getBoundingClientRect();
-		cursor.sx = e.clientX - bound.x;
-		cursor.sy = e.clientY - bound.y;
-		let ix = cursor.sx - viewX;
-		let iy = cursor.sy - viewY;
-		mapCoord = isoRenderer.toMap(ix, iy);	
-		cursor.mx = mapCoord.mx;
-		cursor.my = mapCoord.my;
-		cursor.vix = ix;
-		cursor.viy = iy;
-		if (mouseButtons[1]) {
-			viewX += cursor.sx - mouseDownX;
-			viewY += cursor.sy - mouseDownY;
-			mouseDownX = cursor.sx;
-			mouseDownY = cursor.sy;
-		}
-	}, false);
 		
 	return {	
 		start: function() {					
