@@ -50,10 +50,11 @@ $.GIsoGame.Editor = (function() {
 	
 	let brush = {
 		size: 1,
-		fill: 0,
+		fillId: 0,
 	};
 	
 	let mergeMatrix;
+	let fullTileType;
 	
 	let fills = [];
 
@@ -97,7 +98,7 @@ $.GIsoGame.Editor = (function() {
 			};
 		};
 		let chooseItemFunc = function(id) {
-			choosenTextureSprite = id;
+			brush.fillId = id;
 		};
 		drawItemsMenu(spritesMenu, spriteLoader.getGroupSize(0), texDetailFunc, chooseItemFunc);
 	};
@@ -170,15 +171,36 @@ $.GIsoGame.Editor = (function() {
 				
 	let placeTile = function(index, spriteId, type) {		
 		let existing = level.grounds[index];
-		if (existing == undefined || existing.length == 0) {
+		if (existing == undefined || existing.length == 0 || type == fullTileType) {
 			level.grounds[index] = [spriteId, getRandomTileByType(spriteId, type)]; // prázdné
 		} else {
-			let existingSpriteId = existing[0];
-			let existingType = getTypeByTile(existingSpriteId, existing[1]);
-			if (existing[0] == spriteId) { // obsazené stejným spritem
-				let mergedType = mergeMatrix[existingType][type];				
-				level.grounds[index] = [spriteId, getRandomTileByType(spriteId, mergedType)]; // prázdné				
-			}
+			let existingPrimSpriteId = existing[0];
+			let existingPrimType = getTypeByTile(existingPrimSpriteId, existing[1]);
+			let existingSecSpriteId = existing[2];
+			let existingSecType = existingSecSpriteId == undefined ? undefined : getTypeByTile(existingSecSpriteId, existing[3]);
+			
+			if (existingSecSpriteId == undefined) {
+				if (existingPrimSpriteId == spriteId) {
+					level.grounds[index][1] = getRandomTileByType(spriteId, mergeMatrix[existingPrimType][type]);
+				} else if (existingPrimType == type){
+					level.grounds[index][0] = spriteId;
+					level.grounds[index][1] = getRandomTileByType(spriteId, type);
+				} else {
+					level.grounds[index][2] = spriteId;
+					level.grounds[index][3] = getRandomTileByType(spriteId, type);
+				}
+			} else {
+				if (existingSecSpriteId == spriteId) {
+					level.grounds[index][3] = getRandomTileByType(spriteId, mergeMatrix[existingSecType][type]);	
+				} else if (existingPrimSpriteId == spriteId && existingSecType == type) {
+					level.grounds[index] = [spriteId, getRandomTileByType(spriteId, mergeMatrix[existingPrimType][type])];
+				} else {
+					level.grounds[index][0] = level.grounds[index][2];
+					level.grounds[index][1] = level.grounds[index][3];
+					level.grounds[index][2] = spriteId;
+					level.grounds[index][3] = getRandomTileByType(spriteId, type);
+				}
+			}			
 		}
 	};
 			
@@ -202,7 +224,7 @@ $.GIsoGame.Editor = (function() {
 				else if (ty == fromY) type = 1; // horní strana
 				else if (ty == toY) type = 7; // dolní strana
 				else type = 4; // prostředek					
-				placeTile(index, brush.fill, type);
+				placeTile(index, brush.fillId, type);
 			}
 		}					
 	};
@@ -316,6 +338,7 @@ $.GIsoGame.Editor = (function() {
 	let initMergeMatrix = function() {
 		let TL=0,T=1,TR=2,L=3,M=4,R=5,BL=6,B=7,BR=8,OTL=9,OTR=10,OBL=11,OBR=12;
 		let E=M; // nedefinováno -- zatím budiž M
+		fullTileType = M;
 		mergeMatrix = [
 			//  TL   T  TR   L   M   R  BL   B  BR OTL OTR OBL OBR
 			[   TL,  T,  T,  L,  M,OBL,  L,OTR,  E,  M,OTR,OBL,OBR], // TL
