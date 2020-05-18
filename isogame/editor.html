@@ -191,12 +191,29 @@ $.GIsoGame.Editor = (function() {
 				}
 			} else {
 				if (existingSecSpriteId == spriteId) {
-					level.grounds[index][3] = getRandomTileByType(spriteId, mergeMatrix[existingSecType][type]);	
-				} else if (existingPrimSpriteId == spriteId && existingSecType == type) {
-					level.grounds[index] = [spriteId, getRandomTileByType(spriteId, mergeMatrix[existingPrimType][type])];
+					let mergedType = mergeMatrix[existingSecType][type];
+					let mergedTile = getRandomTileByType(spriteId, mergedType);
+					if (mergedType == fullTileType) {
+						level.grounds[index] = [spriteId, mergedTile];
+					} else {
+						level.grounds[index][3] = mergedTile;	
+					}
+				} else if (existingPrimSpriteId == spriteId) {
+					if (existingSecType == type) {
+						level.grounds[index] = [spriteId, getRandomTileByType(spriteId, mergeMatrix[existingPrimType][type])];
+					} else {
+						let mergedType = mergeMatrix[existingPrimType][type];
+						let mergedTile = getRandomTileByType(spriteId, mergedType);
+						if (mergedType == fullTileType) {
+							level.grounds[index] = [spriteId, mergedTile];
+						} else {
+							level.grounds[index][0] = level.grounds[index][2];
+							level.grounds[index][1] = level.grounds[index][3];
+							level.grounds[index][2] = spriteId;
+							level.grounds[index][3] = mergedTile;
+						}
+					}	
 				} else {
-					level.grounds[index][0] = level.grounds[index][2];
-					level.grounds[index][1] = level.grounds[index][3];
 					level.grounds[index][2] = spriteId;
 					level.grounds[index][3] = getRandomTileByType(spriteId, type);
 				}
@@ -408,7 +425,7 @@ $.GIsoGame.Editor = (function() {
 				
 		spriteLoader = $.GIsoGame.SpriteLoader.create();
 		
-		let materials = ["grass_medium_64x32.png", "stone_path_64x32.png", "grass_dry_64x32.png"];
+		let materials = ["grass_medium_64x32.png", "stone_path_64x32.png", "grass_dry_64x32.png", "forest_ground_64x32.png", "sand_64x32.png", "dirt_dark_64x32.png"];
 		for (let i = 0; i < materials.length; i++) {
 			spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/" + materials[i], 8, 7, cellW, cellH, 0, 0);
 			addFill(0, i, [0, 20], 			
