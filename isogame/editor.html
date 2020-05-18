@@ -302,7 +302,7 @@ $.GIsoGame.Editor = (function() {
 		
 		spritesMenu.x = menuMargin;
 		spritesMenu.width = width - menuMargin * 2;
-		spritesMenu.y = tilesMenu.y - menuMargin - tilesMenu.height;	
+		spritesMenu.y = tilesMenu.y - menuMargin - spritesMenu.height;	
 		
 		canvas.style.position = "absolute";
 		canvas.style.left = "0";
@@ -333,8 +333,9 @@ $.GIsoGame.Editor = (function() {
 			
 		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor);		
 		
-		viewX = halfWidth;
-		viewY = halfHeight;
+		let iso = isoRenderer.toIso(level.mapW / 2, level.mapH / 2);
+		viewX = halfWidth - iso.ix;
+		viewY = (height - tilesMenu.height - spritesMenu.height - menuMargin * 2) / 2 - iso.iy;
 								
 		// https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
 		// https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-ref
