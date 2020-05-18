@@ -9,9 +9,26 @@ $.GIsoGame.SpriteLoader = {
 		
 		// public
 		return {
-			queueTexture: function(group, src, cols, rows, width, height, offsetX, offsetY) {
+			// tileGroupsSizes pole popisuje "tile skupiny".
+			// Má-li tedy například sprite s tiles hlíny některé			
+			// tiles víckrát -- například má pravý horní roh 4x aby 
+			// byla výsledná mapa pestřejší -- je potřeba vědět
+			// kolik má taková skupiny položek. Metoda tyto délky
+			// přepočítá na pozice počátků těchto skupin.
+			queueTexture: function(group, src, cols, rows, width, height, offsetX, offsetY, tileGroupsSizes) {
 				if (textures[group] == undefined)
 					textures[group] = [];
+				tileGroupsStarts = [];
+				if (tileGroupsSizes == undefined) {
+					for (let i = 0; i < cols * rows; i++)
+						tileGroupsStarts[i] = i;
+				} else {
+					let counter = 0;
+					for (let i = 0; i < tileGroupsSizes.length; i++) {
+						tileGroupsStarts[i] = counter;
+						counter += tileGroupsSizes[i];
+					}
+				}
 				textures[group].push({
 					src: src,
 					cols: cols, 
@@ -20,8 +37,11 @@ $.GIsoGame.SpriteLoader = {
 					height: height,
 					offsetX: offsetX,
 					offsetY: offsetY,
+					tileGroupsStarts: tileGroupsStarts,
+					tileGroupsSizes: tileGroupsSizes
 				});
 				loadingProgress++;
+				return textures[group].length - 1;
 			},				
 			
 			getProgress: function() {
@@ -38,6 +58,11 @@ $.GIsoGame.SpriteLoader = {
 			
 			getGroupSize: function(group) {
 				return textures[group].length;
+			},
+			
+			
+			setTileGroupSizes: function(group, id, tileGroupsSizes) {
+				textures[group][id].tileGroupsSizes = tileGroupsSizes;
 			},
 			
 			// async

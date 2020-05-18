@@ -60,7 +60,9 @@ $.GIsoGame.Editor = (function() {
 	
 	let choosenTextureGroup = 0;
 	let choosenTextureSprite = 0;
-	let choosenTextureFrame = 0;
+	let choosenTextureFrame = 0;	
+	let lastPaintedX = -1;
+	let lastPaintedY = -1;
 	
 	let level;
 	
@@ -107,16 +109,17 @@ $.GIsoGame.Editor = (function() {
 	let drawTilesMenu = function() {
 		let tex = spriteLoader.getTexture(0, choosenTextureSprite);
 		let texDetailFunc = function(i) {
+			let j = tex.tileGroupsStarts[i];
 			return {
 				tex: tex,
-				col: i % tex.cols,
-				row: Math.floor(i / tex.cols)
+				col: j % tex.cols,
+				row: Math.floor(j / tex.cols)
 			};
 		};
-		let chooseItemFunc = function(id) {
-			choosenTextureFrame = id;
+		let chooseItemFunc = function(id) {			
+			choosenTextureFrame = tex.tileGroupsStarts[id] + Math.floor(Math.random() * tex.tileGroupsSizes[id]);
 		};
-		drawItemsMenu(tilesMenu, tex.cols * tex.rows, texDetailFunc, chooseItemFunc);
+		drawItemsMenu(tilesMenu, tex.tileGroupsStarts.length, texDetailFunc, chooseItemFunc);
 	};
 	
 	let drawItemsMenu = function(menu, itemsCount, texDetailFunc, chooseItemFunc) {		
@@ -189,7 +192,13 @@ $.GIsoGame.Editor = (function() {
 		if (cursor.mx < level.mapW && cursor.mx >= 0 && cursor.my < level.mapH && cursor.my >= 0
 			&& (mouseButtons[0] || mouseButtons[2])) {
 			let val = mouseButtons[0] ? [choosenTextureSprite, choosenTextureFrame] : undefined;
-			level.grounds[Math.floor(cursor.mx) + Math.floor(cursor.my) * level.mapW] = val;		
+			let paintedX = Math.floor(cursor.mx); 
+			let paintedY = Math.floor(cursor.my);
+			if (paintedX != lastPaintedX || paintedY != lastPaintedY) {
+				level.grounds[paintedX + paintedY * level.mapW] = val;	
+				lastPaintedX = paintedX;		
+				lastPaintedY = paintedY;
+			}
 		}		
 	};		
 	
@@ -225,6 +234,12 @@ $.GIsoGame.Editor = (function() {
 				dragTargetId = 1; // tiles menu 
 			} else {
 				dragTargetId = 0; // plocha
+			}
+		} else {
+			if (button == 0) {
+				// aby šlo to samé pole překreslit když na něj kliknu (ne držení)
+				lastPaintedX = -1;
+				lastPaintedY = -1;
 			}
 		}
 	};
@@ -303,11 +318,11 @@ $.GIsoGame.Editor = (function() {
 		}
 	
 		currentLevel = $.GIsoGame.LevelLoader.createLevel(level);
-		
+				
 		spriteLoader = $.GIsoGame.SpriteLoader.create();
-		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_64x32.png", 8, 7, cellW, cellH, 0, 0);
-		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_64x32.png", 8, 7, cellW, cellH, 0, 0);			
-		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_64x32.png", 8, 7, cellW, cellH, 0, 0);		
+		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_64x32.png", 8, 7, cellW, cellH, 0, 0, [20, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2]);
+		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_64x32.png", 8, 7, cellW, cellH, 0, 0, [20, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2]);
+		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_64x32.png", 8, 7, cellW, cellH, 0, 0, [20, 4, 4, 4, 4, 2, 2, 2, 2, 2, 2, 2, 2]);
 		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 16);
 		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 16);
 		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
