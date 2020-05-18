@@ -161,19 +161,23 @@ $.GIsoGame.Editor = (function() {
 				return type;
 		return -1;
 	};
-						
-	let placeRandomTile = function(index, type, spriteId) {
+
+	let getRandomTileByType = function(spriteId, type) {
 		let fill = fills[spriteId];
 		let range = fill.tiles[type];	
-		let tileId = range[0] + Math.floor(Math.random() * (range[1] - range[0]));
+		return range[0] + Math.floor(Math.random() * (range[1] - range[0]));
+	};
+				
+	let placeTile = function(index, spriteId, type) {		
 		let existing = level.grounds[index];
 		if (existing == undefined || existing.length == 0) {
-			level.grounds[index] = [spriteId, tileId]; // prázdné
+			level.grounds[index] = [spriteId, getRandomTileByType(spriteId, type)]; // prázdné
 		} else {
 			let existingSpriteId = existing[0];
 			let existingType = getTypeByTile(existingSpriteId, existing[1]);
 			if (existing[0] == spriteId) { // obsazené stejným spritem
-				level.grounds[index] = [spriteId, mergeMatrix[existingType, type]]; // prázdné
+				let mergedType = mergeMatrix[existingType][type];				
+				level.grounds[index] = [spriteId, getRandomTileByType(spriteId, mergedType)]; // prázdné				
 			}
 		}
 	};
@@ -198,7 +202,7 @@ $.GIsoGame.Editor = (function() {
 				else if (ty == fromY) type = 1; // horní strana
 				else if (ty == toY) type = 7; // dolní strana
 				else type = 4; // prostředek					
-				placeRandomTile(index, type, brush.fill);
+				placeTile(index, brush.fill, type);
 			}
 		}					
 	};
@@ -311,18 +315,18 @@ $.GIsoGame.Editor = (function() {
 	
 	let initMergeMatrix = function() {
 		let TL=0,T=1,TR=2,L=3,M=4,R=5,BL=6,B=7,BR=8,OTL=9,OTR=10,OBL=11,OBR=12;
-		let E=-1; // nedefinováno
+		let E=M; // nedefinováno -- zatím budiž M
 		mergeMatrix = [
 			//  TL   T  TR   L   M   R  BL   B  BR OTL OTR OBL OBR
-			[   TL,  T,  T,  L,  M,  M,  L,OTR,  E,  M,  M,  M,OBR], // TL
+			[   TL,  T,  T,  L,  M,OBL,  L,OTR,  E,  M,OTR,OBL,OBR], // TL
 			[     ,  T,  T,OBR,  M,OBL,OBR,  M,OBL,  M,  M,OBL,OBR], // T
-			[     ,   , TR,OBR,  M,  R,  E,  M,  R,OTL,  M,OBL,OBR], // TR
+			[     ,   , TR,OBR,  M,  R,  E,OTL,  R,OTL,  M,OBL,OBR], // TR
 			[     ,   ,   ,  L,  M,  M,  L,OTR,OTR,  M,OTR,  M,OBR], // L
 			[     ,   ,   ,   ,  M,  M,  M,  M,  M,  M,  M,  M,  M], // M
-			[     ,   ,   ,   ,   ,  R,  M,OTL,  R,OTL,  M,OBL,  M], // R
+			[     ,   ,   ,   ,   ,  R,OTL,OTL,  R,OTL,  M,OBL,  M], // R
 			[     ,   ,   ,   ,   ,   , BL,  B,  B,OTL,OTR,  M,OBR], // BL
 			[     ,   ,   ,   ,   ,   ,   ,  B,  B,OTL,OTR,  M,  M], // B
-			[     ,   ,   ,   ,   ,   ,   ,   , BR,OTL,OTR,  M,  M], // BR			
+			[     ,   ,   ,   ,   ,   ,   ,   , BR,OTL,OTR,OBL,  M], // BR			
 			[     ,   ,   ,   ,   ,   ,   ,   ,   ,OTL,  M,  M,  M], // OTL
 			[     ,   ,   ,   ,   ,   ,   ,   ,   ,   ,OTR,  M,  M], // OTR
 			[     ,   ,   ,   ,   ,   ,   ,   ,   ,   ,   ,OBL,  M], // OBL
