@@ -447,12 +447,10 @@ $.GIsoGame.Editor = (function() {
 		};
 	};
 	
-	let init = function() {	
+	let updateWindowSize = function() {
 		canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 		
-		$.GIsoGame.Configuration.outlines = true;
-			
 		width = canvas.width;
 		height = canvas.height;	
 		halfWidth = width / 2;
@@ -461,6 +459,18 @@ $.GIsoGame.Editor = (function() {
 		spritesMenu.x = menuMargin;
 		spritesMenu.width = width - menuMargin * 2;
 		spritesMenu.y = height - menuMargin - spritesMenu.height;	
+
+		if (isoRenderer != undefined) {
+			isoRenderer.setWidth(width);
+			isoRenderer.setHeight(height);
+		}
+	};
+	
+	let init = function() {	
+		window.addEventListener("resize", updateWindowSize);		
+		updateWindowSize();
+		
+		$.GIsoGame.Configuration.outlines = true;					
 		
 		canvas.style.position = "absolute";
 		canvas.style.left = "0";

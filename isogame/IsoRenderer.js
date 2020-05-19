@@ -100,6 +100,14 @@ $.GIsoGame.IsoRenderer = {
 				}
 			}
 		};
+		
+		let innerSetWidth = function(w) {
+			width = w;	
+		};
+			
+		let innerSetHeight = function(h) {
+			height = h;
+		};
 				
 		return {
 			toIso: function(mx, my) {
@@ -112,6 +120,14 @@ $.GIsoGame.IsoRenderer = {
 			
 			drawSprite: function(groupId, spriteId, frameId, ix, iy, showOutline) {
 				innerDrawSprite(groupId, spriteId, frameId, ix, iy, showOutline);
+			},
+					
+			setWidth: function(w) {
+				innerSetWidth(w);
+			},
+			
+			setHeight: function(h) {
+				innerSetHeight(h);
 			},
 			
 			update: function(delay, viewX, viewY) {
