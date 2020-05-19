@@ -39,18 +39,14 @@ $.GIsoGame.Editor = (function() {
 	let cellH = 32;	
 	
 	// pole všech UI prvků, které reagují na mouse události
-	// povinná pole: x, y, width, height, visible, onEventFunc
+	// povinná pole: 
+	// 		x, y, width, height, visible, 
+	// 		consumed = onMouse(x, y, button, down, isInBounds)
+	// 		consumed = onDrag(dx, dy, isInBounds)
 	let uiListeners = [];
 	
-	let spritesMenu = {
-		dragTargetId: 2,
-		x: 0,
-		y: 0,
-		width: 0,
-		height: 100,
-		itemWidth: cellW * 1.5,
-		dragOffset: 0,
-	};
+	let desktopArea = {};	
+	let spritesMenu = {};
 	
 	let buttonFontSize = 20;
 	let buttons = [];
@@ -62,19 +58,12 @@ $.GIsoGame.Editor = (function() {
 		groupId: 0,
 		spriteId: 0,
 		tileId: 0,
+		lastPaintedX: -1,
+		lastPaintedY: -1,
 	};	
 	
 	let level;
 	
-	// T/F dle tlačítka myši
-	let mouseButtons = [];
-	
-	// na které části UI je prováděn mouse-drag
-	let dragTargetId = -1;
-
-	let lastPaintedX = -1;
-	let lastPaintedY = -1;
-		
 	let cursor = {
 		lastSx: 0,
 		lastSy: 0,
@@ -156,10 +145,10 @@ $.GIsoGame.Editor = (function() {
 		ctx.fillStyle = cfg.uiBorderColor;
 		ctx.fillRect(itemsStartX, fromY, slotWidth, toY - fromY);
 		
-		if (mouseButtons[0] && dragTargetId == menu.dragTargetId) {
+		if (menu.mouseDown) {
 			let diff = cursor.sx - itemsStartX;
 			menu.dragOffset -= Math.floor(diff / slotWidth) * slotWidth;
-			mouseButtons[0] = false;
+			menu.mouseDown = false;
 		}
 		
 		let choosenItemId = Math.floor(-menu.dragOffset / slotWidth);
@@ -225,14 +214,16 @@ $.GIsoGame.Editor = (function() {
 
 		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
 		
-		if (cursor.mx < level.mapW && cursor.mx >= 0 && cursor.my < level.mapH && cursor.my >= 0
-			&& (mouseButtons[0] || mouseButtons[2])) {			
+		let offsetTolerance = 5;
+		if (cursor.mx < level.mapW + offsetTolerance && cursor.mx >= -offsetTolerance 
+				&& cursor.my < level.mapH + offsetTolerance && cursor.my >= -offsetTolerance
+				&& desktopArea.mouseDown) {			
 			let paintedX = Math.floor(cursor.mx); 
 			let paintedY = Math.floor(cursor.my);
-			if (paintedX != lastPaintedX || paintedY != lastPaintedY) {
+			if (paintedX != brush.lastPaintedX || paintedY != brush.lastPaintedY) {
 				mapSculptor.paint(paintedX, paintedY, brush);
-				lastPaintedX = paintedX;		
-				lastPaintedY = paintedY;
+				brush.lastPaintedX = paintedX;		
+				brush.lastPaintedY = paintedY;
 			}
 		}		
 	};		
@@ -241,39 +232,15 @@ $.GIsoGame.Editor = (function() {
 	* CONTROLS
 	*/
 	
-	let dragMove = function() {
-		let diffX = cursor.sx - cursor.lastSx;
-		let diffY = cursor.sy - cursor.lastSy;
-		switch (dragTargetId) {
-		case 0:
-			viewX += diffX;
-			viewY += diffY;
-			break;
-		case 1:
-			tilesMenu.dragOffset += diffX;
-			break;
-		case 2:
-			spritesMenu.dragOffset += diffX;
-			break;		
-		} 
+	let isInBounds = function(uiListener, x, y)  {
+		return x > uiListener.x && x < uiListener.x + uiListener.width
+			&& y > uiListener.y && y < uiListener.y + uiListener.height;
 	};
 	
 	let mouseButtonChange = function(down, button) {
-		mouseButtons[button] = down;		
-		if (down) {
-			if (cursor.sx > spritesMenu.x && cursor.sx < spritesMenu.x + spritesMenu.width 
-				&& cursor.sy > spritesMenu.y && cursor.sy < spritesMenu.y + spritesMenu.height) {				
-				dragTargetId = 2; // sprites menu 
-			} else {
-				dragTargetId = 0; // plocha
-			}
-		} else {
-			if (button == 0) {
-				// aby šlo to samé pole překreslit když na něj kliknu (ne držení)
-				lastPaintedX = -1;
-				lastPaintedY = -1;
-			}
-		}
+		for (let i = 0; i < uiListeners.length; i++)
+			if (uiListeners[i].onMouse(cursor.sx, cursor.sy, button, down, isInBounds(uiListeners[i], cursor.sx, cursor.sy)))
+				break;
 	};
 	
 	canvas.addEventListener('contextmenu', function(e) {		
@@ -306,9 +273,13 @@ $.GIsoGame.Editor = (function() {
 		cursor.mx = mapCoord.mx;
 		cursor.my = mapCoord.my;
 		cursor.vix = ix;
-		cursor.viy = iy;
-		if (mouseButtons[1])
-			dragMove();
+		cursor.viy = iy;		
+		
+		let diffX = cursor.sx - cursor.lastSx;
+		let diffY = cursor.sy - cursor.lastSy;
+		for (let i = 0; i < uiListeners.length; i++)
+			if (uiListeners[i].onDrag != undefined && uiListeners[i].onDrag(diffX, diffY, isInBounds(uiListeners[i], cursor.sx, cursor.sy)))
+				break;
 	}, false);
 
 	/*
@@ -339,6 +310,9 @@ $.GIsoGame.Editor = (function() {
 		height = canvas.height;	
 		halfWidth = width / 2;
 		halfHeight = height / 2;
+		
+		desktopArea.width = width;
+		desktopArea.height = height;
 				
 		spritesMenu.x = cfg.uiMargin;
 		spritesMenu.width = width - cfg.uiMargin * 2;
@@ -350,7 +324,7 @@ $.GIsoGame.Editor = (function() {
 		}
 	};
 	
-	let createButton = function(text, onEventFunc) {	
+	let createButton = function(text, onMouse, onDrag) {	
 		let button = {};
 		button.fontSize = buttonFontSize;
 		ctx.font = button.fontSize + "px Monospace";		
@@ -364,35 +338,116 @@ $.GIsoGame.Editor = (function() {
 		}
 		button.width = ctx.measureText(button.text).width + cfg.uiSpacing * 2;
 		button.height = button.fontSize / 2 + cfg.uiSpacing * 2;
-		button.onEventFunc = onEventFunc;
+		button.onMouse = onMouse;
 		buttons.push(button);
 		uiListeners.push(button);
 	};
 	
 	let createButtons = function() {	
-		createButton("Povrchy");
-		createButton("Kolizní objekty");
-		createButton("Nekolizní objekty");
+		createButton("Povrchy", function(x, y, button, down, isInBounds) {
+			// TODO
+			return false;
+		});
+		createButton("Kolizní objekty", function(x, y, button, down, isInBounds) {
+			// TODO
+			return false;
+		});
+		createButton("Nekolizní objekty", function(x, y, button, down, isInBounds) {
+			// TODO
+			return false;
+		});
 	};
-	
+
 	let createMenus = function() {
-		let spritesMenu = {
-			dragTargetId: 2,
+		spritesMenu = {
 			x: 0,
 			y: 0,
 			width: 0,
 			height: 100,
+			visible: true,
+			dragged: false,
 			itemWidth: cellW * 1.5,
 			dragOffset: 0,
+			mouseDown: false,
+		};		
+		spritesMenu.onMouse = function(x, y, button, down, isInBounds) {
+			if (button == 1) {
+				if (!down) { 
+					spritesMenu.dragged = false;					
+				} else if (isInBounds) {
+					spritesMenu.dragged = true;
+					return true;
+				}
+			} else if (button == 0) {
+				if (!down) {
+					spritesMenu.mouseDown = false;
+				} else if (isInBounds) {					
+					spritesMenu.mouseDown = true;
+					return true;
+				}
+			}
+			return false;
 		};
-		uiListeners.push(button);
+		spritesMenu.onDrag = function(dx, dy, isInBounds) {
+			if (spritesMenu.visible && spritesMenu.dragged) {
+				spritesMenu.dragOffset += dx;
+				return true;
+			}
+			return false;
+		};
+		uiListeners.push(spritesMenu);
+	};
+	
+	let createDesktopArea = function() {
+		desktopArea = {
+			x: 0,
+			y: 0,
+			width: width,
+			height: height,
+			visible: true,	
+			dragged: false,
+			mouseDown: false,
+		};
+		desktopArea.onMouse = function(x, y, button, down, isInBounds) {
+			if (button == 1) {
+				if (!down) { 
+					desktopArea.dragged = false;					
+				} else if (isInBounds) {
+					desktopArea.dragged = true;
+					return true;
+				}
+			} else if (button == 0) {
+				if (!down) {
+					desktopArea.mouseDown = false;
+				} else if (isInBounds) {
+					// aby šlo to samé pole překreslit když na něj kliknu (ne držení)
+					lastPaintedX = -1;
+					lastPaintedY = -1;
+					desktopArea.mouseDown = true;
+					return true;
+				}
+			}
+			return false;			
+		};
+		desktopArea.onDrag = function(dx, dy, isInBounds) {
+			if (desktopArea.dragged) {
+				viewX += dx;
+				viewY += dy;
+				return true;
+			}
+			return false;
+		};
+		uiListeners.push(desktopArea);
 	};
 	
 	let init = function() {	
 		window.addEventListener("resize", updateWindowSize);		
-		updateWindowSize();		
 		
+		createMenus();
 		createButtons();		
+		createDesktopArea();
+		
+		updateWindowSize();		
 		
 		cfg.outlines = true;					
 		
@@ -407,7 +462,7 @@ $.GIsoGame.Editor = (function() {
 			grounds:[],
 			objects: [],
 			walls: []
-		}
+		};
 	
 		currentLevel = $.GIsoGame.LevelLoader.createLevel(level);								
 		spriteLoader = $.GIsoGame.SpriteLoader.create();		
