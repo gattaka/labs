@@ -177,44 +177,36 @@ $.GIsoGame.Editor = (function() {
 			level.grounds[index] = [spriteId, getRandomTileByType(spriteId, type)]; 
 			return;
 		}
-		let matchingSpriteLayer;		
-		let matchingSpriteType;
-		let layers = 0;
-		
-		for (let i = 0; i < 4; i++) {	
-			let layerId = i * 2;
-			let layerSpriteId = tile[layerId];
-			if (layerSpriteId == undefined)
-				break;
-			let layerType = getTypeByTile(layerSpriteId, tile[layerId + 1]);
+					
+		let layers = tile.length / 2;				
+		for (let i = tile.length - 2; i >= 0; i -= 2) {				
+			let layerSpriteId = tile[i];
+			let layerType = getTypeByTile(layerSpriteId, tile[i + 1]);
 			// bude nový tile překrývat danou vrstvu? Pokud ano, vrstvu smaž
-			if (layerSpriteId != spriteId && overlapMatrix[layerType][type] == 1) {
-				tile.splice(layerId, 2);
-				i--;
+			if (overlapMatrix[layerType][type] == 1) {
+				tile.splice(i, 2);
+				layers--;
 				continue;
 			}
-			if (layerSpriteId == spriteId) {
-				matchingSpriteLayer = i;
-				matchingSpriteType = layerType;
-			}
-			layers++;
+			// je aktuální nový sprite stejný jako stávající v této vrstvě?
+			if (i == tile.length - 2 && layerSpriteId == spriteId) {
+				// zkus na něm provést merge
+				let mergedType = mergeMatrix[layerType][type];
+				// pokud se merge podařil, odeber vrstvu a změn type, který se bude přidávat
+				if (mergedType != -1) {
+					type = mergedType;
+					tile.splice(i, 2);
+					layers--;
+					continue;
+				}
+			}	
+			break;
 		}		
-		
-		let mergedType;
-		if (matchingSpriteLayer != undefined && matchingSpriteLayer == layers - 1) 
-			mergedType = mergeMatrix[matchingSpriteType][type];			
-		
-		// existuje vrstva, se kterou jde provést merge 
-		if (matchingSpriteLayer != undefined && matchingSpriteLayer == layers - 1 && mergedType != -1) {			
-			tile.splice(matchingSpriteLayer * 2, 2);
-			tile.push(spriteId);
-			tile.push(getRandomTileByType(spriteId, mergedType));
-		} else {
-			if (layers == 4)			
-				tile.splice(0, 2);
-			tile.push(spriteId);
-			tile.push(getRandomTileByType(spriteId, type));
-		}		
+
+		if (layers == 4)			
+			tile.splice(0, 2);
+		tile.push(spriteId);
+		tile.push(getRandomTileByType(spriteId, type));		
 	};
 			
 	let paint = function(mx, my) {		
