@@ -38,6 +38,10 @@ $.GIsoGame.Editor = (function() {
 	let cellW = 64;
 	let cellH = 32;	
 	
+	// pole všech UI prvků, které reagují na mouse události
+	// povinná pole: x, y, width, height, visible, onEventFunc
+	let uiListeners = [];
+	
 	let spritesMenu = {
 		dragTargetId: 2,
 		x: 0,
@@ -48,12 +52,8 @@ $.GIsoGame.Editor = (function() {
 		dragOffset: 0,
 	};
 	
-	let groundsButton = {
-		x: 0,
-		y: 0,
-		size: 20,
-		text: "Povrchy",
-	};
+	let buttonFontSize = 20;
+	let buttons = [];
 	
 	// Ground tiles vyplňování
 	let fills = [];	
@@ -193,20 +193,20 @@ $.GIsoGame.Editor = (function() {
 		}
 	};
 	
-	let drawButton = function(button) {
-		ctx.fillStyle = cfg.uiBorderColor;
-		ctx.fillRect(button.x, button.y, button.width, button.height);			
-		ctx.fillStyle = cfg.uiAreaColor;		
-		ctx.fillRect(button.x + cfg.uiBorder, button.y + cfg.uiBorder, button.width - cfg.uiBorder * 2, button.height - cfg.uiBorder * 2);
-
-		ctx.font = button.size + "px Monospace";
-		ctx.fillStyle = "#999";
-		ctx.fillText(button.text, button.x + cfg.uiSpacing, button.y + button.height - 9);
-	};
-	
 	let drawButtons = function() {
-		drawButton(groundsButton);
+		for (let i = 0; i < buttons.length; i++) {
+			let button = buttons[i];
+			ctx.fillStyle = cfg.uiBorderColor;
+			ctx.fillRect(button.x, button.y, button.width, button.height);			
+			ctx.fillStyle = cfg.uiAreaColor;		
+			ctx.fillRect(button.x + cfg.uiBorder, button.y + cfg.uiBorder, button.width - cfg.uiBorder * 2, button.height - cfg.uiBorder * 2);
+
+			ctx.font = button.fontSize + "px Monospace";
+			ctx.fillStyle = "#999";
+			ctx.fillText(button.text, button.x + cfg.uiSpacing, button.y + button.height - 9);
+		}
 	};
+
 				
 	let drawScene = function(timestamp) {	
 		if (!spriteLoader.isLoaded())
@@ -276,11 +276,9 @@ $.GIsoGame.Editor = (function() {
 		}
 	};
 	
-	canvas.addEventListener('contextmenu', function(e) {
-		// Block right-click menu thru preventing default action.
-		if (e.button == 2) 
-		  e.preventDefault();		
-	 });
+	canvas.addEventListener('contextmenu', function(e) {		
+		if (e.button == 2) e.preventDefault();		
+	});
 	
 	canvas.addEventListener("mousedown", function (e) {
 		mouseButtonChange(true, e.button);
@@ -352,13 +350,42 @@ $.GIsoGame.Editor = (function() {
 		}
 	};
 	
-	let createButtons = function() {		
-		button = groundsButton;
-		ctx.font = button.size + "px Monospace";
+	let createButton = function(text, onEventFunc) {	
+		let button = {};
+		button.fontSize = buttonFontSize;
+		ctx.font = button.fontSize + "px Monospace";		
+		button.text = text;
 		button.x = cfg.uiMargin;
-		button.y = cfg.uiMargin + cfg.minimapHeight + cfg.uiMargin;
+		if (buttons.length == 0) {
+			button.y = cfg.uiMargin + cfg.minimapHeight + cfg.uiMargin;
+		} else {
+			let lastBtn = buttons[buttons.length - 1];
+			button.y = lastBtn.y + lastBtn.height + cfg.uiMargin;
+		}
 		button.width = ctx.measureText(button.text).width + cfg.uiSpacing * 2;
-		button.height = button.size / 2 + cfg.uiSpacing * 2;
+		button.height = button.fontSize / 2 + cfg.uiSpacing * 2;
+		button.onEventFunc = onEventFunc;
+		buttons.push(button);
+		uiListeners.push(button);
+	};
+	
+	let createButtons = function() {	
+		createButton("Povrchy");
+		createButton("Kolizní objekty");
+		createButton("Nekolizní objekty");
+	};
+	
+	let createMenus = function() {
+		let spritesMenu = {
+			dragTargetId: 2,
+			x: 0,
+			y: 0,
+			width: 0,
+			height: 100,
+			itemWidth: cellW * 1.5,
+			dragOffset: 0,
+		};
+		uiListeners.push(button);
 	};
 	
 	let init = function() {	
