@@ -22,6 +22,8 @@ $.GIsoGame.Editor = (function() {
 	let halfWidth;
 	let halfHeight;
 	
+	let cfg = $.GIsoGame.Configuration;
+	
 	let spriteLoader;
 	let levelLoader;
 	let currentLevel;
@@ -36,10 +38,6 @@ $.GIsoGame.Editor = (function() {
 	let cellW = 64;
 	let cellH = 32;	
 	
-	let menuMargin = 10;
-	let menuBorder = 2;
-	let menuItemBorder = 10;
-	
 	let spritesMenu = {
 		dragTargetId: 2,
 		x: 0,
@@ -48,6 +46,13 @@ $.GIsoGame.Editor = (function() {
 		height: 100,
 		itemWidth: cellW * 1.5,
 		dragOffset: 0,
+	};
+	
+	let groundsButton = {
+		x: 0,
+		y: 0,
+		size: 20,
+		text: "Povrchy",
 	};
 	
 	// Ground tiles vyplňování
@@ -133,22 +138,22 @@ $.GIsoGame.Editor = (function() {
 	};
 	
 	let drawItemsMenu = function(menu, itemsCount, texDetailFunc, chooseItemFunc) {		
-		ctx.fillStyle = "#333";		
+		ctx.fillStyle = cfg.uiBorderColor;		
 		ctx.fillRect(menu.x, menu.y, menu.width, menu.height);
 		
 		// zmenšení aktivní plochy menu, aby se v ní dalo pracovat s položkami
-		let fromX = menu.x + menuBorder;
-		let toX = menu.x + menu.width - menuBorder;
-		let fromY = menu.y + menuBorder;
-		let toY = menu.y + menu.height - menuBorder;
+		let fromX = menu.x + cfg.uiBorder;
+		let toX = menu.x + menu.width - cfg.uiBorder;
+		let fromY = menu.y + cfg.uiBorder;
+		let toY = menu.y + menu.height - cfg.uiBorder;
 		
-		ctx.fillStyle = "#222";		
+		ctx.fillStyle = cfg.uiAreaColor;	
 		ctx.fillRect(fromX, fromY, toX - fromX, toY - fromY);
 		
-		let slotWidth = menu.itemWidth + menuItemBorder * 2;
+		let slotWidth = menu.itemWidth + cfg.uiSpacing * 2;
 		let itemsStartX = Math.floor(width / 2 - slotWidth / 2);
 		
-		ctx.fillStyle = "#333";		
+		ctx.fillStyle = cfg.uiBorderColor;
 		ctx.fillRect(itemsStartX, fromY, slotWidth, toY - fromY);
 		
 		if (mouseButtons[0] && dragTargetId == menu.dragTargetId) {
@@ -176,7 +181,7 @@ $.GIsoGame.Editor = (function() {
 			let x = Math.floor(slotCenterX - cellW / 2 - offsetX);
 			let leftOverlap = fromX - x;
 			let rightOverlap = x + texDetail.tex.width - toX;
-			let y = Math.floor(fromY + menu.height / 2 - menuBorder - offsetY);
+			let y = Math.floor(fromY + menu.height / 2 - cfg.uiBorder - offsetY);
 			if ((leftOverlap < 0 || rightOverlap < 0) && leftOverlap < texDetail.tex.width && rightOverlap < texDetail.tex.width) {
 				let leftTrim = leftOverlap > 0 ? leftOverlap : 0;
 				let rightTrim = rightOverlap > 0 ? rightOverlap : 0;
@@ -186,6 +191,21 @@ $.GIsoGame.Editor = (function() {
 					x + leftTrim, y, trimWidth, texDetail.tex.height);	
 			}
 		}
+	};
+	
+	let drawButton = function(button) {
+		ctx.fillStyle = cfg.uiBorderColor;
+		ctx.fillRect(button.x, button.y, button.width, button.height);			
+		ctx.fillStyle = cfg.uiAreaColor;		
+		ctx.fillRect(button.x + cfg.uiBorder, button.y + cfg.uiBorder, button.width - cfg.uiBorder * 2, button.height - cfg.uiBorder * 2);
+
+		ctx.font = button.size + "px Monospace";
+		ctx.fillStyle = "#999";
+		ctx.fillText(button.text, button.x + cfg.uiSpacing, button.y + button.height - 9);
+	};
+	
+	let drawButtons = function() {
+		drawButton(groundsButton);
 	};
 				
 	let drawScene = function(timestamp) {	
@@ -197,6 +217,8 @@ $.GIsoGame.Editor = (function() {
 		lastTime = timestamp;	
 				
 		isoRenderer.update(delay, viewX, viewY);
+		
+		drawButtons();
 		
 		// drawGroundMenu();
 		drawWallsMenu();
@@ -320,9 +342,9 @@ $.GIsoGame.Editor = (function() {
 		halfWidth = width / 2;
 		halfHeight = height / 2;
 				
-		spritesMenu.x = menuMargin;
-		spritesMenu.width = width - menuMargin * 2;
-		spritesMenu.y = height - menuMargin - spritesMenu.height;	
+		spritesMenu.x = cfg.uiMargin;
+		spritesMenu.width = width - cfg.uiMargin * 2;
+		spritesMenu.y = height - cfg.uiMargin - spritesMenu.height;	
 
 		if (isoRenderer != undefined) {
 			isoRenderer.setWidth(width);
@@ -330,11 +352,22 @@ $.GIsoGame.Editor = (function() {
 		}
 	};
 	
+	let createButtons = function() {		
+		button = groundsButton;
+		ctx.font = button.size + "px Monospace";
+		button.x = cfg.uiMargin;
+		button.y = cfg.uiMargin + cfg.minimapHeight + cfg.uiMargin;
+		button.width = ctx.measureText(button.text).width + cfg.uiSpacing * 2;
+		button.height = button.size / 2 + cfg.uiSpacing * 2;
+	};
+	
 	let init = function() {	
 		window.addEventListener("resize", updateWindowSize);		
-		updateWindowSize();
+		updateWindowSize();		
 		
-		$.GIsoGame.Configuration.outlines = true;					
+		createButtons();		
+		
+		cfg.outlines = true;					
 		
 		canvas.style.position = "absolute";
 		canvas.style.left = "0";
@@ -375,7 +408,7 @@ $.GIsoGame.Editor = (function() {
 		
 		let iso = isoRenderer.toIso(level.mapW / 2, level.mapH / 2);
 		viewX = halfWidth - iso.ix;
-		viewY = (height - spritesMenu.height - menuMargin * 2) / 2 - iso.iy;
+		viewY = (height - spritesMenu.height - cfg.uiMargin * 2) / 2 - iso.iy;
 						
 		mapSculptor = $.GIsoGame.MapSculptor.create(fills, level);
 						

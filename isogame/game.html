@@ -364,7 +364,7 @@ $.GIsoGame.Game = (function() {
 	* INIT
 	*/	
 	
-	let init = function() {	
+	let updateWindowSize = function() {
 		canvas.width = window.innerWidth;
         canvas.height = window.innerHeight;
 			
@@ -372,6 +372,17 @@ $.GIsoGame.Game = (function() {
 		height = canvas.height;	
 		halfWidth = width / 2;
 		halfHeight = height / 2;
+
+		if (isoRenderer != undefined) {
+			isoRenderer.setWidth(width);
+			isoRenderer.setHeight(height);
+		}
+	};
+	
+	let init = function() {	
+		window.addEventListener("resize", updateWindowSize);		
+		updateWindowSize();		
+		
 		
 		canvas.style.position = "absolute";
 		canvas.style.left = "0";

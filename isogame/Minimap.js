@@ -2,10 +2,10 @@ var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.Minimap = {	
 	drawMinimap: function(ctx, currentLevel, target, hero) {
-		let miniX = 10;
-		let miniY = 10;
-		let miniWidth = 150;
-		let miniHeight = 150;	
+		let miniX = $.GIsoGame.Configuration.uiMargin;
+		let miniY = $.GIsoGame.Configuration.uiMargin;
+		let miniWidth = $.GIsoGame.Configuration.minimapWidth;
+		let miniHeight = $.GIsoGame.Configuration.minimapHeight;	
 		
 		let miniCellWidth = Math.floor(miniWidth / currentLevel.getMapW());
 		let miniCellHeight = Math.floor(miniHeight / currentLevel.getMapH());
