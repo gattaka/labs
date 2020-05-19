@@ -7,6 +7,7 @@ $.GIsoGame.Configuration = {
 	uiBorder: 2,
 	uiBorderColor: "#333",
 	uiAreaColor: "#222",
+	uiFontColor: "#999",
 	uiMargin: 10,
 	uiSpacing: 10,
 	minimapWidth: 150,

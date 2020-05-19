@@ -41,8 +41,8 @@ $.GIsoGame.Editor = (function() {
 	// pole všech UI prvků, které reagují na mouse události
 	// povinná pole: 
 	// 		x, y, width, height, visible, 
-	// 		consumed = onMouse(x, y, button, down, isInBounds)
-	// 		consumed = onDrag(dx, dy, isInBounds)
+	// 		consumed = onMouse(x, y, button, down, isInBounds, uiListener)
+	// 		consumed = onDrag(dx, dy, isInBounds, uiListener)
 	let uiListeners = [];
 	
 	let desktopArea = {};	
@@ -185,13 +185,13 @@ $.GIsoGame.Editor = (function() {
 	let drawButtons = function() {
 		for (let i = 0; i < buttons.length; i++) {
 			let button = buttons[i];
-			ctx.fillStyle = cfg.uiBorderColor;
+			ctx.fillStyle = button.backgroundColor;
 			ctx.fillRect(button.x, button.y, button.width, button.height);			
-			ctx.fillStyle = cfg.uiAreaColor;		
+			ctx.fillStyle = button.borderColor;		
 			ctx.fillRect(button.x + cfg.uiBorder, button.y + cfg.uiBorder, button.width - cfg.uiBorder * 2, button.height - cfg.uiBorder * 2);
 
 			ctx.font = button.fontSize + "px Monospace";
-			ctx.fillStyle = "#999";
+			ctx.fillStyle = button.fontColor;
 			ctx.fillText(button.text, button.x + cfg.uiSpacing, button.y + button.height - 9);
 		}
 	};
@@ -239,7 +239,7 @@ $.GIsoGame.Editor = (function() {
 	
 	let mouseButtonChange = function(down, button) {
 		for (let i = 0; i < uiListeners.length; i++)
-			if (uiListeners[i].onMouse(cursor.sx, cursor.sy, button, down, isInBounds(uiListeners[i], cursor.sx, cursor.sy)))
+			if (uiListeners[i].onMouse(cursor.sx, cursor.sy, button, down, isInBounds(uiListeners[i], cursor.sx, cursor.sy), uiListeners[i]))
 				break;
 	};
 	
@@ -262,6 +262,9 @@ $.GIsoGame.Editor = (function() {
 	}, false);
 	
 	canvas.addEventListener("mousemove", function (e) {
+		// výchozí vyresetování kurzoru
+		document.body.style.cursor = "default";
+	
 		let bound = canvas.getBoundingClientRect();
 		cursor.lastSx = cursor.sx;
 		cursor.lastSy = cursor.sy;
@@ -278,7 +281,7 @@ $.GIsoGame.Editor = (function() {
 		let diffX = cursor.sx - cursor.lastSx;
 		let diffY = cursor.sy - cursor.lastSy;
 		for (let i = 0; i < uiListeners.length; i++)
-			if (uiListeners[i].onDrag != undefined && uiListeners[i].onDrag(diffX, diffY, isInBounds(uiListeners[i], cursor.sx, cursor.sy)))
+			if (uiListeners[i].onDrag != undefined && uiListeners[i].onDrag(diffX, diffY, isInBounds(uiListeners[i], cursor.sx, cursor.sy), uiListeners[i]))
 				break;
 	}, false);
 
@@ -324,8 +327,11 @@ $.GIsoGame.Editor = (function() {
 		}
 	};
 	
-	let createButton = function(text, onMouse, onDrag) {	
+	let createButton = function(text, onMouse) {	
 		let button = {};
+		button.backgroundColor = cfg.uiAreaColor;
+		button.borderColor = cfg.uiBorderColor;
+		button.fontColor = cfg.uiFontColor;
 		button.fontSize = buttonFontSize;
 		ctx.font = button.fontSize + "px Monospace";		
 		button.text = text;
@@ -339,20 +345,28 @@ $.GIsoGame.Editor = (function() {
 		button.width = ctx.measureText(button.text).width + cfg.uiSpacing * 2;
 		button.height = button.fontSize / 2 + cfg.uiSpacing * 2;
 		button.onMouse = onMouse;
+		button.onDrag = function(dx, dy, isInBounds, uiListener) {
+			if (isInBounds) 
+				document.body.style.cursor = "pointer";
+			uiListener.backgroundColor = isInBounds ? "#226" : cfg.uiAreaColor;
+			uiListener.borderColor = isInBounds ? "#337" : cfg.uiBorderColor;
+			uiListener.fontColor = isInBounds ? "#99c" : cfg.uiFontColor;			
+			return false;
+		};
 		buttons.push(button);
 		uiListeners.push(button);
 	};
 	
 	let createButtons = function() {	
-		createButton("Povrchy", function(x, y, button, down, isInBounds) {
+		createButton("Povrchy", function(x, y, button, down, isInBounds, uiListener) {
 			// TODO
 			return false;
 		});
-		createButton("Kolizní objekty", function(x, y, button, down, isInBounds) {
+		createButton("Kolizní objekty", function(x, y, button, down, isInBounds, uiListener) {
 			// TODO
 			return false;
 		});
-		createButton("Nekolizní objekty", function(x, y, button, down, isInBounds) {
+		createButton("Nekolizní objekty", function(x, y, button, down, isInBounds, uiListener) {
 			// TODO
 			return false;
 		});
@@ -370,27 +384,27 @@ $.GIsoGame.Editor = (function() {
 			dragOffset: 0,
 			mouseDown: false,
 		};		
-		spritesMenu.onMouse = function(x, y, button, down, isInBounds) {
+		spritesMenu.onMouse = function(x, y, button, down, isInBounds, uiListener) {
 			if (button == 1) {
 				if (!down) { 
-					spritesMenu.dragged = false;					
+					uiListener.dragged = false;					
 				} else if (isInBounds) {
-					spritesMenu.dragged = true;
+					uiListener.dragged = true;
 					return true;
 				}
 			} else if (button == 0) {
 				if (!down) {
-					spritesMenu.mouseDown = false;
+					uiListener.mouseDown = false;
 				} else if (isInBounds) {					
-					spritesMenu.mouseDown = true;
+					uiListener.mouseDown = true;
 					return true;
 				}
 			}
 			return false;
 		};
-		spritesMenu.onDrag = function(dx, dy, isInBounds) {
-			if (spritesMenu.visible && spritesMenu.dragged) {
-				spritesMenu.dragOffset += dx;
+		spritesMenu.onDrag = function(dx, dy, isInBounds, uiListener) {
+			if (uiListener.visible && uiListener.dragged) {
+				uiListener.dragOffset += dx;
 				return true;
 			}
 			return false;
@@ -408,29 +422,29 @@ $.GIsoGame.Editor = (function() {
 			dragged: false,
 			mouseDown: false,
 		};
-		desktopArea.onMouse = function(x, y, button, down, isInBounds) {
+		desktopArea.onMouse = function(x, y, button, down, isInBounds, uiListener) {
 			if (button == 1) {
 				if (!down) { 
-					desktopArea.dragged = false;					
+					uiListener.dragged = false;					
 				} else if (isInBounds) {
-					desktopArea.dragged = true;
+					uiListener.dragged = true;
 					return true;
 				}
 			} else if (button == 0) {
 				if (!down) {
-					desktopArea.mouseDown = false;
+					uiListener.mouseDown = false;
 				} else if (isInBounds) {
 					// aby šlo to samé pole překreslit když na něj kliknu (ne držení)
 					lastPaintedX = -1;
 					lastPaintedY = -1;
-					desktopArea.mouseDown = true;
+					uiListener.mouseDown = true;
 					return true;
 				}
 			}
 			return false;			
 		};
-		desktopArea.onDrag = function(dx, dy, isInBounds) {
-			if (desktopArea.dragged) {
+		desktopArea.onDrag = function(dx, dy, isInBounds, uiListener) {
+			if (uiListener.dragged) {
 				viewX += dx;
 				viewY += dy;
 				return true;
