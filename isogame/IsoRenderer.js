@@ -45,14 +45,10 @@ $.GIsoGame.IsoRenderer = {
 			// Mimo view nemá cenu vykreslovat
 			if (x[2] < 0 || x[0] > width || y[1] > height || y[3] < 0)
 				return;
-						
-			if (isoCell.value != undefined) {
-				innerDrawSprite(0, isoCell.value.spriteId, isoCell.value.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);	
-
-				// existuje přechod?
-				if (isoCell.value.layerSpriteId != undefined)
-					innerDrawSprite(0, isoCell.value.layerSpriteId, isoCell.value.layerFrameId, isoCell.ix, isoCell.iy - cellH / 2, false);	
-			}
+					
+			if (isoCell.value != undefined)
+				for (let i = 0; i < isoCell.value.length / 2; i++)
+					innerDrawSprite(0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], isoCell.ix, isoCell.iy - cellH / 2, false);			
 			
 			if ($.GIsoGame.Configuration.outlines) 
 				$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,40%,0.5)", false);

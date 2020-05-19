@@ -14,15 +14,7 @@ $.GIsoGame.LevelLoader = {
 		let walls = level.walls;
 		
 		let innerGetGroundAtIndex = function(index) {
-			let tile = grounds[index];
-			if (tile == undefined)
-				return undefined;				
-			return {
-				spriteId: tile[0],
-				frameId: tile[1],
-				layerSpriteId: tile[2],
-				layerFrameId: tile[3]
-			};
+			return grounds[index];
 		};
 		
 		let innerGetObjectAtIndex = function(index) {

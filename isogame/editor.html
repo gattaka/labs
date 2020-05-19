@@ -54,6 +54,7 @@ $.GIsoGame.Editor = (function() {
 	};
 	
 	let mergeMatrix;
+	let overlapMatrix;
 	let fullTileType;
 	
 	let fills = [];
@@ -169,56 +170,51 @@ $.GIsoGame.Editor = (function() {
 		return range[0] + Math.floor(Math.random() * (range[1] - range[0]));
 	};
 				
-	let placeTile = function(index, spriteId, type) {		
-		let existing = level.grounds[index];
-		if (existing == undefined || existing.length == 0 || type == fullTileType) {
-			level.grounds[index] = [spriteId, getRandomTileByType(spriteId, type)]; // prázdné
-		} else {
-			let existingPrimSpriteId = existing[0];
-			let existingPrimType = getTypeByTile(existingPrimSpriteId, existing[1]);
-			let existingSecSpriteId = existing[2];
-			let existingSecType = existingSecSpriteId == undefined ? undefined : getTypeByTile(existingSecSpriteId, existing[3]);
-			
-			if (existingSecSpriteId == undefined) {
-				if (existingPrimSpriteId == spriteId) {
-					level.grounds[index][1] = getRandomTileByType(spriteId, mergeMatrix[existingPrimType][type]);
-				} else if (existingPrimType == type){
-					level.grounds[index][0] = spriteId;
-					level.grounds[index][1] = getRandomTileByType(spriteId, type);
-				} else {
-					level.grounds[index][2] = spriteId;
-					level.grounds[index][3] = getRandomTileByType(spriteId, type);
-				}
-			} else {
-				if (existingSecSpriteId == spriteId) {
-					let mergedType = mergeMatrix[existingSecType][type];
-					let mergedTile = getRandomTileByType(spriteId, mergedType);
-					if (mergedType == fullTileType) {
-						level.grounds[index] = [spriteId, mergedTile];
-					} else {
-						level.grounds[index][3] = mergedTile;	
-					}
-				} else if (existingPrimSpriteId == spriteId) {
-					if (existingSecType == type) {
-						level.grounds[index] = [spriteId, getRandomTileByType(spriteId, mergeMatrix[existingPrimType][type])];
-					} else {
-						let mergedType = mergeMatrix[existingPrimType][type];
-						let mergedTile = getRandomTileByType(spriteId, mergedType);
-						if (mergedType == fullTileType) {
-							level.grounds[index] = [spriteId, mergedTile];
-						} else {
-							level.grounds[index][0] = level.grounds[index][2];
-							level.grounds[index][1] = level.grounds[index][3];
-							level.grounds[index][2] = spriteId;
-							level.grounds[index][3] = mergedTile;
-						}
-					}	
-				} else {
-					level.grounds[index][2] = spriteId;
-					level.grounds[index][3] = getRandomTileByType(spriteId, type);
-				}
-			}			
+	let placeTile = function(index, spriteId, type) {	
+		let tile = level.grounds[index];
+		if (tile == undefined || tile.length == 0 || type == fullTileType) {
+			// prázdné nebo se nastavuje plně překrývající tile
+			level.grounds[index] = [spriteId, getRandomTileByType(spriteId, type)]; 
+			return;
 		}
+		let matchingSpriteLayer;		
+		let matchingSpriteType;
+		let layers = 0;
+		
+		for (let i = 0; i < 4; i++) {	
+			let layerId = i * 2;
+			let layerSpriteId = tile[layerId];
+			if (layerSpriteId == undefined)
+				break;
+			let layerType = getTypeByTile(layerSpriteId, tile[layerId + 1]);
+			// bude nový tile překrývat danou vrstvu? Pokud ano, vrstvu smaž
+			if (layerSpriteId != spriteId && overlapMatrix[layerType][type] == 1) {
+				tile.splice(layerId, 2);
+				i--;
+				continue;
+			}
+			if (layerSpriteId == spriteId) {
+				matchingSpriteLayer = i;
+				matchingSpriteType = layerType;
+			}
+			layers++;
+		}		
+		
+		let mergedType;
+		if (matchingSpriteLayer != undefined && matchingSpriteLayer == layers - 1) 
+			mergedType = mergeMatrix[matchingSpriteType][type];			
+		
+		// existuje vrstva, se kterou jde provést merge 
+		if (matchingSpriteLayer != undefined && matchingSpriteLayer == layers - 1 && mergedType != -1) {			
+			tile.splice(matchingSpriteLayer * 2, 2);
+			tile.push(spriteId);
+			tile.push(getRandomTileByType(spriteId, mergedType));
+		} else {
+			if (layers == 4)			
+				tile.splice(0, 2);
+			tile.push(spriteId);
+			tile.push(getRandomTileByType(spriteId, type));
+		}		
 	};
 			
 	let paint = function(mx, my) {		
@@ -352,9 +348,9 @@ $.GIsoGame.Editor = (function() {
 	* INIT
 	*/
 	
-	let initMergeMatrix = function() {
+	let initTileTypesMatrices = function() {
 		let TL=0,T=1,TR=2,L=3,M=4,R=5,BL=6,B=7,BR=8,OTL=9,OTR=10,OBL=11,OBR=12;
-		let E=M; // nedefinováno -- zatím budiž M
+		let E=-1; // nedefinováno -- zatím budiž M
 		fullTileType = M;
 		mergeMatrix = [
 			//  TL   T  TR   L   M   R  BL   B  BR OTL OTR OBL OBR
@@ -375,6 +371,26 @@ $.GIsoGame.Editor = (function() {
 		for (let i = 0; i < mergeMatrix.length; i++)
 			for (let j = 0; j < mergeMatrix.length; j++)
 				mergeMatrix[j][i] = mergeMatrix[i][j];
+				
+		let n = 1; // new
+		let o = -1; // old
+		let x = 0; // n/a
+		overlapMatrix = [
+		// new  TL   T  TR   L   M   R  BL   B  BR OTL OTR OBL OBR   // old
+			[    n,  n,  x,  n,  n,  x,  x,  x,  x,  x,  x,  n,  n], // TL
+			[    o,  n,  o,  x,  n,  x,  x,  x,  x,  x,  x,  n,  n], // T
+			[    x,  n,  n,  x,  n,  n,  x,  x,  x,  x,  x,  n,  n], // TR
+			[    o,  x,  x,  n,  n,  x,  o,  x,  x,  x,  n,  x,  n], // L
+			[    o,  o,  o,  o,  n,  o,  o,  o,  o,  o,  o,  o,  o], // M
+			[    x,  x,  o,  x,  n,  n,  x,  x,  o,  n,  x,  n,  x], // R
+			[    x,  x,  x,  n,  n,  x,  n,  n,  x,  x,  n,  x,  n], // BL
+			[    x,  x,  x,  x,  n,  x,  o,  n,  o,  n,  n,  x,  x], // B
+			[    x,  x,  x,  x,  n,  n,  x,  n,  n,  n,  n,  x,  x], // BR			
+			[    x,  x,  x,  x,  n,  o,  x,  o,  o,  n,  x,  x,  x], // OTL
+			[    x,  x,  x,  o,  n,  x,  o,  o,  o,  x,  n,  x,  x], // OTR
+			[    o,  o,  o,  x,  n,  o,  x,  x,  x,  x,  x,  n,  x], // OBL
+			[    o,  o,  o,  o,  n,  x,  o,  x,  x,  x,  x,  x,  n], // OBR
+		];
 	};
 	
 	let addFill = function(group, spriteId, middle, right, bottom, top, left, 
@@ -421,7 +437,7 @@ $.GIsoGame.Editor = (function() {
 	
 		currentLevel = $.GIsoGame.LevelLoader.createLevel(level);
 				
-		initMergeMatrix();
+		initTileTypesMatrices();
 				
 		spriteLoader = $.GIsoGame.SpriteLoader.create();
 		
