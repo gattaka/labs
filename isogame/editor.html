@@ -200,11 +200,7 @@ $.GIsoGame.Editor = (function() {
 					continue;
 				}
 			}	
-			break;
 		}		
-
-		if (layers == 4)			
-			tile.splice(0, 2);
 		tile.push(spriteId);
 		tile.push(getRandomTileByType(spriteId, type));		
 	};
