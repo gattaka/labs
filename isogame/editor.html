@@ -44,7 +44,7 @@ $.GIsoGame.Editor = (function() {
 		y: 0,
 		width: 0,
 		height: 100,
-		itemWidth: 64,
+		itemWidth: cellW * 1.5,
 		dragOffset: 0,
 	};
 	
@@ -56,7 +56,8 @@ $.GIsoGame.Editor = (function() {
 	let brush = {
 		size: 1,
 		groupId: 0,
-		spriteId: 0
+		spriteId: 0,
+		tileId: 0,
 	};	
 	
 	let level;
@@ -90,19 +91,46 @@ $.GIsoGame.Editor = (function() {
 		window.requestAnimationFrame(draw);
 	};
 	
-	let drawSpritesMenu = function(groupId) {		
+	let drawGroundMenu = function() {		
+		let group = 0;
 		let texDetailFunc = function(i) {
 			return {
-				tex: spriteLoader.getTexture(groupId, i),
+				tex: spriteLoader.getTexture(group, i),
 				col: 0,
 				row: 0
 			};
 		};
 		let chooseItemFunc = function(id) {
-			brush.groupId = groupId;
+			brush.groupId = group;
 			brush.spriteId = id;
 		};
-		drawItemsMenu(spritesMenu, spriteLoader.getGroupSize(groupId), texDetailFunc, chooseItemFunc);
+		drawItemsMenu(spritesMenu, spriteLoader.getGroupSize(group), texDetailFunc, chooseItemFunc);
+	};
+	
+	let drawWallsMenu = function() {
+		let group = 3;
+		let wallsArray = [];
+		for (let i = 0; i < spriteLoader.getGroupSize(group); i++) {
+			let tex = spriteLoader.getTexture(group, i);
+			let tilesCount = tex.cols * tex.rows;
+			for (let j = 0; j < tilesCount; j++)
+				wallsArray.push([i, j]);
+		}		
+		let texDetailFunc = function(i) {
+			let tex = spriteLoader.getTexture(group, wallsArray[i][0]);
+			let tileId = wallsArray[i][1];
+			return {
+				tex: tex,
+				col: tileId % tex.cols,
+				row: Math.floor(tileId / tex.cols)
+			};
+		};
+		let chooseItemFunc = function(i) {
+			brush.groupId = group;
+			brush.spriteId = wallsArray[i][0];
+			brush.tileId = wallsArray[i][1];
+		};
+		drawItemsMenu(spritesMenu, wallsArray.length, texDetailFunc, chooseItemFunc);
 	};
 	
 	let drawItemsMenu = function(menu, itemsCount, texDetailFunc, chooseItemFunc) {		
@@ -141,12 +169,15 @@ $.GIsoGame.Editor = (function() {
 		chooseItemFunc(choosenItemId);
 		
 		for (let i = 0; i < itemsCount; i++) {	
-			let texDetail = texDetailFunc(i);			
-			let slotCenterX = itemsStartX + menuItemBorder + (i - choosenItemId) * slotWidth + (menu.itemWidth / 2);
-			let x = Math.floor(slotCenterX - texDetail.tex.width / 2 /* + texDetail.tex.offsetX*/);
+			let texDetail = texDetailFunc(i);						
+			let offsetX = texDetail.tex.offsetX == 0 ? texDetail.tex.width / 2 : texDetail.tex.offsetX;
+			let offsetY = texDetail.tex.offsetY == 0 ? texDetail.tex.height / 2 : texDetail.tex.offsetY;
+			
+			let slotCenterX = itemsStartX + (i - choosenItemId) * slotWidth + slotWidth / 2;
+			let x = Math.floor(slotCenterX - cellW / 2 - offsetX);
 			let leftOverlap = fromX - x;
 			let rightOverlap = x + texDetail.tex.width - toX;
-			let y = Math.floor(fromY + menu.height / 2 - menuBorder - texDetail.tex.height / 2 /* - texDetail.tex.offsetY*/);
+			let y = Math.floor(fromY + menu.height / 2 - menuBorder - offsetY);
 			if ((leftOverlap < 0 || rightOverlap < 0) && leftOverlap < texDetail.tex.width && rightOverlap < texDetail.tex.width) {
 				let leftTrim = leftOverlap > 0 ? leftOverlap : 0;
 				let rightTrim = rightOverlap > 0 ? rightOverlap : 0;
@@ -231,6 +262,22 @@ $.GIsoGame.Editor = (function() {
 			}
 		}					
 	};
+	
+	let paintWall = function(mx, my) {
+		let index = mx + my * level.mapW;
+		level.walls[index] = [brush.spriteId, brush.tileId];
+	};
+	
+	let paint = function(mx, my) {
+		switch (brush.groupId) {
+		case 0:
+			paintGround(mx, my);
+			break;
+		case 3:
+			paintWall(mx, my);
+			break;
+		}
+	};
 			
 	let drawScene = function(timestamp) {	
 		if (!spriteLoader.isLoaded())
@@ -242,7 +289,8 @@ $.GIsoGame.Editor = (function() {
 				
 		isoRenderer.update(delay, viewX, viewY);
 		
-		drawSpritesMenu(3);
+		// drawGroundMenu();
+		drawWallsMenu();
 
 		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
 		
@@ -251,7 +299,7 @@ $.GIsoGame.Editor = (function() {
 			let paintedX = Math.floor(cursor.mx); 
 			let paintedY = Math.floor(cursor.my);
 			if (paintedX != lastPaintedX || paintedY != lastPaintedY) {
-				paintGround(paintedX, paintedY);
+				paint(paintedX, paintedY);
 				lastPaintedX = paintedX;		
 				lastPaintedY = paintedY;
 			}
@@ -447,7 +495,7 @@ $.GIsoGame.Editor = (function() {
 		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 16);
 		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 16);
 		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
-		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 42, 128 + 64);
+		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 50, 128 + 64);
 		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);
 		
 		spriteLoader.load();
