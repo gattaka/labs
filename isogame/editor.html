@@ -48,19 +48,16 @@ $.GIsoGame.Editor = (function() {
 		dragOffset: 0,
 	};
 	
-	let brush = {
-		size: 1,
-		fillId: 0,
-	};
-	
+	// Ground tiles vyplňování
 	let mergeMatrix;
 	let overlapMatrix;
-	let fullTileType;
-	
-	let fills = [];
-
-	let lastPaintedX = -1;
-	let lastPaintedY = -1;
+	let fullTileType;	
+	let fills = [];	
+	let brush = {
+		size: 1,
+		groupId: 0,
+		spriteId: 0
+	};	
 	
 	let level;
 	
@@ -69,6 +66,9 @@ $.GIsoGame.Editor = (function() {
 	
 	// na které části UI je prováděn mouse-drag
 	let dragTargetId = -1;
+
+	let lastPaintedX = -1;
+	let lastPaintedY = -1;
 		
 	let cursor = {
 		lastSx: 0,
@@ -90,18 +90,19 @@ $.GIsoGame.Editor = (function() {
 		window.requestAnimationFrame(draw);
 	};
 	
-	let drawSpritesMenu = function() {		
+	let drawSpritesMenu = function(groupId) {		
 		let texDetailFunc = function(i) {
 			return {
-				tex: spriteLoader.getTexture(0, i),
+				tex: spriteLoader.getTexture(groupId, i),
 				col: 0,
 				row: 0
 			};
 		};
 		let chooseItemFunc = function(id) {
-			brush.fillId = id;
+			brush.groupId = groupId;
+			brush.spriteId = id;
 		};
-		drawItemsMenu(spritesMenu, spriteLoader.getGroupSize(0), texDetailFunc, chooseItemFunc);
+		drawItemsMenu(spritesMenu, spriteLoader.getGroupSize(groupId), texDetailFunc, chooseItemFunc);
 	};
 	
 	let drawItemsMenu = function(menu, itemsCount, texDetailFunc, chooseItemFunc) {		
@@ -117,71 +118,72 @@ $.GIsoGame.Editor = (function() {
 		ctx.fillStyle = "#222";		
 		ctx.fillRect(fromX, fromY, toX - fromX, toY - fromY);
 		
-		let itemWidth = menu.itemWidth + menuItemBorder * 2;
-		let itemsStartX = Math.floor(width / 2 - itemWidth / 2);
+		let slotWidth = menu.itemWidth + menuItemBorder * 2;
+		let itemsStartX = Math.floor(width / 2 - slotWidth / 2);
 		
 		ctx.fillStyle = "#333";		
-		ctx.fillRect(itemsStartX, fromY, itemWidth, toY - fromY);
+		ctx.fillRect(itemsStartX, fromY, slotWidth, toY - fromY);
 		
 		if (mouseButtons[0] && dragTargetId == menu.dragTargetId) {
 			let diff = cursor.sx - itemsStartX;
-			menu.dragOffset -= Math.floor(diff / itemWidth) * itemWidth;
+			menu.dragOffset -= Math.floor(diff / slotWidth) * slotWidth;
 			mouseButtons[0] = false;
 		}
 		
-		let choosenItemId = Math.floor(-menu.dragOffset / itemWidth);
+		let choosenItemId = Math.floor(-menu.dragOffset / slotWidth);
 		if (choosenItemId < 0) {
-			menu.dragOffset += itemWidth * choosenItemId;
+			menu.dragOffset += slotWidth * choosenItemId;
 			choosenItemId = 0;			
 		} else if (choosenItemId >= itemsCount) {
-			menu.dragOffset += itemWidth * (choosenItemId - itemsCount);
+			menu.dragOffset += slotWidth * (choosenItemId - itemsCount);
 			choosenItemId = itemsCount - 1;
 		}
 		chooseItemFunc(choosenItemId);
 		
 		for (let i = 0; i < itemsCount; i++) {	
 			let texDetail = texDetailFunc(i);			
-			let x = itemsStartX + menuItemBorder + (i - choosenItemId) * itemWidth;			
+			let slotCenterX = itemsStartX + menuItemBorder + (i - choosenItemId) * slotWidth + (menu.itemWidth / 2);
+			let x = Math.floor(slotCenterX - texDetail.tex.width / 2 /* + texDetail.tex.offsetX*/);
 			let leftOverlap = fromX - x;
 			let rightOverlap = x + texDetail.tex.width - toX;
-			let itemsStartY = Math.floor(fromY + menu.height / 2 - menuBorder - texDetail.tex.height / 2);
+			let y = Math.floor(fromY + menu.height / 2 - menuBorder - texDetail.tex.height / 2 /* - texDetail.tex.offsetY*/);
 			if ((leftOverlap < 0 || rightOverlap < 0) && leftOverlap < texDetail.tex.width && rightOverlap < texDetail.tex.width) {
 				let leftTrim = leftOverlap > 0 ? leftOverlap : 0;
 				let rightTrim = rightOverlap > 0 ? rightOverlap : 0;
 				let trimWidth = texDetail.tex.width - leftTrim - rightTrim;
 				ctx.drawImage(texDetail.tex.canvas, 
 					texDetail.col * texDetail.tex.width + leftTrim, texDetail.row * texDetail.tex.height, trimWidth, texDetail.tex.height, 
-					x + leftTrim, itemsStartY, trimWidth, texDetail.tex.height);	
+					x + leftTrim, y, trimWidth, texDetail.tex.height);	
 			}
 		}
 	};
 	
-	let getTypeByTile = function(spriteId, tileId) {
-		let tiles = fills[spriteId].tiles;
+	let getTypeByTile = function(groupId, spriteId, tileId) {
+		let tiles = fills[groupId][spriteId].tiles;
 		for (let type = 0; type < tiles.length; type++)
 			if (tileId >= tiles[type][0] && tileId < tiles[type][1])
 				return type;
 		return -1;
 	};
 
-	let getRandomTileByType = function(spriteId, type) {
-		let fill = fills[spriteId];
+	let getRandomTileByType = function(groupId, spriteId, type) {
+		let fill = fills[groupId][spriteId];
 		let range = fill.tiles[type];	
 		return range[0] + Math.floor(Math.random() * (range[1] - range[0]));
 	};
 				
-	let placeTile = function(index, spriteId, type) {	
+	let placeGroundTile = function(index, spriteId, type) {	
 		let tile = level.grounds[index];
 		if (tile == undefined || tile.length == 0 || type == fullTileType) {
 			// prázdné nebo se nastavuje plně překrývající tile
-			level.grounds[index] = [spriteId, getRandomTileByType(spriteId, type)]; 
+			level.grounds[index] = [spriteId, getRandomTileByType(0, spriteId, type)]; 
 			return;
 		}
 					
 		let layers = tile.length / 2;				
 		for (let i = tile.length - 2; i >= 0; i -= 2) {				
 			let layerSpriteId = tile[i];
-			let layerType = getTypeByTile(layerSpriteId, tile[i + 1]);
+			let layerType = getTypeByTile(0, layerSpriteId, tile[i + 1]);
 			// bude nový tile překrývat danou vrstvu? Pokud ano, vrstvu smaž
 			if (overlapMatrix[layerType][type] == 1) {
 				tile.splice(i, 2);
@@ -202,10 +204,10 @@ $.GIsoGame.Editor = (function() {
 			}	
 		}		
 		tile.push(spriteId);
-		tile.push(getRandomTileByType(spriteId, type));		
+		tile.push(getRandomTileByType(0, spriteId, type));		
 	};
 			
-	let paint = function(mx, my) {		
+	let paintGround = function(mx, my) {		
 		let fromX = mx - brush.size;
 		let toX = mx + brush.size;
 		let fromY = my - brush.size;
@@ -225,7 +227,7 @@ $.GIsoGame.Editor = (function() {
 				else if (ty == fromY) type = 1; // horní strana
 				else if (ty == toY) type = 7; // dolní strana
 				else type = 4; // prostředek					
-				placeTile(index, brush.fillId, type);
+				placeGroundTile(index, brush.spriteId, type);
 			}
 		}					
 	};
@@ -240,7 +242,7 @@ $.GIsoGame.Editor = (function() {
 				
 		isoRenderer.update(delay, viewX, viewY);
 		
-		drawSpritesMenu();
+		drawSpritesMenu(3);
 
 		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
 		
@@ -249,7 +251,7 @@ $.GIsoGame.Editor = (function() {
 			let paintedX = Math.floor(cursor.mx); 
 			let paintedY = Math.floor(cursor.my);
 			if (paintedX != lastPaintedX || paintedY != lastPaintedY) {
-				paint(paintedX, paintedY);
+				paintGround(paintedX, paintedY);
 				lastPaintedX = paintedX;		
 				lastPaintedY = paintedY;
 			}
@@ -384,7 +386,9 @@ $.GIsoGame.Editor = (function() {
 	let addFill = function(group, spriteId, middle, right, bottom, top, left, 
 			innerTopRight, innerBottomRight, innerTopLeft, innerBottomLeft,
 			outerTopRight, outerBottomRight, outerTopLeft, outerBottomLeft) {
-		fills.push({
+		if (fills[group] == undefined)
+			fills[group] = [];
+		fills[group][spriteId] = {
 			group: group,
 			spriteId: spriteId,
 			tiles: [outerTopLeft, top, outerTopRight, 
@@ -392,7 +396,7 @@ $.GIsoGame.Editor = (function() {
 					outerBottomLeft, bottom, outerBottomRight,
 					innerTopLeft, innerTopRight,
 					innerBottomLeft, innerBottomRight]			
-		});
+		};
 	};
 	
 	let init = function() {	
@@ -429,7 +433,8 @@ $.GIsoGame.Editor = (function() {
 				
 		spriteLoader = $.GIsoGame.SpriteLoader.create();
 		
-		let materials = ["grass_medium_64x32.png", "stone_path_64x32.png", "grass_dry_64x32.png", "forest_ground_64x32.png", "sand_64x32.png", "dirt_dark_64x32.png"];
+		let materials = ["grass_medium_64x32.png", "stone_path_64x32.png", "grass_dry_64x32.png", "forest_ground_64x32.png", "sand_64x32.png", 
+						"dirt_dark_64x32.png"];
 		for (let i = 0; i < materials.length; i++) {
 			spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/" + materials[i], 8, 7, cellW, cellH, 0, 0);
 			addFill(0, i, [0, 20], 			
