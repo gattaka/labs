@@ -1,11 +1,12 @@
 [HTML]<head>
-	<script type="text/javascript" src="./SpriteLoader.js"></script>
-	<script type="text/javascript" src="./LevelLoader.js"></script>
-	<script type="text/javascript" src="./GFXUtils.js"></script>
-	<script type="text/javascript" src="./Minimap.js"></script>
-	<script type="text/javascript" src="./IsoRenderer.js"></script>	
-	<script type="text/javascript" src="./Configuration.js"></script>		
-	<script type="text/javascript" src="./MapSculptor.js"></script>			
+	<script type="text/javascript" src="./js/SpriteLoader.js"></script>
+	<script type="text/javascript" src="./js/LevelLoader.js"></script>
+	<script type="text/javascript" src="./js/GFXUtils.js"></script>
+	<script type="text/javascript" src="./js/Minimap.js"></script>
+	<script type="text/javascript" src="./js/IsoRenderer.js"></script>	
+	<script type="text/javascript" src="./js/Configuration.js"></script>		
+	<script type="text/javascript" src="./js/MapSculptor.js"></script>			
+	<script type="text/javascript" src="./js/PersistanceManager.js"></script>				
 </head>
 <div style="margin: 10px 0;">
 	<canvas id="canvasT" style="width: 100%;" height="600"></canvas>
@@ -22,8 +23,11 @@ $.GIsoGame.Editor = (function() {
 	let halfWidth;
 	let halfHeight;
 	
+	let levelDraftCookieName = "GIsoGameLevelDraft";
+	
 	let cfg = $.GIsoGame.Configuration;
 	
+	let persistanceManager;
 	let spriteLoader;
 	let levelLoader;
 	let currentLevel;
@@ -154,7 +158,6 @@ $.GIsoGame.Editor = (function() {
 			ctx.fillText(button.text, button.x + cfg.uiSpacing, button.y + button.height - 9);
 		}
 	};
-
 				
 	let drawScene = function(timestamp) {	
 		if (!spriteLoader.isLoaded())
@@ -162,8 +165,8 @@ $.GIsoGame.Editor = (function() {
 			
 		// Update času pro animace
 		let delay = timestamp - lastTime;
-		lastTime = timestamp;	
-				
+		lastTime = timestamp;			
+
 		isoRenderer.update(delay, viewX, viewY);
 		
 		drawButtons();
@@ -204,50 +207,7 @@ $.GIsoGame.Editor = (function() {
 			if (uiListeners[i].visible 
 				&& uiListeners[i].onMouse(cursor.sx, cursor.sy, button, down, isInBounds(uiListeners[i], cursor.sx, cursor.sy), uiListeners[i]))
 				break;
-	};
-	
-	canvas.addEventListener('contextmenu', function(e) {		
-		if (e.button == 2) e.preventDefault();		
-	});
-	
-	canvas.addEventListener("mousedown", function (e) {
-		mouseButtonChange(true, e.button);
-	}, false);
- 
-	canvas.addEventListener("mouseup", function (e) {
-		mouseButtonChange(false, e.button);
-	}, false);
-	
-	canvas.addEventListener("mouseleave", function (e) {
-		mouseButtonChange(false, 0);
-		mouseButtonChange(false, 1);
-		mouseButtonChange(false, 2);
-	}, false);
-	
-	canvas.addEventListener("mousemove", function (e) {
-		// výchozí vyresetování kurzoru
-		document.body.style.cursor = "default";
-	
-		let bound = canvas.getBoundingClientRect();
-		cursor.lastSx = cursor.sx;
-		cursor.lastSy = cursor.sy;
-		cursor.sx = e.clientX - bound.x;
-		cursor.sy = e.clientY - bound.y;
-		let ix = cursor.sx - viewX;
-		let iy = cursor.sy - viewY;
-		mapCoord = isoRenderer.toMap(ix, iy);	
-		cursor.mx = mapCoord.mx;
-		cursor.my = mapCoord.my;
-		cursor.vix = ix;
-		cursor.viy = iy;		
-		
-		let diffX = cursor.sx - cursor.lastSx;
-		let diffY = cursor.sy - cursor.lastSy;
-		for (let i = 0; i < uiListeners.length; i++)
-			if (uiListeners[i].visible 
-				&& uiListeners[i].onDrag(diffX, diffY, isInBounds(uiListeners[i], cursor.sx, cursor.sy), uiListeners[i]))
-				break;
-	}, false);
+	};	
 
 	/*
 	* INIT
@@ -464,7 +424,10 @@ $.GIsoGame.Editor = (function() {
 				}
 			} else if (button == 0 || button == 2) {
 				if (!down) {
-					uiListener.mouseDown = false;
+					if (uiListener.mouseDown) {
+						uiListener.mouseDown = false;
+						saveDraft();
+					}
 				} else if (isInBounds) {
 					// aby šlo to samé pole překreslit když na něj kliknu (ne držení)
 					brush.lastPaintedX = -1;
@@ -487,65 +450,124 @@ $.GIsoGame.Editor = (function() {
 		uiListeners.push(desktopArea);
 	};
 	
+	let createCanvasListeners = function() {
+		canvas.addEventListener('contextmenu', function(e) {		
+			if (e.button == 2) e.preventDefault();		
+		});
+		
+		canvas.addEventListener("mousedown", function (e) {
+			mouseButtonChange(true, e.button);
+		}, false);
+	 
+		canvas.addEventListener("mouseup", function (e) {
+			mouseButtonChange(false, e.button);
+		}, false);
+		
+		canvas.addEventListener("mouseleave", function (e) {
+			mouseButtonChange(false, 0);
+			mouseButtonChange(false, 1);
+			mouseButtonChange(false, 2);
+		}, false);
+		
+		canvas.addEventListener("mousemove", function (e) {
+			// výchozí vyresetování kurzoru
+			document.body.style.cursor = "default";
+		
+			let bound = canvas.getBoundingClientRect();
+			cursor.lastSx = cursor.sx;
+			cursor.lastSy = cursor.sy;
+			cursor.sx = e.clientX - bound.x;
+			cursor.sy = e.clientY - bound.y;
+			let ix = cursor.sx - viewX;
+			let iy = cursor.sy - viewY;
+			mapCoord = isoRenderer.toMap(ix, iy);	
+			cursor.mx = mapCoord.mx;
+			cursor.my = mapCoord.my;
+			cursor.vix = ix;
+			cursor.viy = iy;		
+			
+			let diffX = cursor.sx - cursor.lastSx;
+			let diffY = cursor.sy - cursor.lastSy;
+			for (let i = 0; i < uiListeners.length; i++)
+				if (uiListeners[i].visible 
+					&& uiListeners[i].onDrag(diffX, diffY, isInBounds(uiListeners[i], cursor.sx, cursor.sy), uiListeners[i]))
+					break;
+		}, false);
+	};
+	
+	let saveDraft = function() {
+		persistanceManager.saveData(level);
+	};
+	
 	let init = function() {	
 		window.addEventListener("resize", updateWindowSize);				
 		
-		cfg.outlines = true;					
+		//cfg.outlines = true;					
 		
 		canvas.style.position = "absolute";
 		canvas.style.left = "0";
 		canvas.style.top = "0";
 		canvas.style.zIndex = "999";				
-				
-		level = {
-			mapW: 10,
-			mapH: 10,
-			grounds:[],
-			objects: [],
-			walls: []
-		};
-	
-		currentLevel = $.GIsoGame.LevelLoader.createLevel(level);								
-		spriteLoader = $.GIsoGame.SpriteLoader.create();		
 		
-		let materials = ["grass_medium_64x32.png", "stone_path_64x32.png", "grass_dry_64x32.png", "forest_ground_64x32.png", "sand_64x32.png", 
+		spriteLoader = $.GIsoGame.SpriteLoader.create();				
+		let grounds = ["grass_medium_64x32.png", "stone_path_64x32.png", "grass_dry_64x32.png", "forest_ground_64x32.png", "sand_64x32.png", 
 						"dirt_dark_64x32.png"];
-		for (let i = 0; i < materials.length; i++) {
-			spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/" + materials[i], 8, 7, cellW, cellH, 0, 0);
+		for (let i = 0; i < grounds.length; i++) {
+			spriteLoader.queueTexture(0, "./sprites/grounds/" + grounds[i], 8, 7, cellW, cellH, 0, 0);
 			addFill(0, i, [0, 20], 			
 				[20, 24], [24, 28], [28, 32], [32, 36],
 				[36, 38], [38, 40], [40, 42], [42, 44],
 				[44, 46], [46, 48], [48, 50], [50, 52]
 			);
 		}
-		
-		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 16);
-		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 16);
-		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
-		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 50, 128 + 64);
-		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);
-		
+		spriteLoader.queueTexture(0, "./sprites/grounds/32_flagstone_tiles.png", 4, 8, cellW, cellH, 0, 0);
+		addFill(0, grounds.length, [0, 32], 			
+				[0, 32], [0, 32], [0, 32], [0, 32],
+				[0, 32], [0, 32], [0, 32], [0, 32],
+				[0, 32], [0, 32], [0, 32], [0, 32]
+			);
+		spriteLoader.queueTexture(2, "./sprites/objects/weed03.png", 1, 1, 128, 64, 0, 16);
+		spriteLoader.queueTexture(2, "./sprites/objects/swirl02.png", 1, 1, 128, 64, 0, 16);
+		spriteLoader.queueTexture(3, "./sprites/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
+		spriteLoader.queueTexture(3, "./sprites/objects/pine-none03.png", 1, 1, 256, 256, 64 + 50, 128 + 64);
+		spriteLoader.queueTexture(3, "./sprites/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);	
 		spriteLoader.load();
-		
-		mapSculptor = $.GIsoGame.MapSculptor.create(fills, level);
-		
+						
 		createMenus();
 		createButtons();		
 		createDesktopArea();
 		
-		updateWindowSize();		
-					
-		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor);		
+		updateWindowSize();
 		
-		let iso = isoRenderer.toIso(level.mapW / 2, level.mapH / 2);
-		viewX = halfWidth - iso.ix;
-		viewY = (height - groundsMenu.height - cfg.uiMargin * 2) / 2 - iso.iy;		
-						
-		// https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
-		// https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-ref
-		// https://developer.mozilla.org/en-US/docs/Web/API/Performance/now
-		// https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
-		window.requestAnimationFrame(draw);		
+		let self = this;
+		persistanceManager = $.GIsoGame.PersistanceManager.create();
+		persistanceManager.loadData(function(data){
+			level = data;
+			if (level == undefined) 
+				level = {
+					mapW: 10,
+					mapH: 10,
+					grounds:[],
+					objects: [],
+					walls: []
+				};
+				
+			currentLevel = $.GIsoGame.LevelLoader.createLevel(level);											
+			mapSculptor = $.GIsoGame.MapSculptor.create(fills, level);
+			isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor);		
+			
+			let iso = isoRenderer.toIso(level.mapW / 2, level.mapH / 2);
+			viewX = halfWidth - iso.ix;
+			viewY = (height - groundsMenu.height - cfg.uiMargin * 2) / 2 - iso.iy;		
+				
+			createCanvasListeners();
+				
+			// https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
+			// https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-ref
+			// https://developer.mozilla.org/en-US/docs/Web/API/Performance/now
+			// https://developer.mozilla.org/en-US/docs/Web/API/Window/requestAnimationFrame
+			window.requestAnimationFrame(draw);	
+		});				
 	};		
 		
 	return {	

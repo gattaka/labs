@@ -1,12 +1,12 @@
 [HTML]<head>
-	<script type="text/javascript" src="../libs/astar.js"></script>	
-	<script type="text/javascript" src="./SpriteLoader.js"></script>
-	<script type="text/javascript" src="./LevelLoader.js"></script>
-	<script type="text/javascript" src="./GFXUtils.js"></script>
-	<script type="text/javascript" src="./Minimap.js"></script>
-	<script type="text/javascript" src="./IsoRenderer.js"></script>	
-	<script type="text/javascript" src="./Configuration.js"></script>
-	<script type="text/javascript" src="./Level1.dat.js"></script>
+	<script type="text/javascript" src="./js/Astar.js"></script>	
+	<script type="text/javascript" src="./js/SpriteLoader.js"></script>
+	<script type="text/javascript" src="./js/LevelLoader.js"></script>
+	<script type="text/javascript" src="./js/GFXUtils.js"></script>
+	<script type="text/javascript" src="./js/Minimap.js"></script>
+	<script type="text/javascript" src="./js/IsoRenderer.js"></script>	
+	<script type="text/javascript" src="./js/Configuration.js"></script>
+	<script type="text/javascript" src="./js/Level1.dat.js"></script>
 </head>
 <input type="checkbox" onchange="$.GIsoGame.Game.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
 <input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
@@ -392,16 +392,19 @@ $.GIsoGame.Game = (function() {
 		let level1 = $.GIsoGame.Level1.create();
 		currentLevel = $.GIsoGame.LevelLoader.createLevel(level1);
 		
-		spriteLoader = $.GIsoGame.SpriteLoader.create();
-		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_medium_64x32.png", 8, 7, cellW, cellH, 0, 0);
-		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/stone_path_64x32.png", 8, 7, cellW, cellH, 0, 0);			
-		spriteLoader.queueTexture(0, "https://www.gattserver.cz/fm-files/isometric-files/ground/grass_dry_64x32.png", 8, 7, cellW, cellH, 0, 0);
-		spriteLoader.queueTexture(1, "https://www.gattserver.cz/fm-files/isometric-files/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 64, 128 - 32);		
-		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/weed03.png", 1, 1, 128, 64, 0, 16);
-		spriteLoader.queueTexture(2, "https://www.gattserver.cz/fm-files/isometric-files/plants/swirl02.png", 1, 1, 128, 64, 0, 16);
-		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
-		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/plants/pine-none03.png", 1, 1, 256, 256, 64 + 42, 128 + 64);
-		spriteLoader.queueTexture(3, "https://www.gattserver.cz/fm-files/isometric-files/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);
+		spriteLoader = $.GIsoGame.SpriteLoader.create();				
+		let grounds = ["grass_medium_64x32.png", "stone_path_64x32.png", "grass_dry_64x32.png", "forest_ground_64x32.png", "sand_64x32.png", 
+						"dirt_dark_64x32.png"];
+		for (let i = 0; i < grounds.length; i++) 
+			spriteLoader.queueTexture(0, "./sprites/grounds/" + grounds[i], 8, 7, cellW, cellH, 0, 0);		
+		spriteLoader.queueTexture(1, "./sprites/characters/skeleton_0.png", 32, 8, heroSprite.width, heroSprite.height, 64, 128 - 32);		
+		spriteLoader.queueTexture(2, "./sprites/objects/weed03.png", 1, 1, 128, 64, 0, 16);
+		spriteLoader.queueTexture(2, "./sprites/objects/swirl02.png", 1, 1, 128, 64, 0, 16);
+		spriteLoader.queueTexture(3, "./sprites/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
+		spriteLoader.queueTexture(3, "./sprites/objects/pine-none03.png", 1, 1, 256, 256, 64 + 50, 128 + 64);
+		spriteLoader.queueTexture(3, "./sprites/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);	
+		spriteLoader.load();
+
 		
 		spriteLoader.load();
 			
