@@ -93,7 +93,7 @@ $.GIsoGame.IsoRenderer = {
 						innerDrawSprite(3, wall.spriteId, wall.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);	
 					
 					let object = currentLevel.getObjectAtCoord(mx, my);
-					if (object != undefined && object.length > 0) 
+					if (object != undefined) 
 						innerDrawSprite(2, object.spriteId, object.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);
 									
 					if ($.GIsoGame.Configuration.showNumbers) {

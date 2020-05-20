@@ -55,7 +55,7 @@ $.GIsoGame.MapSculptor = {
 		let getTypeByTile = function(groupId, spriteId, tileId) {
 			let tiles = fills[groupId][spriteId].tiles;
 			for (let type = 0; type < tiles.length; type++)
-				if (tileId >= tiles[type][0] && tileId < tiles[type][1])
+				if (tiles[type] != undefined && tileId >= tiles[type][0] && tileId < tiles[type][1])
 					return type;
 			return -1;
 		};
@@ -63,10 +63,18 @@ $.GIsoGame.MapSculptor = {
 		let getRandomTileByType = function(groupId, spriteId, type) {
 			let fill = fills[groupId][spriteId];
 			let range = fill.tiles[type];	
+			// pokud není definován tento typ tile, použij M typ (M=4)
+			if (range == undefined)
+				range = fill.tiles[4];
 			return range[0] + Math.floor(Math.random() * (range[1] - range[0]));
 		};
 		
 		let placeGroundTile = function(index, spriteId, type) {	
+			// pokud není definován tento typ tile, použij M typ (M=4)
+			let fill = fills[0][spriteId];			
+			if (fill.tiles[type] == undefined)
+				type = 4;
+
 			let tile = level.grounds[index];
 			if (tile == undefined || tile.length == 0 || type == fullTileType) {
 				// prázdné nebo se nastavuje plně překrývající tile
@@ -101,7 +109,7 @@ $.GIsoGame.MapSculptor = {
 			tile.push(getRandomTileByType(0, spriteId, type));		
 		};
 				
-		let paintGround = function(mx, my, brush) {					
+		let paintGround = function(mx, my, brush) {			
 			let fromX = mx - brush.size;
 			let toX = mx + brush.size;
 			let fromY = my - brush.size;
@@ -128,16 +136,18 @@ $.GIsoGame.MapSculptor = {
 					}
 				}
 			}					
-		};
-		
-		let paintWall = function(mx, my, brush) {
+		};		
+
+		let paintSprite = function(mx, my, brush, wall) {
 			if (mx >= level.mapW || mx < 0 || my >= level.mapH || my < 0) 
 				return;
 			let index = mx + my * level.mapW;
 			if (brush.mode == -1) {
-				level.walls[index] = undefined;
+				if (wall) level.walls[index] = undefined; 
+				else level.objects[index] = undefined;
 			} else {
-				level.walls[index] = [brush.spriteId, brush.tileId];
+				if (wall) level.walls[index] = [brush.spriteId, brush.tileId]; 
+				else level.objects[index] = [brush.spriteId, brush.tileId];
 			}
 		};
 		
@@ -147,8 +157,11 @@ $.GIsoGame.MapSculptor = {
 				case 0:
 					paintGround(mx, my, brush);
 					break;
+				case 2:
+					paintSprite(mx, my, brush, false);
+					break;
 				case 3:
-					paintWall(mx, my, brush);
+					paintSprite(mx, my, brush, true);
 					break;
 				}
 			},

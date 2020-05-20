@@ -56,6 +56,7 @@ $.GIsoGame.Editor = (function() {
 	
 	let groundsMenu = {};
 	let wallsMenu = {};
+	let objectsMenu = {};
 	
 	// Ground tiles vyplňování
 	let fills = [];	
@@ -172,10 +173,11 @@ $.GIsoGame.Editor = (function() {
 		drawButtons();
 		
 		if (groundsMenu.visible)
-			drawItemsMenu(groundsMenu);
-			
+			drawItemsMenu(groundsMenu);		
 		if (wallsMenu.visible)
 			drawItemsMenu(wallsMenu);
+		if (objectsMenu.visible)
+			drawItemsMenu(objectsMenu);
 
 		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
 		
@@ -213,19 +215,16 @@ $.GIsoGame.Editor = (function() {
 	* INIT
 	*/
 	
-	let addFill = function(group, spriteId, middle, right, bottom, top, left, 
-			innerTopRight, innerBottomRight, innerTopLeft, innerBottomLeft,
-			outerTopRight, outerBottomRight, outerTopLeft, outerBottomLeft) {
+	let addFill = function(group, spriteId, ranges) {
 		if (fills[group] == undefined)
 			fills[group] = [];
 		fills[group][spriteId] = {
 			group: group,
 			spriteId: spriteId,
-			tiles: [outerTopLeft, top, outerTopRight, 
-					left, middle, right,
-					outerBottomLeft, bottom, outerBottomRight,
-					innerTopLeft, innerTopRight,
-					innerBottomLeft, innerBottomRight]			
+			tiles: [ranges.tl, ranges.t, ranges.tr, 
+					ranges.l, ranges.m, ranges.r,
+					ranges.bl, ranges.b, ranges.br,
+					ranges.otl, ranges.otr, ranges.obl, ranges.obr]			
 		};
 	};
 	
@@ -241,13 +240,12 @@ $.GIsoGame.Editor = (function() {
 		desktopArea.width = width;
 		desktopArea.height = height;
 						
-		groundsMenu.x = cfg.uiMargin;
-		groundsMenu.width = width - cfg.uiMargin * 2;
-		groundsMenu.y = height - cfg.uiMargin - groundsMenu.height;	
-		
-		wallsMenu.x = groundsMenu.x;
-		wallsMenu.width = groundsMenu.width;
-		wallsMenu.y = groundsMenu.y;	
+		let menus = [groundsMenu, wallsMenu, objectsMenu];
+		menus.forEach(function(m) {
+			m.x = cfg.uiMargin;
+			m.width = width - cfg.uiMargin * 2;
+			m.y = height - cfg.uiMargin - groundsMenu.height;	
+		});
 
 		if (isoRenderer != undefined) {
 			isoRenderer.setWidth(width);
@@ -302,14 +300,17 @@ $.GIsoGame.Editor = (function() {
 		createButton("Povrchy", function() {
 			groundsMenu.visible = true;
 			wallsMenu.visible = false;
+			objectsMenu.visible = false;
 		});
 		createButton("Kolizní objekty", function() {
 			wallsMenu.visible = true;
 			groundsMenu.visible = false;
+			objectsMenu.visible = false;
 		});
-		createButton("Nekolizní objekty", function(x, y, button, down, isInBounds, uiListener) {
-			// TODO
-			return false;
+		createButton("Nekolizní objekty", function() {
+			objectsMenu.visible = true;
+			groundsMenu.visible = false;
+			wallsMenu.visible = false;
 		});
 	};
 
@@ -371,36 +372,38 @@ $.GIsoGame.Editor = (function() {
 		groundsMenu.itemsCount = spriteLoader.getGroupSize(group);		
 	};
 	
-	let createWallsMenu = function() {
-		wallsMenu = createMenu();
-		let group = 3;
-		let wallsArray = [];
-		for (let i = 0; i < spriteLoader.getGroupSize(group); i++) {
-			let tex = spriteLoader.getTexture(group, i);
+	let createSingleSpriteMenu = function(groupId) {
+		menu = createMenu();
+		let arr = [];
+		for (let i = 0; i < spriteLoader.getGroupSize(groupId); i++) {
+			let tex = spriteLoader.getTexture(groupId, i);
 			let tilesCount = tex.cols * tex.rows;
 			for (let j = 0; j < tilesCount; j++)
-				wallsArray.push([i, j]);
+				arr.push([i, j]);
 		}		
-		wallsMenu.texDetailFunc = function(i) {
-			let tex = spriteLoader.getTexture(group, wallsArray[i][0]);
-			let tileId = wallsArray[i][1];
+		menu.texDetailFunc = function(i) {
+			let tex = spriteLoader.getTexture(groupId, arr[i][0]);
+			let tileId = arr[i][1];
 			return {
 				tex: tex,
 				col: tileId % tex.cols,
 				row: Math.floor(tileId / tex.cols)
 			};
 		};
-		wallsMenu.chooseItemFunc = function(i) {
-			brush.groupId = group;
-			brush.spriteId = wallsArray[i][0];
-			brush.tileId = wallsArray[i][1];
+		menu.chooseItemFunc = function(i) {
+			brush.groupId = groupId;
+			brush.spriteId = arr[i][0];
+			brush.tileId = arr[i][1];
 		};
-		wallsMenu.itemsCount = wallsArray.length;		
+		menu.itemsCount = arr.length;
+		return menu;
 	};
 	
 	let createMenus = function() {
 		createGroundsMenu();
-		createWallsMenu();
+		objectsMenu = createSingleSpriteMenu(2);
+		objectsMenu.visible = false;
+		wallsMenu = createSingleSpriteMenu(3);
 		wallsMenu.visible = false;
 	};
 	
@@ -514,20 +517,18 @@ $.GIsoGame.Editor = (function() {
 						"dirt_dark_64x32.png"];
 		for (let i = 0; i < grounds.length; i++) {
 			spriteLoader.queueTexture(0, "./sprites/grounds/" + grounds[i], 8, 7, cellW, cellH, 0, 0);
-			addFill(0, i, [0, 20], 			
-				[20, 24], [24, 28], [28, 32], [32, 36],
-				[36, 38], [38, 40], [40, 42], [42, 44],
-				[44, 46], [46, 48], [48, 50], [50, 52]
-			);
+			addFill(0, i, {
+				m: [0, 20], r: [20, 24], b: [24, 28], t: [28, 32], l: [32, 36],
+				otr: [36, 38], obr: [38, 40], otl: [40, 42], obl: [42, 44],
+				tr: [44, 46], br: [46, 48], tl: [48, 50], bl: [50, 52]
+			});
 		}
 		spriteLoader.queueTexture(0, "./sprites/grounds/32_flagstone_tiles.png", 4, 8, cellW, cellH, 0, 0);
-		addFill(0, grounds.length, [0, 32], 			
-				[0, 32], [0, 32], [0, 32], [0, 32],
-				[0, 32], [0, 32], [0, 32], [0, 32],
-				[0, 32], [0, 32], [0, 32], [0, 32]
-			);
-		spriteLoader.queueTexture(2, "./sprites/objects/weed03.png", 1, 1, 128, 64, 0, 16);
-		spriteLoader.queueTexture(2, "./sprites/objects/swirl02.png", 1, 1, 128, 64, 0, 16);
+		addFill(0, grounds.length, {m: [0, 32]});
+		for (let i = 1; i <= 6; i++)
+			spriteLoader.queueTexture(2, "./sprites/objects/weed0" + i + ".png", 1, 1, 128, 64, 34, 25);
+		for (let i = 1; i <= 2; i++)
+			spriteLoader.queueTexture(2, "./sprites/objects/swirl0" + i + ".png", 1, 1, 128, 64, 34, 30);		
 		spriteLoader.queueTexture(3, "./sprites/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
 		spriteLoader.queueTexture(3, "./sprites/objects/pine-none03.png", 1, 1, 256, 256, 64 + 50, 128 + 64);
 		spriteLoader.queueTexture(3, "./sprites/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);	
