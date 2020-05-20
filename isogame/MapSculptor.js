@@ -101,7 +101,7 @@ $.GIsoGame.MapSculptor = {
 			tile.push(getRandomTileByType(0, spriteId, type));		
 		};
 				
-		let paintGround = function(mx, my, brush) {		
+		let paintGround = function(mx, my, brush) {					
 			let fromX = mx - brush.size;
 			let toX = mx + brush.size;
 			let fromY = my - brush.size;
@@ -111,28 +111,38 @@ $.GIsoGame.MapSculptor = {
 				for (let ty = fromY; ty <= toY; ty++) {
 					if (ty >= level.mapH || ty < 0) continue;
 					let index = tx + ty * level.mapW;
-					let type;
-					if (tx == fromX && ty == fromY) type = 0; // levý horní roh
-					else if (tx == fromX && ty == toY) type = 6; // levý dolní roh
-					else if (tx == toX && ty == fromY) type = 2; // pravý horní roh
-					else if (tx == toX && ty == toY) type = 8; // pravý dolní roh
-					else if (tx == fromX) type = 3; // levá strana
-					else if (tx == toX) type = 5; // pravá strana
-					else if (ty == fromY) type = 1; // horní strana
-					else if (ty == toY) type = 7; // dolní strana
-					else type = 4; // prostředek					
-					placeGroundTile(index, brush.spriteId, type);
+					if (brush.mode == -1) {
+						level.grounds[index] = undefined;
+					} else {
+						let type;
+						if (tx == fromX && ty == fromY) type = 0; // levý horní roh
+						else if (tx == fromX && ty == toY) type = 6; // levý dolní roh
+						else if (tx == toX && ty == fromY) type = 2; // pravý horní roh
+						else if (tx == toX && ty == toY) type = 8; // pravý dolní roh
+						else if (tx == fromX) type = 3; // levá strana
+						else if (tx == toX) type = 5; // pravá strana
+						else if (ty == fromY) type = 1; // horní strana
+						else if (ty == toY) type = 7; // dolní strana
+						else type = 4; // prostředek					
+						placeGroundTile(index, brush.spriteId, type);
+					}
 				}
 			}					
 		};
 		
 		let paintWall = function(mx, my, brush) {
+			if (mx >= level.mapW || mx < 0 || my >= level.mapH || my < 0) 
+				return;
 			let index = mx + my * level.mapW;
-			level.walls[index] = [brush.spriteId, brush.tileId];
+			if (brush.mode == -1) {
+				level.walls[index] = undefined;
+			} else {
+				level.walls[index] = [brush.spriteId, brush.tileId];
+			}
 		};
 		
 		return {
-			paint: function(mx, my, brush) {
+			paint: function(mx, my, brush) {				
 				switch (brush.groupId) {
 				case 0:
 					paintGround(mx, my, brush);
