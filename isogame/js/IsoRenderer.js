@@ -24,6 +24,17 @@ $.GIsoGame.IsoRenderer = {
 		
 		let innerDrawSprite = function(groupId, spriteId, frameId, ix, iy, showOutline) {
 			let tex = spriteLoader.getTexture(groupId, spriteId);
+			if (tex == undefined) {
+				// chybějící textura
+				ctx.strokeStyle = "black";
+				ctx.fillStyle = "magenta";
+				ctx.lineWidth = 1;			
+				let w = cellW / 2, h = cellH;
+				let x = ix + w / 2, y = iy - h / 2;				
+				ctx.fillRect(x, y, w, h);
+				ctx.strokeRect(x, y, w, h);
+				return;
+			}
 			let col = frameId % tex.cols;
 			let row = Math.floor(frameId / tex.cols);
 			let x = Math.floor(ix - tex.offsetX);

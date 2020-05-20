@@ -149,13 +149,13 @@ $.GIsoGame.Editor = (function() {
 	let drawButtons = function() {
 		for (let i = 0; i < buttons.length; i++) {
 			let button = buttons[i];
-			ctx.fillStyle = button.backgroundColor;
+			ctx.fillStyle = button.highlighted ? button.highlightBackgroundColor : button.backgroundColor;
 			ctx.fillRect(button.x, button.y, button.width, button.height);			
-			ctx.fillStyle = button.borderColor;		
+			ctx.fillStyle = button.highlighted ? button.highlightBorderColor : button.borderColor;		
 			ctx.fillRect(button.x + cfg.uiBorder, button.y + cfg.uiBorder, button.width - cfg.uiBorder * 2, button.height - cfg.uiBorder * 2);
 
 			ctx.font = button.fontSize + "px Monospace";
-			ctx.fillStyle = button.fontColor;
+			ctx.fillStyle = button.highlighted ? button.highlightFontColor : button.fontColor;
 			ctx.fillText(button.text, button.x + cfg.uiSpacing, button.y + button.height - 9);
 		}
 	};
@@ -259,6 +259,12 @@ $.GIsoGame.Editor = (function() {
 		button.borderColor = cfg.uiBorderColor;
 		button.fontColor = cfg.uiFontColor;
 		button.fontSize = buttonFontSize;
+
+		button.highlightBackgroundColor = "#226";
+		button.highlightBorderColor = "#337";
+		button.highlightFontColor = "#99c";
+
+		button.highlighted = false;
 		button.pushed = false;
 		button.visible = true;
 		ctx.font = button.fontSize + "px Monospace";		
@@ -272,13 +278,13 @@ $.GIsoGame.Editor = (function() {
 		}
 		button.width = ctx.measureText(button.text).width + cfg.uiSpacing * 2;
 		button.height = button.fontSize / 2 + cfg.uiSpacing * 2;
-		button.onMouse = function(x, y, button, down, isInBounds, uiListener) {
-			if (isInBounds && button == 0) {
+		button.onMouse = function(x, y, mouseBtn, down, isInBounds, uiListener) {
+			if (isInBounds && mouseBtn == 0) {
 				if (down) {
 					uiListener.pushed = true;
 				} else if (uiListener.pushed) {
 					uiListener.pushed = false;
-					onClick();
+					onClick(button);
 				}
 				return true;
 			}
@@ -287,30 +293,45 @@ $.GIsoGame.Editor = (function() {
 		button.onDrag = function(dx, dy, isInBounds, uiListener) {
 			if (isInBounds) 
 				document.body.style.cursor = "pointer";
-			uiListener.backgroundColor = isInBounds ? "#226" : cfg.uiAreaColor;
-			uiListener.borderColor = isInBounds ? "#337" : cfg.uiBorderColor;
-			uiListener.fontColor = isInBounds ? "#99c" : cfg.uiFontColor;			
+			if (!uiListener.highlighted) {
+				uiListener.backgroundColor = isInBounds ? uiListener.highlightBackgroundColor : cfg.uiAreaColor;
+				uiListener.borderColor = isInBounds ? uiListener.highlightBorderColor : cfg.uiBorderColor;
+				uiListener.fontColor = isInBounds ? uiListener.highlightFontColor : cfg.uiFontColor;
+			}
 			return false;
 		};
 		buttons.push(button);
 		uiListeners.push(button);
+		return button;
 	};
 	
+	let highlightBtns = function(buttons, highlighted) {
+		buttons.forEach((b) => {
+			b.highlighted = highlighted;
+		});
+	};
+
 	let createButtons = function() {	
-		createButton("Povrchy", function() {
+		createButton("Povrchy", function(button) {
 			groundsMenu.visible = true;
 			wallsMenu.visible = false;
 			objectsMenu.visible = false;
+			highlightBtns(buttons, false);
+			button.highlighted = true;
 		});
-		createButton("Kolizní objekty", function() {
+		createButton("Kolizní objekty", function(button) {
 			wallsMenu.visible = true;
 			groundsMenu.visible = false;
 			objectsMenu.visible = false;
+			highlightBtns(buttons, false);
+			button.highlighted = true;
 		});
-		createButton("Nekolizní objekty", function() {
+		createButton("Nekolizní objekty", function(button) {
 			objectsMenu.visible = true;
 			groundsMenu.visible = false;
 			wallsMenu.visible = false;
+			highlightBtns(buttons, false);
+			button.highlighted = true;
 		});
 	};
 
@@ -529,8 +550,11 @@ $.GIsoGame.Editor = (function() {
 			spriteLoader.queueTexture(2, "./sprites/objects/weed0" + i + ".png", 1, 1, 128, 64, 34, 25);
 		for (let i = 1; i <= 2; i++)
 			spriteLoader.queueTexture(2, "./sprites/objects/swirl0" + i + ".png", 1, 1, 128, 64, 34, 30);		
+		for (let i = 1; i <= 5; i++)
+			spriteLoader.queueTexture(2, "./sprites/objects/grasses0" + i + ".png", 1, 1, 128, 64, 34, 30);				
 		spriteLoader.queueTexture(3, "./sprites/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
-		spriteLoader.queueTexture(3, "./sprites/objects/pine-none03.png", 1, 1, 256, 256, 64 + 50, 128 + 64);
+		for (let i = 1; i <= 8; i++) 
+			spriteLoader.queueTexture(3, "./sprites/objects/pine-none0" + i + ".png", 1, 1, 256, 256, 64 + 50, 128 + 64);
 		spriteLoader.queueTexture(3, "./sprites/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);	
 		spriteLoader.load();
 						

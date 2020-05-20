@@ -4,3 +4,5 @@ https://opengameart.org/content/free-isometric-plants-pack
 https://opengameart.org/content/isometric-ground-tiles
 https://opengameart.org/content/classic-dungeon-walls
 https://opengameart.org/content/flagstone-floor-tiles
+https://opengameart.org/content/room-tileset
+https://opengameart.org/content/isometric-parts-2
