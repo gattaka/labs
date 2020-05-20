@@ -1,4 +1,6 @@
-[HTML]<head>
+<!DOCTYPE html>
+<html>
+	<head>
 	<script type="text/javascript" src="./js/SpriteLoader.js"></script>
 	<script type="text/javascript" src="./js/LevelLoader.js"></script>
 	<script type="text/javascript" src="./js/GFXUtils.js"></script>
@@ -6,11 +8,53 @@
 	<script type="text/javascript" src="./js/IsoRenderer.js"></script>	
 	<script type="text/javascript" src="./js/Configuration.js"></script>		
 	<script type="text/javascript" src="./js/MapSculptor.js"></script>			
-	<script type="text/javascript" src="./js/PersistanceManager.js"></script>				
+	<script type="text/javascript" src="./js/PersistanceManager.js"></script>	
+	<style>
+		#mapcode-div {
+			display: none;
+			position: absolute;
+			z-index: 10;
+			width: 100%;
+			height: 100%;
+			background-color: hsla(0, 0%, 0%, 0.61);
+			padding: 10px;
+			margin: 0;
+			top: 0;
+			left: 0;
+			box-sizing: border-box;
+			text-align: center;
+			font-family: monospace;
+			font-size: 30px;
+			color: #aaa;
+			font-variant: all-small-caps;
+		}
+
+		#mapcode-text {
+			width: 80%;
+			height: 50%;
+		}
+		
+		#mapcode-div a {
+			cursor: pointer;
+		}
+		
+		#mapcode-div a:hover {
+			color: #55f;
+		}
+	</style>
 </head>
+<body>
+<div id="mapcode-div">
+	<textarea id="mapcode-text"></textarea><br/>
+	<br/>
+	<input id="map-width-text" /> x <input id="map-height-text" /><br/>
+	<a onClick="$.GIsoGame.Editor.newMap()">Nová mapa</a><br/>
+	<br/>
+	<a onClick="$.GIsoGame.Editor.closeMenu()">Zavřít</a>
+</div>
 <div style="margin: 10px 0;">
 	<canvas id="canvasT" style="width: 100%;" height="600"></canvas>
-</div>[/HTML]
+</div>
 <script>
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
@@ -212,20 +256,38 @@ $.GIsoGame.Editor = (function() {
 	};	
 
 	/*
-	* INIT
+	* MISC
 	*/
-	
-	let addFill = function(group, spriteId, ranges) {
-		if (fills[group] == undefined)
-			fills[group] = [];
-		fills[group][spriteId] = {
-			group: group,
-			spriteId: spriteId,
-			tiles: [ranges.tl, ranges.t, ranges.tr, 
-					ranges.l, ranges.m, ranges.r,
-					ranges.bl, ranges.b, ranges.br,
-					ranges.otl, ranges.otr, ranges.obl, ranges.obr]			
-		};
+
+	let highlightBtns = function(buttons, highlighted) {
+		buttons.forEach((b) => {
+			b.highlighted = highlighted;
+		});
+	};
+
+	let displayMapCode = function() {
+		document.getElementById("mapcode-text").value = JSON.stringify(level);
+		document.getElementById("mapcode-div").style.display = "block";
+		document.getElementById("map-width-text").value = level.mapW;
+		document.getElementById("map-height-text").value = level.mapH;
+	};
+
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+
+	let saveDraft = function() {
+		persistanceManager.saveData(level);		
 	};
 	
 	let updateWindowSize = function() {
@@ -251,6 +313,23 @@ $.GIsoGame.Editor = (function() {
 			isoRenderer.setWidth(width);
 			isoRenderer.setHeight(height);
 		}
+	};
+
+	/*
+	* INIT
+	*/
+	
+	let addFill = function(group, spriteId, ranges) {
+		if (fills[group] == undefined)
+			fills[group] = [];
+		fills[group][spriteId] = {
+			group: group,
+			spriteId: spriteId,
+			tiles: [ranges.tl, ranges.t, ranges.tr, 
+					ranges.l, ranges.m, ranges.r,
+					ranges.bl, ranges.b, ranges.br,
+					ranges.otl, ranges.otr, ranges.obl, ranges.obr]			
+		};
 	};
 	
 	let createButton = function(text, onClick) {	
@@ -304,14 +383,11 @@ $.GIsoGame.Editor = (function() {
 		uiListeners.push(button);
 		return button;
 	};
-	
-	let highlightBtns = function(buttons, highlighted) {
-		buttons.forEach((b) => {
-			b.highlighted = highlighted;
-		});
-	};
 
 	let createButtons = function() {	
+		createButton("Menu", function(button) {
+			displayMapCode();
+		});
 		createButton("Povrchy", function(button) {
 			groundsMenu.visible = true;
 			wallsMenu.visible = false;
@@ -519,10 +595,16 @@ $.GIsoGame.Editor = (function() {
 		}, false);
 	};
 	
-	let saveDraft = function() {
-		persistanceManager.saveData(level);
+	let prepareMapTools = function() {
+		currentLevel = $.GIsoGame.LevelLoader.createLevel(level);											
+		mapSculptor = $.GIsoGame.MapSculptor.create(fills, level);
+		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor);		
+		
+		let iso = isoRenderer.toIso(level.mapW / 2, level.mapH / 2);
+		viewX = halfWidth - iso.ix;
+		viewY = (height - groundsMenu.height - cfg.uiMargin * 2) / 2 - iso.iy;		
 	};
-	
+
 	let init = function() {	
 		window.addEventListener("resize", updateWindowSize);				
 		
@@ -531,7 +613,7 @@ $.GIsoGame.Editor = (function() {
 		canvas.style.position = "absolute";
 		canvas.style.left = "0";
 		canvas.style.top = "0";
-		canvas.style.zIndex = "999";				
+		//canvas.style.zIndex = "999";				
 		
 		spriteLoader = $.GIsoGame.SpriteLoader.create();				
 		let grounds = ["grass_medium_64x32.png", "stone_path_64x32.png", "grass_dry_64x32.png", "forest_ground_64x32.png", "sand_64x32.png", 
@@ -576,14 +658,8 @@ $.GIsoGame.Editor = (function() {
 					objects: [],
 					walls: []
 				};
-				
-			currentLevel = $.GIsoGame.LevelLoader.createLevel(level);											
-			mapSculptor = $.GIsoGame.MapSculptor.create(fills, level);
-			isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor);		
-			
-			let iso = isoRenderer.toIso(level.mapW / 2, level.mapH / 2);
-			viewX = halfWidth - iso.ix;
-			viewY = (height - groundsMenu.height - cfg.uiMargin * 2) / 2 - iso.iy;		
+
+			prepareMapTools();			
 				
 			createCanvasListeners();
 				
@@ -595,12 +671,35 @@ $.GIsoGame.Editor = (function() {
 		});				
 	};		
 		
+	let innerCloseMenu = function() {	
+		document.getElementById('mapcode-div').style.display = 'none';
+	};
+
 	return {	
 		start: function() {					
 			init();						
 		},	
+		newMap: function() {
+			let w = validate("Rozměr musí být číslo v rozsahu 10-100", "map-width-text", 10, 100);
+			let h = validate("Rozměr musí být číslo v rozsahu 10-100", "map-height-text", 10, 100);
+			if (!w || !h)
+				return;
+			level = {
+				mapW: w,
+				mapH: h,
+				grounds:[],
+				objects: [],
+				walls: []
+			};
+			prepareMapTools();
+			innerCloseMenu();
+		},
+		closeMenu: function() {
+			innerCloseMenu();
+		},	
 	};
-
 })();
 
 $.GIsoGame.Editor.start();</script>
+</body>
+</html>
