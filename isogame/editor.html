@@ -48,6 +48,7 @@
 <body>
 <div id="mapcode-div">
 	<textarea id="mapcode-text"></textarea><br/>
+	<a onClick="$.GIsoGame.Editor.loadMap()">Nahrát mapu dle JSON</a><br/>
 	<br/>
 	<input id="map-width-text" /> x <input id="map-height-text" /><br/>
 	<a onClick="$.GIsoGame.Editor.newMap()">Nová mapa</a><br/>
@@ -271,10 +272,10 @@ $.GIsoGame.Editor = (function() {
 	};
 
 	let displayMapCode = function() {
-		document.getElementById("mapcode-text").value = JSON.stringify(level);
+		document.getElementById("mapcode-text").value = JSON.stringify(levelBlueprint);
 		document.getElementById("mapcode-div").style.display = "block";
-		document.getElementById("map-width-text").value = level.mapW;
-		document.getElementById("map-height-text").value = level.mapH;
+		document.getElementById("map-width-text").value = levelBlueprint.mapW;
+		document.getElementById("map-height-text").value = levelBlueprint.mapH;
 	};
 
 	let validate = function(msg, field, min, max) {
@@ -645,6 +646,11 @@ $.GIsoGame.Editor = (function() {
 		start: function() {					
 			init();						
 		},	
+		loadMap: function() {
+			levelBlueprint = JSON.parse(document.getElementById("mapcode-text").value);
+			prepareMapTools();
+			innerCloseMenu();
+		},
 		newMap: function() {
 			let w = validate("Rozměr musí být číslo v rozsahu 10-100", "map-width-text", 10, 100);
 			let h = validate("Rozměr musí být číslo v rozsahu 10-100", "map-height-text", 10, 100);
