@@ -234,7 +234,8 @@ $.GIsoGame.Editor = (function() {
 	};
 	
 	let switchMenuButton = function(button, menu) {
-		button.highlighted = true;
+		buttons.forEach(b => { b.switched = false });
+		button.switched = true;
 		groundsMenu.visible = false;
 		wallsMenu.visible = false;
 		objectsMenu.visible = false;
