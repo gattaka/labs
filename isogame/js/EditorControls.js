@@ -2,6 +2,11 @@ var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.EditorControls = {		
 	create: function(canvas) {
+		// pole všech UI prvků, které reagují na mouse události
+		// povinná pole: 
+		// 		x, y, width, height, visible, 
+		// 		consumed = onMouse(movement, button, down, isInBounds, uiListener)
+		// 		consumed = onDrag(movement, isInBounds, uiListener)
 		let uiListeners = [];
 		let movement = {
 			dx: 0,

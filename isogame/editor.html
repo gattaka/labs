@@ -13,6 +13,7 @@
 <script type="text/javascript" src="./js/SpritePalette.js"></script>			
 <script type="text/javascript" src="./js/EditorControls.js"></script>
 <script type="text/javascript" src="./js/SpriteMenu.js"></script>
+<script type="text/javascript" src="./js/Button.js"></script>
 <style>
 	#mapcode-div {
 		display: none;
@@ -92,20 +93,10 @@ $.GIsoGame.Editor = (function() {
 	let lastTime = 0;
 	
 	let viewX = 0;
-	let viewY = 0;
+	let viewY = 0;	
 	
-	// pole všech UI prvků, které reagují na mouse události
-	// povinná pole: 
-	// 		x, y, width, height, visible, 
-	// 		consumed = onMouse(x, y, button, down, isInBounds, uiListener)
-	// 		consumed = onDrag(dx, dy, isInBounds, uiListener)
-	let uiListeners = [];
-	
-	let desktopArea = {};	
-		
-	let buttonFontSize = 20;
+	let desktopArea = {};			
 	let buttons = [];
-	
 	let groundsMenu = {};
 	let wallsMenu = {};
 	let objectsMenu = {};
@@ -136,20 +127,6 @@ $.GIsoGame.Editor = (function() {
 		drawScene(timestamp);
 		window.requestAnimationFrame(draw);
 	};	
-			
-	let drawButtons = function() {
-		for (let i = 0; i < buttons.length; i++) {
-			let button = buttons[i];
-			ctx.fillStyle = button.highlighted ? button.highlightBackgroundColor : button.backgroundColor;
-			ctx.fillRect(button.x, button.y, button.width, button.height);			
-			ctx.fillStyle = button.highlighted ? button.highlightBorderColor : button.borderColor;		
-			ctx.fillRect(button.x + cfg.uiBorder, button.y + cfg.uiBorder, button.width - cfg.uiBorder * 2, button.height - cfg.uiBorder * 2);
-
-			ctx.font = button.fontSize + "px Monospace";
-			ctx.fillStyle = button.highlighted ? button.highlightFontColor : button.fontColor;
-			ctx.fillText(button.text, button.x + cfg.uiSpacing, button.y + button.height - 9);
-		}
-	};
 				
 	let drawScene = function(timestamp) {	
 		if (!spriteLoader.isLoaded())
@@ -161,7 +138,7 @@ $.GIsoGame.Editor = (function() {
 
 		isoRenderer.update(delay, viewX, viewY);
 		
-		drawButtons();
+		buttons.forEach(b => $.GIsoGame.Button.draw(ctx, b));
 		
 		if (groundsMenu.visible)
 			$.GIsoGame.SpriteMenu.draw(ctx, groundsMenu);
@@ -188,14 +165,8 @@ $.GIsoGame.Editor = (function() {
 		fpsUI.update(width - cfg.uiMargin, cfg.uiMargin, delay);		
 	};			
 
-	/*
-	* MISC
-	*/
-
 	let highlightBtns = function(buttons, highlighted) {
-		buttons.forEach((b) => {
-			b.highlighted = highlighted;
-		});
+		buttons.forEach(b => { b.highlighted = highlighted; });
 	};
 
 	let displayMapCode = function() {
@@ -247,27 +218,9 @@ $.GIsoGame.Editor = (function() {
 			isoRenderer.setHeight(height);
 		}
 	};
-
-	/*
-	* INIT
-	*/	
 	
 	let createButton = function(text, onClick) {	
-		let button = {};
-		button.backgroundColor = cfg.uiAreaColor;
-		button.borderColor = cfg.uiBorderColor;
-		button.fontColor = cfg.uiFontColor;
-		button.fontSize = buttonFontSize;
-
-		button.highlightBackgroundColor = "#226";
-		button.highlightBorderColor = "#337";
-		button.highlightFontColor = "#99c";
-
-		button.highlighted = false;
-		button.pushed = false;
-		button.visible = true;
-		ctx.font = button.fontSize + "px Monospace";		
-		button.text = text;
+		let button = $.GIsoGame.Button.create(ctx, text, onClick);
 		button.x = cfg.uiMargin;
 		if (buttons.length == 0) {
 			button.y = cfg.uiMargin + cfg.minimapHeight + cfg.uiMargin;
@@ -275,72 +228,30 @@ $.GIsoGame.Editor = (function() {
 			let lastBtn = buttons[buttons.length - 1];
 			button.y = lastBtn.y + lastBtn.height + cfg.uiMargin;
 		}
-		button.width = ctx.measureText(button.text).width + cfg.uiSpacing * 2;
-		button.height = button.fontSize / 2 + cfg.uiSpacing * 2;
-		button.onMouse = function(movement, mouseBtn, down, isInBounds, uiListener) {
-			if (isInBounds && mouseBtn == 0) {
-				if (down) {
-					uiListener.pushed = true;
-				} else if (uiListener.pushed) {
-					uiListener.pushed = false;
-					onClick(button);
-				}
-				return true;
-			}
-			return false;
-		};
-		button.onDrag = function(movement, isInBounds, uiListener) {
-			if (isInBounds) 
-				document.body.style.cursor = "pointer";
-			if (!uiListener.highlighted) {
-				uiListener.backgroundColor = isInBounds ? uiListener.highlightBackgroundColor : cfg.uiAreaColor;
-				uiListener.borderColor = isInBounds ? uiListener.highlightBorderColor : cfg.uiBorderColor;
-				uiListener.fontColor = isInBounds ? uiListener.highlightFontColor : cfg.uiFontColor;
-			}
-			return false;
-		};
 		buttons.push(button);
 		controls.addUIListener(button);
 		return button;
 	};
+	
+	let switchMenuButton = function(button, menu) {
+		button.highlighted = true;
+		groundsMenu.visible = false;
+		wallsMenu.visible = false;
+		objectsMenu.visible = false;
+		menu.visible = true;
+	};
 
 	let createButtons = function() {	
-		createButton("Menu", function(button) {
-			displayMapCode();
-		});
-		createButton("Povrchy", function(button) {
-			groundsMenu.visible = true;
-			wallsMenu.visible = false;
-			objectsMenu.visible = false;
-			highlightBtns(buttons, false);
-			button.highlighted = true;
-		});
-		createButton("Kolizní objekty", function(button) {
-			wallsMenu.visible = true;
-			groundsMenu.visible = false;
-			objectsMenu.visible = false;
-			highlightBtns(buttons, false);
-			button.highlighted = true;
-		});
-		createButton("Nekolizní objekty", function(button) {
-			objectsMenu.visible = true;
-			groundsMenu.visible = false;
-			wallsMenu.visible = false;
-			highlightBtns(buttons, false);
-			button.highlighted = true;
-		});
+		createButton("Menu", button => displayMapCode());
+		createButton("Povrchy", button => switchMenuButton(button, groundsMenu));
+		createButton("Kolizní objekty", button => switchMenuButton(button, wallsMenu));			
+		createButton("Nekolizní objekty", button => switchMenuButton(button, objectsMenu));
 	};
 	
 	let createGroundsMenu = function() {	
 		groundsMenu = $.GIsoGame.SpriteMenu.create(spritePalette.getCellW());
 		let group = 0;
-		groundsMenu.texDetailFunc = function(i) {
-			return {
-				tex: spriteLoader.getTexture(group, i),
-				col: 0,
-				row: 0
-			};
-		};
+		groundsMenu.texDetailFunc = function(i) { return { tex: spriteLoader.getTexture(group, i), col: 0, row: 0 } };
 		groundsMenu.chooseItemFunc = function(id) {
 			brush.groupId = group;
 			brush.spriteId = id;
@@ -361,11 +272,7 @@ $.GIsoGame.Editor = (function() {
 		menu.texDetailFunc = function(i) {
 			let tex = spriteLoader.getTexture(groupId, arr[i][0]);
 			let tileId = arr[i][1];
-			return {
-				tex: tex,
-				col: tileId % tex.cols,
-				row: Math.floor(tileId / tex.cols)
-			};
+			return { tex: tex, col: tileId % tex.cols, row: Math.floor(tileId / tex.cols) };
 		};
 		menu.chooseItemFunc = function(i) {
 			brush.groupId = groupId;
@@ -386,15 +293,7 @@ $.GIsoGame.Editor = (function() {
 	};
 	
 	let createDesktopArea = function() {
-		desktopArea = {
-			x: 0,
-			y: 0,
-			width: width,
-			height: height,
-			visible: true,	
-			dragged: false,
-			mouseDown: false,
-		};
+		desktopArea = { x: 0, y: 0, width: width, height: height, visible: true, dragged: false, mouseDown: false };
 		desktopArea.onMouse = function(movement, button, down, isInBounds, uiListener) {
 			if (button == 1) {
 				if (!down) { 
@@ -458,24 +357,25 @@ $.GIsoGame.Editor = (function() {
 		canvas.style.left = "0";
 		canvas.style.top = "0";
 		
+		fpsUI = $.GIsoGame.FPS.create(100, ctx, 20);
+		
 		spriteLoader = $.GIsoGame.SpriteLoader.create();	
 		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader);
-		
-		controls = $.GIsoGame.EditorControls.create(canvas);			
-		createMenus();
-		createButtons();		
-		createDesktopArea();								
-		
-		updateWindowSize();
-		
-		fpsUI = $.GIsoGame.FPS.create(100, ctx, 20);
+
+		controls = $.GIsoGame.EditorControls.create(canvas);
 		
 		let self = this;
 		persistanceManager = $.GIsoGame.PersistanceManager.create();
-		persistanceManager.loadData(function(data){
+		persistanceManager.loadData(data => {
 			levelBlueprint = data;
 			if (levelBlueprint == undefined) 
 				levelBlueprint = $.GIsoGame.LevelManager.createNewLevelBlueprint(10, 10);
+			
+			createMenus();
+			createButtons();		
+			createDesktopArea();								
+			
+			updateWindowSize();	
 
 			prepareMapTools();						
 				
