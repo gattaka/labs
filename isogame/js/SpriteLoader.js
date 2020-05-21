@@ -55,19 +55,25 @@ $.GIsoGame.SpriteLoader = {
 						continue;
 					for (let i = 0; i < group.length; i++) {
 						let texture = group[i];
-						let textureCanvas = document.createElement("canvas");
-						textureCanvas.width = texture.width * texture.cols;
-						textureCanvas.height = texture.height * texture.rows;
 						
-						let textureCtx = textureCanvas.getContext("2d");
-						let subCanvasSmoothing = false;
-						textureCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
-						textureCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
-						textureCtx.imageSmoothingEnabled = subCanvasSmoothing;
-						textureCtx.msImageSmoothingEnabled = subCanvasSmoothing; 
+						let shades = 10;
+						texture.canvas = [];
+						texture.ctx = [];		
+						texture.imageData = [];
+						for (let s = 0; s < shades; s++) {
+							let textureCanvas = document.createElement("canvas");
+							textureCanvas.width = texture.width * texture.cols;
+							textureCanvas.height = texture.height * texture.rows;
+							let textureCtx = textureCanvas.getContext("2d");
+							let subCanvasSmoothing = true;
+							textureCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
+							textureCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
+							textureCtx.imageSmoothingEnabled = subCanvasSmoothing;
+							textureCtx.msImageSmoothingEnabled = subCanvasSmoothing; 						
+							texture.canvas.push(textureCanvas);
+							texture.ctx.push(textureCtx);
+						}
 						
-						texture.canvas = textureCanvas;
-						texture.ctx = textureCtx;
 						textureImg = new Image();			
 						(function() {
 							let seafImg = textureImg;
@@ -78,8 +84,14 @@ $.GIsoGame.SpriteLoader = {
 								if (loadingProgress == 0)
 									loaded = true;
 								let tex = textures[seafGroup][seafIndex];
-								tex.ctx.drawImage(seafImg, 0, 0);
-								tex.imageData = tex.ctx.getImageData(0, 0, textureCanvas.width, textureCanvas.height);
+								for (let s = 0; s < shades; s++) {
+									let bright = Math.floor(s / shades * 100);
+									tex.ctx[s].filter = "brightness(" + bright + "%)";
+									//tex.ctx[s].filter = "brightness(100%)";
+									tex.ctx[s].drawImage(seafImg, 0, 0);
+									//tex.ctx[s].filter = "none";
+									//tex.imageData[s] = tex.ctx[s].getImageData(0, 0, tex.canvas[s].width, tex.canvas[s].height);
+								}
 							}
 						})();
 						textureImg.src = texture.src;

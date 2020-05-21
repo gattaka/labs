@@ -45,6 +45,8 @@ $.GIsoGame.SpritePalette = {
 		});		
 		spriteLoader.queueTexture(0, "./sprites/grounds/32_flagstone_tiles.png", 4, 8, cellW, cellH, 0, 0);
 		addGround({m: [0, 32]});
+		spriteLoader.queueTexture(0, "./sprites/grounds/tilesfloor.png", 5, 3, cellW, cellH, 0, 0);
+		addGround({m: [0, 15]});
 		
 		// --- Characters ---
 		// Stance (4 frames), Walk (8 frames), Attack (4 frames), Cast (4 frames), Block (2 frames), Hit and Die (6 frames), Aim Crossbow (4 frames)
@@ -66,6 +68,10 @@ $.GIsoGame.SpritePalette = {
 		for (let i = 1; i <= 8; i++) 
 			spriteLoader.queueTexture(3, "./sprites/objects/pine-none0" + i + ".png", 1, 1, 256, 256, 64 + 50, 128 + 64);
 		spriteLoader.queueTexture(3, "./sprites/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);	
+		spriteLoader.queueTexture(3, "./sprites/walls/woodRoom.png", 16, 3, 64, 128, 0, 64 + 32);
+		spriteLoader.queueTexture(3, "./sprites/objects/table.png", 4, 1, 64, 48, 0, 16 + 4);
+		spriteLoader.queueTexture(3, "./sprites/objects/chair.png", 8, 1, 64, 64, 0, 32);
+		
 		spriteLoader.load();
 		
 		// public

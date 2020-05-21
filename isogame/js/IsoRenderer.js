@@ -21,7 +21,7 @@ $.GIsoGame.IsoRenderer = {
 			};
 		};
 		
-		let innerDrawSprite = function(groupId, spriteId, frameId, ix, iy, showOutline) {
+		let innerDrawSprite = function(groupId, spriteId, frameId, ix, iy, showOutline, light) {
 			let tex = spriteLoader.getTexture(groupId, spriteId);
 			if (tex == undefined) {
 				// chybějící textura
@@ -37,10 +37,14 @@ $.GIsoGame.IsoRenderer = {
 			let col = frameId % tex.cols;
 			let row = Math.floor(frameId / tex.cols);
 			let x = Math.floor(ix - tex.offsetX);
-			let y = Math.floor(iy - tex.offsetY);
-			ctx.drawImage(tex.canvas, 
+			let y = Math.floor(iy - tex.offsetY);		
+			if (light == undefined)
+				light = 9;
+			if (light > 9)
+				light = 9;
+			ctx.drawImage(tex.canvas[light], 
 				col * tex.width, row * tex.height, tex.width, tex.height, 
-				x, y, tex.width, tex.height);
+				x, y, tex.width, tex.height);			
 			if (showOutline) {
 				ctx.strokeStyle = "black";
 				ctx.lineWidth = 1;			
@@ -48,7 +52,7 @@ $.GIsoGame.IsoRenderer = {
 			}
 		};
 
-		let drawIsoCell = function(isoCell, mx, my) {		
+		let drawIsoCell = function(isoCell, mx, my, light) {		
 			let x = [isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix + cellW, isoCell.ix + cellW / 2];
 			let y = [isoCell.iy, isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2];		
 			
@@ -56,13 +60,14 @@ $.GIsoGame.IsoRenderer = {
 			if (x[2] < 0 || x[0] > width || y[1] > height || y[3] < 0)
 				return;
 					
+			
 			let filled = false;
 			if (isoCell.value != undefined) {
 				for (let i = 0; i < isoCell.value.length / 2; i++) {
-					innerDrawSprite(0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], isoCell.ix, isoCell.iy - cellH / 2, false);
+					innerDrawSprite(0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], isoCell.ix, isoCell.iy - cellH / 2, false, light);
 					filled = true;
 				}
-			}
+			}			
 			
 			if ($.GIsoGame.Configuration.outlines || !filled) 
 				$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,40%,0.5)", false);
@@ -76,6 +81,8 @@ $.GIsoGame.IsoRenderer = {
 			ctx.fillStyle = "black";
 			ctx.fillRect(0, 0, width, height);					
 
+			let mapWH = levelReader.getMapW() / 2;
+
 			// map se musí vykreslovat v opačném pořadí, než je X, aby se bloky správně překrývaly
 			// nejprve všechny povrchové dílky
 			let isoCells = [];
@@ -85,8 +92,11 @@ $.GIsoGame.IsoRenderer = {
 					let isoCell = innerToIso(mx, my);
 					isoCell.ix += viewX;
 					isoCell.iy += viewY;
+					
+					light = Math.floor(Math.abs(mapWH - mx) / mapWH * 10);
+					
 					isoCell.value = levelReader.getGroundAtCoord(mx, my);				
-					drawIsoCell(isoCell, mx, my);
+					drawIsoCell(isoCell, mx, my, light);
 					isoCells[mx][my] = isoCell;
 				}
 			}

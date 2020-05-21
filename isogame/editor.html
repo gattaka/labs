@@ -286,11 +286,11 @@ $.GIsoGame.Editor = (function() {
 	};
 	
 	let createMenus = function() {
-		createGroundsMenu();
+		wallsMenu = createSingleSpriteMenu(3);
 		objectsMenu = createSingleSpriteMenu(2);
 		objectsMenu.visible = false;
-		wallsMenu = createSingleSpriteMenu(3);
-		wallsMenu.visible = false;
+		createGroundsMenu();
+		groundsMenu.visible = false;
 	};
 	
 	let createDesktopArea = function() {
@@ -413,6 +413,21 @@ $.GIsoGame.Editor = (function() {
 		closeMenu: function() {
 			innerCloseMenu();
 		},	
+		light: function(value) {
+			if (value < 0) {
+				ctx.globalCompositeOperation = "multiply";
+				ctx.fillStyle = "black";
+				ctx.globalAlpha = -value / 100;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+			} else if (value > 0) {
+				ctx.fillStyle = "white";
+				ctx.globalCompositeOperation = "lighten";
+				ctx.globalAlpha = 1;
+				ctx.drawImage(image, 0, 0);
+				ctx.globalAlpha = value / 100;
+				ctx.fillRect(0, 0, canvas.width, canvas.height);
+			}
+		}
 	};
 })();
 
