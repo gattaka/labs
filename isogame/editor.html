@@ -2,7 +2,7 @@
 <html>
 	<head>
 	<script type="text/javascript" src="./js/SpriteLoader.js"></script>
-	<script type="text/javascript" src="./js/LevelLoader.js"></script>
+	<script type="text/javascript" src="./js/LevelManager.js"></script>
 	<script type="text/javascript" src="./js/GFXUtils.js"></script>
 	<script type="text/javascript" src="./js/Minimap.js"></script>
 	<script type="text/javascript" src="./js/IsoRenderer.js"></script>	
@@ -78,8 +78,9 @@ $.GIsoGame.Editor = (function() {
 	
 	let spriteLoader;
 	let spritePalette;
-	let levelLoader;
-	let currentLevel;
+	
+	let levelReader;
+	let levelBlueprint;
 	let isoRenderer;
 	let mapSculptor;
 	
@@ -116,9 +117,7 @@ $.GIsoGame.Editor = (function() {
 		tileId: 0,
 		lastPaintedX: -1,
 		lastPaintedY: -1,
-	};	
-	
-	let level;
+	};		
 	
 	let cursor = {
 		lastSx: 0,
@@ -227,11 +226,11 @@ $.GIsoGame.Editor = (function() {
 		if (objectsMenu.visible)
 			drawItemsMenu(objectsMenu);
 
-		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel);
+		$.GIsoGame.Minimap.drawMinimap(ctx, levelReader);
 		
 		let offsetTolerance = 5;
-		if (cursor.mx < level.mapW + offsetTolerance && cursor.mx >= -offsetTolerance 
-				&& cursor.my < level.mapH + offsetTolerance && cursor.my >= -offsetTolerance
+		if (cursor.mx < levelReader.getMapW() + offsetTolerance && cursor.mx >= -offsetTolerance 
+				&& cursor.my < levelReader.getMapH() + offsetTolerance && cursor.my >= -offsetTolerance
 				&& desktopArea.mouseDown) {			
 			let paintedX = Math.floor(cursor.mx); 
 			let paintedY = Math.floor(cursor.my);
@@ -293,7 +292,7 @@ $.GIsoGame.Editor = (function() {
 	};
 
 	let saveDraft = function() {
-		persistanceManager.saveData(level);		
+		persistanceManager.saveData(levelBlueprint);		
 	};
 	
 	let updateWindowSize = function() {
@@ -589,11 +588,11 @@ $.GIsoGame.Editor = (function() {
 	};
 	
 	let prepareMapTools = function() {
-		currentLevel = $.GIsoGame.LevelLoader.createLevel(level);											
-		mapSculptor = $.GIsoGame.MapSculptor.create(spritePalette, level);
-		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor);		
+		levelReader = $.GIsoGame.LevelManager.createLevelReader(levelBlueprint);											
+		mapSculptor = $.GIsoGame.MapSculptor.create(spritePalette, levelBlueprint);
+		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, levelReader, spriteLoader, cursor);		
 		
-		let iso = isoRenderer.toIso(level.mapW / 2, level.mapH / 2);
+		let iso = isoRenderer.toIso(levelReader.getMapW() / 2, levelReader.getMapH() / 2);
 		viewX = halfWidth - iso.ix;
 		viewY = (height - groundsMenu.height - cfg.uiMargin * 2) / 2 - iso.iy;		
 	};
@@ -622,15 +621,9 @@ $.GIsoGame.Editor = (function() {
 		let self = this;
 		persistanceManager = $.GIsoGame.PersistanceManager.create();
 		persistanceManager.loadData(function(data){
-			level = data;
-			if (level == undefined) 
-				level = {
-					mapW: 10,
-					mapH: 10,
-					grounds:[],
-					objects: [],
-					walls: []
-				};
+			levelBlueprint = data;
+			if (levelBlueprint == undefined) 
+				levelBlueprint = $.GIsoGame.LevelManager.createNewLevelBlueprint(10, 10);
 
 			prepareMapTools();			
 				
@@ -657,13 +650,7 @@ $.GIsoGame.Editor = (function() {
 			let h = validate("Rozměr musí být číslo v rozsahu 10-100", "map-height-text", 10, 100);
 			if (!w || !h)
 				return;
-			level = {
-				mapW: w,
-				mapH: h,
-				grounds:[],
-				objects: [],
-				walls: []
-			};
+			levelBlueprint = $.GIsoGame.LevelManager.createNewLevelBlueprint(w, h);
 			prepareMapTools();
 			innerCloseMenu();
 		},

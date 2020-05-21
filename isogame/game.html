@@ -1,7 +1,7 @@
 [HTML]<head>
 	<script type="text/javascript" src="./js/Astar.js"></script>	
 	<script type="text/javascript" src="./js/SpriteLoader.js"></script>
-	<script type="text/javascript" src="./js/LevelLoader.js"></script>
+	<script type="text/javascript" src="./js/LevelManager.js"></script>
 	<script type="text/javascript" src="./js/GFXUtils.js"></script>
 	<script type="text/javascript" src="./js/Minimap.js"></script>
 	<script type="text/javascript" src="./js/IsoRenderer.js"></script>	
@@ -31,10 +31,11 @@ $.GIsoGame.Game = (function() {
 	let fpsUI;
 	
 	let cfg;
+	
 	let spriteLoader;
 	let spritePalette;
-	let levelLoader;
-	let currentLevel;
+		
+	let levelReader;
 	let isoRenderer;
 	
 	let lastTime = 0;
@@ -144,7 +145,7 @@ $.GIsoGame.Game = (function() {
 		
 		isoRenderer.update(delay, viewX, viewY);
 
-		$.GIsoGame.Minimap.drawMinimap(ctx, currentLevel, target, hero);
+		$.GIsoGame.Minimap.drawMinimap(ctx, levelReader, target, hero);
 		
 		fpsUI.update(width - cfg.uiMargin, cfg.uiMargin, delay);
 	};		
@@ -257,9 +258,9 @@ $.GIsoGame.Game = (function() {
 	*/		
 	
 	let isCollision = function(mx, my) {
-		return mx < 0 || mx >= currentLevel.getMapW() 
-			|| my < 0 || my >= currentLevel.getMapH() 
-			|| currentLevel.getWallAtCoord(Math.floor(mx), Math.floor(my)) != undefined;
+		return mx < 0 || mx >= levelReader.getMapW() 
+			|| my < 0 || my >= levelReader.getMapH() 
+			|| levelReader.getWallAtCoord(Math.floor(mx), Math.floor(my)) != undefined;
 	};
 	
 	let prepareNavigationSteps = function(mx, my, ix, iy) {
@@ -279,39 +280,39 @@ $.GIsoGame.Game = (function() {
 				neighbors.push({mx: point.mx - 1, my: point.my, id: point.id - 1});	
 				// top left
 				if (!isCollision(point.mx - 1, point.my - 1)) 
-					neighbors.push({mx: point.mx - 1, my: point.my - 1, id: point.id - currentLevel.getMapW() - 1});	
+					neighbors.push({mx: point.mx - 1, my: point.my - 1, id: point.id - levelReader.getMapW() - 1});	
 				// bottom left
 				if (!isCollision(point.mx - 1, point.my + 1))
-					neighbors.push({mx: point.mx - 1, my: point.my + 1, id: point.id + currentLevel.getMapW() - 1});	
+					neighbors.push({mx: point.mx - 1, my: point.my + 1, id: point.id + levelReader.getMapW() - 1});	
 			}
 			if (!isCollision(point.mx + 1, point.my)) {
 				// right				
 				neighbors.push({mx: point.mx + 1, my: point.my, id: point.id + 1});	
 				// top right
 				if (!isCollision(point.mx + 1, point.my - 1)) 					
-					neighbors.push({mx: point.mx + 1, my: point.my - 1, id: point.id - currentLevel.getMapW() + 1});	
+					neighbors.push({mx: point.mx + 1, my: point.my - 1, id: point.id - levelReader.getMapW() + 1});	
 				// bottom right
 				if (!isCollision(point.mx + 1, point.my + 1)) 
-					neighbors.push({mx: point.mx + 1, my: point.my + 1, id: point.id + currentLevel.getMapW() + 1});	
+					neighbors.push({mx: point.mx + 1, my: point.my + 1, id: point.id + levelReader.getMapW() + 1});	
 			}
 			// top
 			if (!isCollision(point.mx, point.my - 1)) 
-				neighbors.push({mx: point.mx, my: point.my - 1, id: point.id - currentLevel.getMapW()});	
+				neighbors.push({mx: point.mx, my: point.my - 1, id: point.id - levelReader.getMapW()});	
 			// bottom
 			if (!isCollision(point.mx, point.my + 1)) 
-				neighbors.push({mx: point.mx, my: point.my + 1, id: point.id + currentLevel.getMapW()});	
+				neighbors.push({mx: point.mx, my: point.my + 1, id: point.id + levelReader.getMapW()});	
 			return neighbors;
 		};
 				
 		let pointA = {};
 		pointA.mx = Math.floor(hero.mx);
 		pointA.my = Math.floor(hero.my);
-		pointA.id = pointA.mx + pointA.my * currentLevel.getMapW();		
+		pointA.id = pointA.mx + pointA.my * levelReader.getMapW();		
 		
 		let pointB = {};
 		pointB.mx = Math.floor(mx);
 		pointB.my = Math.floor(my);
-		pointB.id = pointB.mx + pointB.my * currentLevel.getMapW();
+		pointB.id = pointB.mx + pointB.my * levelReader.getMapW();
 
 		target.steps = $.GJSLibAStar.findPath(pointA, pointB, heuristicFunc, distanceFunc, neighborsFunc);		
 		//console.log("A* steps: " + target.steps);
@@ -377,13 +378,13 @@ $.GIsoGame.Game = (function() {
 		cfg = $.GIsoGame.Configuration;
 		
 		//let level = $.GIsoGame.Level1.create();
-		let level = $.GIsoGame.Level2.create();
-		currentLevel = $.GIsoGame.LevelLoader.createLevel(level);
+		let levelBlueprint = $.GIsoGame.Level2.create();
+		levelReader = $.GIsoGame.LevelManager.createLevelReader(levelBlueprint);
 		
 		spriteLoader = $.GIsoGame.SpriteLoader.create();	
 		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader, cellW, cellH);		
 			
-		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor, onCellRenderFunc);
+		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, levelReader, spriteLoader, cursor, onCellRenderFunc);
 		
 		let mx = 2.5;
 		let my = 1.5;

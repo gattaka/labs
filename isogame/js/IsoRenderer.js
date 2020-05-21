@@ -1,7 +1,7 @@
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.IsoRenderer = {	
-	create: function(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor, onCellRenderFunc) {
+	create: function(ctx, width, height, cellW, cellH, levelReader, spriteLoader, cursor, onCellRenderFunc) {
 		let innerToIso = function(mx, my) {
 			let w = cellW / 2;
 			let h = cellH / 2;
@@ -79,30 +79,30 @@ $.GIsoGame.IsoRenderer = {
 			// map se musí vykreslovat v opačném pořadí, než je X, aby se bloky správně překrývaly
 			// nejprve všechny povrchové dílky
 			let isoCells = [];
-			for (let mx = currentLevel.getMapW() - 1; mx >= 0; mx--) {
+			for (let mx = levelReader.getMapW() - 1; mx >= 0; mx--) {
 				isoCells[mx] = [];
-				for (let my = 0; my < currentLevel.getMapH(); my++) {								
+				for (let my = 0; my < levelReader.getMapH(); my++) {								
 					let isoCell = innerToIso(mx, my);
 					isoCell.ix += viewX;
 					isoCell.iy += viewY;
-					isoCell.value = currentLevel.getGroundAtCoord(mx, my);				
+					isoCell.value = levelReader.getGroundAtCoord(mx, my);				
 					drawIsoCell(isoCell, mx, my);
 					isoCells[mx][my] = isoCell;
 				}
 			}
 			
 			// poté zdi, objekty, postavy apod.
-			for (let mx = currentLevel.getMapW() - 1; mx >= 0; mx--) {
-				for (let my = 0; my < currentLevel.getMapH(); my++) {				
+			for (let mx = levelReader.getMapW() - 1; mx >= 0; mx--) {
+				for (let my = 0; my < levelReader.getMapH(); my++) {				
 					let isoCell = isoCells[mx][my];
 					if (onCellRenderFunc != undefined)
 						onCellRenderFunc(mx, my);					
 
-					let wall = currentLevel.getWallAtCoord(mx, my);
+					let wall = levelReader.getWallAtCoord(mx, my);
 					if (wall != undefined) 
 						innerDrawSprite(3, wall.spriteId, wall.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);	
 					
-					let object = currentLevel.getObjectAtCoord(mx, my);
+					let object = levelReader.getObjectAtCoord(mx, my);
 					if (object != undefined) 
 						innerDrawSprite(2, object.spriteId, object.frameId, isoCell.ix, isoCell.iy - cellH / 2, false);
 									

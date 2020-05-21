@@ -1,17 +1,27 @@
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
-$.GIsoGame.LevelLoader = {
-	createLevel: function(level) {		
-		let mapW = level.mapW;
-		let mapH = level.mapH;
+$.GIsoGame.LevelManager = {
+	createNewLevelBlueprint: function(mapW, mapH) {
+		return {
+			mapW: mapW,
+			mapH: mapH,
+			grounds:[],
+			objects: [],
+			walls: []
+		};
+	},
+	
+	createLevelReader: function(levelBlueprint) {		
+		let mapW = levelBlueprint.mapW;
+		let mapH = levelBlueprint.mapH;
 		
 		// mapa povrchů
-		let grounds = level.grounds;
+		let grounds = levelBlueprint.grounds;
 		
 		// mapa objektů
-		let objects = level.objects;
+		let objects = levelBlueprint.objects;
 		
-		let walls = level.walls;
+		let walls = levelBlueprint.walls;
 		
 		let innerGetGroundAtIndex = function(index) {
 			return grounds[index];
