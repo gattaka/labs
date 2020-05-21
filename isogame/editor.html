@@ -9,6 +9,7 @@
 	<script type="text/javascript" src="./js/Configuration.js"></script>		
 	<script type="text/javascript" src="./js/MapSculptor.js"></script>			
 	<script type="text/javascript" src="./js/PersistanceManager.js"></script>	
+	<script type="text/javascript" src="./js/FPS.js"></script>		
 	<style>
 		#mapcode-div {
 			display: none;
@@ -71,6 +72,7 @@ $.GIsoGame.Editor = (function() {
 	
 	let cfg = $.GIsoGame.Configuration;
 	
+	let fpsUI;
 	let persistanceManager;
 	let spriteLoader;
 	let levelLoader;
@@ -210,7 +212,7 @@ $.GIsoGame.Editor = (function() {
 			
 		// Update času pro animace
 		let delay = timestamp - lastTime;
-		lastTime = timestamp;			
+		lastTime = timestamp;				
 
 		isoRenderer.update(delay, viewX, viewY);
 		
@@ -237,6 +239,8 @@ $.GIsoGame.Editor = (function() {
 				brush.lastPaintedY = paintedY;
 			}
 		}		
+		
+		fpsUI.update(width - cfg.uiMargin, cfg.uiMargin, delay);		
 	};		
 	
 	/*
@@ -645,6 +649,8 @@ $.GIsoGame.Editor = (function() {
 		createDesktopArea();
 		
 		updateWindowSize();
+		
+		fpsUI = $.GIsoGame.FPS.create(200, ctx, 20);
 		
 		let self = this;
 		persistanceManager = $.GIsoGame.PersistanceManager.create();
