@@ -5,8 +5,10 @@
  */ 
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
-$.GIsoGame.SpritePalette = {	
-	create: function(spriteLoader, cellW, cellH) {		
+$.GIsoGame.SpritePalette = {		
+	create: function(spriteLoader) {	
+		let cellW = 64;
+		let cellH = 32;		
 		let grounds = [];
 		let characters = [];
 		
@@ -73,6 +75,12 @@ $.GIsoGame.SpritePalette = {
 			},			
 			getCharacter: function(characterId) {
 				return characters[characterId];
+			},
+			getCellW: function() {
+				return cellW;
+			},
+			getCellH: function() {
+				return cellH;
 			},
 		}
 	}	

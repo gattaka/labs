@@ -11,6 +11,7 @@
 <script type="text/javascript" src="./js/PersistanceManager.js"></script>	
 <script type="text/javascript" src="./js/FPS.js"></script>		
 <script type="text/javascript" src="./js/SpritePalette.js"></script>			
+<script type="text/javascript" src="./js/EditorControls.js"></script>
 <style>
 	#mapcode-div {
 		display: none;
@@ -85,13 +86,12 @@ $.GIsoGame.Editor = (function() {
 	let isoRenderer;
 	let mapSculptor;
 	
+	let controls;
+	
 	let lastTime = 0;
 	
 	let viewX = 0;
 	let viewY = 0;
-	
-	let cellW = 64;
-	let cellH = 32;	
 	
 	// pole všech UI prvků, které reagují na mouse události
 	// povinná pole: 
@@ -121,10 +121,6 @@ $.GIsoGame.Editor = (function() {
 	};		
 	
 	let cursor = {
-		lastSx: 0,
-		lastSy: 0,
-		sx: 0,
-		sy: 0,
 		mx: 0, 
 		my: 0,
 		vix: 0,
@@ -179,7 +175,7 @@ $.GIsoGame.Editor = (function() {
 			let texDetail = menu.texDetailFunc(i);						
 			let offsetY = texDetail.tex.offsetY == 0 ? texDetail.tex.height / 2 : texDetail.tex.offsetY;		
 			let slotCenterX = itemsStartX + (i - choosenItemId) * slotWidth + slotWidth / 2;
-			let x = Math.floor(slotCenterX - cellW / 2 - texDetail.tex.offsetX);
+			let x = Math.floor(slotCenterX - menu.cellW / 2 - texDetail.tex.offsetX);
 			let leftOverlap = fromX - x;
 			let rightOverlap = x + texDetail.tex.width - toX;
 			let y = Math.floor(fromY + menu.height / 2 - cfg.uiBorder - offsetY);
@@ -243,23 +239,7 @@ $.GIsoGame.Editor = (function() {
 		}		
 		
 		fpsUI.update(width - cfg.uiMargin, cfg.uiMargin, delay);		
-	};		
-	
-	/*
-	* CONTROLS
-	*/
-	
-	let isInBounds = function(uiListener, x, y)  {
-		return x > uiListener.x && x < uiListener.x + uiListener.width
-			&& y > uiListener.y && y < uiListener.y + uiListener.height;
-	};
-	
-	let mouseButtonChange = function(down, button) {
-		for (let i = 0; i < uiListeners.length; i++)
-			if (uiListeners[i].visible 
-				&& uiListeners[i].onMouse(cursor.sx, cursor.sy, button, down, isInBounds(uiListeners[i], cursor.sx, cursor.sy), uiListeners[i]))
-				break;
-	};	
+	};			
 
 	/*
 	* MISC
@@ -350,7 +330,7 @@ $.GIsoGame.Editor = (function() {
 		}
 		button.width = ctx.measureText(button.text).width + cfg.uiSpacing * 2;
 		button.height = button.fontSize / 2 + cfg.uiSpacing * 2;
-		button.onMouse = function(x, y, mouseBtn, down, isInBounds, uiListener) {
+		button.onMouse = function(movement, mouseBtn, down, isInBounds, uiListener) {
 			if (isInBounds && mouseBtn == 0) {
 				if (down) {
 					uiListener.pushed = true;
@@ -362,7 +342,7 @@ $.GIsoGame.Editor = (function() {
 			}
 			return false;
 		};
-		button.onDrag = function(dx, dy, isInBounds, uiListener) {
+		button.onDrag = function(movement, isInBounds, uiListener) {
 			if (isInBounds) 
 				document.body.style.cursor = "pointer";
 			if (!uiListener.highlighted) {
@@ -373,7 +353,7 @@ $.GIsoGame.Editor = (function() {
 			return false;
 		};
 		buttons.push(button);
-		uiListeners.push(button);
+		controls.addUIListener(button);
 		return button;
 	};
 
@@ -412,11 +392,12 @@ $.GIsoGame.Editor = (function() {
 			height: 100,
 			visible: true,
 			dragged: false,
-			itemWidth: cellW * 1.5,
+			itemWidth: spritePalette.getCellW() * 1.5,
+			cellW: spritePalette.getCellW(),
 			dragOffset: 0,
 			mouseDown: false,
 		};		
-		menu.onMouse = function(x, y, button, down, isInBounds, uiListener) {
+		menu.onMouse = function(movement, button, down, isInBounds, uiListener) {
 			if (button == 1) {
 				if (!down) { 
 					uiListener.dragged = false;					
@@ -434,14 +415,14 @@ $.GIsoGame.Editor = (function() {
 			}
 			return false;
 		};
-		menu.onDrag = function(dx, dy, isInBounds, uiListener) {
+		menu.onDrag = function(movement, isInBounds, uiListener) {
 			if (uiListener.dragged) {
-				uiListener.dragOffset += dx;
+				uiListener.dragOffset += movement.dx;
 				return true;
 			}
 			return false;
 		};
-		uiListeners.push(menu);
+		controls.addUIListener(menu);
 		return menu;
 	};
 	
@@ -507,7 +488,7 @@ $.GIsoGame.Editor = (function() {
 			dragged: false,
 			mouseDown: false,
 		};
-		desktopArea.onMouse = function(x, y, button, down, isInBounds, uiListener) {
+		desktopArea.onMouse = function(movement, button, down, isInBounds, uiListener) {
 			if (button == 1) {
 				if (!down) { 
 					uiListener.dragged = false;					
@@ -532,66 +513,31 @@ $.GIsoGame.Editor = (function() {
 			}
 			return false;			
 		};
-		desktopArea.onDrag = function(dx, dy, isInBounds, uiListener) {
-			if (uiListener.dragged) {
-				viewX += dx;
-				viewY += dy;
-				return true;
-			}
-			return false;
-		};
-		uiListeners.push(desktopArea);
-	};
-	
-	let createCanvasListeners = function() {
-		canvas.addEventListener('contextmenu', function(e) {		
-			if (e.button == 2) e.preventDefault();		
-		});
-		
-		canvas.addEventListener("mousedown", function (e) {
-			mouseButtonChange(true, e.button);
-		}, false);
-	 
-		canvas.addEventListener("mouseup", function (e) {
-			mouseButtonChange(false, e.button);
-		}, false);
-		
-		canvas.addEventListener("mouseleave", function (e) {
-			mouseButtonChange(false, 0);
-			mouseButtonChange(false, 1);
-			mouseButtonChange(false, 2);
-		}, false);
-		
-		canvas.addEventListener("mousemove", function (e) {
-			// výchozí vyresetování kurzoru
-			document.body.style.cursor = "default";
-		
-			let bound = canvas.getBoundingClientRect();
-			cursor.lastSx = cursor.sx;
-			cursor.lastSy = cursor.sy;
-			cursor.sx = e.clientX - bound.x;
-			cursor.sy = e.clientY - bound.y;
-			let ix = cursor.sx - viewX;
-			let iy = cursor.sy - viewY;
+		desktopArea.onDrag = function(movement, isInBounds, uiListener) {						
+			// ukazatel pole na mapě
+			let ix = movement.x - viewX;
+			let iy = movement.y - viewY;
 			mapCoord = isoRenderer.toMap(ix, iy);	
 			cursor.mx = mapCoord.mx;
 			cursor.my = mapCoord.my;
 			cursor.vix = ix;
-			cursor.viy = iy;		
+			cursor.viy = iy;	
 			
-			let diffX = cursor.sx - cursor.lastSx;
-			let diffY = cursor.sy - cursor.lastSy;
-			for (let i = 0; i < uiListeners.length; i++)
-				if (uiListeners[i].visible 
-					&& uiListeners[i].onDrag(diffX, diffY, isInBounds(uiListeners[i], cursor.sx, cursor.sy), uiListeners[i]))
-					break;
-		}, false);
+			// posuv mapy přes MMB
+			if (uiListener.dragged) {
+				viewX += movement.dx;
+				viewY += movement.dy;
+				return true;
+			}
+			return false;
+		};
+		controls.addUIListener(desktopArea);
 	};
 	
 	let prepareMapTools = function() {
 		levelReader = $.GIsoGame.LevelManager.createLevelReader(levelBlueprint);											
 		mapSculptor = $.GIsoGame.MapSculptor.create(spritePalette, levelBlueprint);
-		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, levelReader, spriteLoader, cursor);		
+		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, spritePalette.getCellW(), spritePalette.getCellH(), levelReader, spriteLoader, cursor);		
 		
 		let iso = isoRenderer.toIso(levelReader.getMapW() / 2, levelReader.getMapH() / 2);
 		viewX = halfWidth - iso.ix;
@@ -601,19 +547,17 @@ $.GIsoGame.Editor = (function() {
 	let init = function() {	
 		window.addEventListener("resize", updateWindowSize);				
 		
-		//cfg.outlines = true;					
-		
 		canvas.style.position = "absolute";
 		canvas.style.left = "0";
 		canvas.style.top = "0";
-		//canvas.style.zIndex = "999";				
 		
 		spriteLoader = $.GIsoGame.SpriteLoader.create();	
-		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader, cellW, cellH);
-						
+		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader);
+		
+		controls = $.GIsoGame.EditorControls.create(canvas);			
 		createMenus();
 		createButtons();		
-		createDesktopArea();
+		createDesktopArea();								
 		
 		updateWindowSize();
 		
@@ -626,9 +570,7 @@ $.GIsoGame.Editor = (function() {
 			if (levelBlueprint == undefined) 
 				levelBlueprint = $.GIsoGame.LevelManager.createNewLevelBlueprint(10, 10);
 
-			prepareMapTools();			
-				
-			createCanvasListeners();
+			prepareMapTools();						
 				
 			// https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
 			// https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-ref

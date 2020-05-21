@@ -1,7 +1,7 @@
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.Minimap = {	
-	drawMinimap: function(ctx, levelReader, target, hero) {
+	drawMinimap: function(ctx, levelReader, hero) {
 		let miniX = $.GIsoGame.Configuration.uiMargin;
 		let miniY = $.GIsoGame.Configuration.uiMargin;
 		let miniWidth = $.GIsoGame.Configuration.minimapWidth;
@@ -33,12 +33,6 @@ $.GIsoGame.Minimap = {
 			for (let my = 0; my < levelReader.getMapH(); my++) 
 				if (levelReader.getWallAtCoord(mx, my) != undefined)		
 					ctx.fillRect(miniX + mx * miniCellWidth, miniY + my * miniCellHeight, miniCellWidth, miniCellHeight);			
-		
-		if (target != undefined) {
-			$.GIsoGame.GFXUtils.drawPoint(ctx, miniX + miniCellWidth * target.mx, miniY + miniCellHeight * target.my, "yellow");
-			for (let s = 0; s < target.mxSteps.length; s++)
-				$.GIsoGame.GFXUtils.drawPoint(ctx, miniX + miniCellWidth * target.mxSteps[s], miniY + miniCellHeight * target.mySteps[s], "purple");
-		}
 		
 		if (hero != undefined)
 			$.GIsoGame.GFXUtils.drawPoint(ctx, miniX + miniCellWidth * hero.mx, miniY + miniCellHeight * hero.my, "lime");				
