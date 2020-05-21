@@ -1,7 +1,6 @@
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
-$.GIsoGame.IsoRenderer = {
-	// TODO vyjmout drawTarget a drawHero -> zobecnit na "entity"
+$.GIsoGame.IsoRenderer = {	
 	create: function(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor, onCellRenderFunc) {
 		let innerToIso = function(mx, my) {
 			let w = cellW / 2;

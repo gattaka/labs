@@ -1,7 +1,7 @@
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.MapSculptor = {	
-	create: function(fills, level) {
+	create: function(spritePalette, level) {
 		
 		let mergeMatrix;
 		let overlapMatrix;
@@ -52,40 +52,39 @@ $.GIsoGame.MapSculptor = {
 			];
 		})();		
 		
-		let getTypeByTile = function(groupId, spriteId, tileId) {
-			let tiles = fills[groupId][spriteId].tiles;
+		let getTypeByTile = function(groundId, tileId) {
+			let tiles = spritePalette.getGround(groundId);
 			for (let type = 0; type < tiles.length; type++)
 				if (tiles[type] != undefined && tileId >= tiles[type][0] && tileId < tiles[type][1])
 					return type;
 			return -1;
 		};
 		
-		let getRandomTileByType = function(groupId, spriteId, type) {
-			let fill = fills[groupId][spriteId];
-			let range = fill.tiles[type];	
+		let getRandomTileByType = function(groundId, type) {
+			let tiles = spritePalette.getGround(groundId);
+			let range = tiles[type];	
 			// pokud není definován tento typ tile, použij M typ (M=4)
 			if (range == undefined)
-				range = fill.tiles[4];
+				range = tiles[4];
 			return range[0] + Math.floor(Math.random() * (range[1] - range[0]));
 		};
 		
-		let placeGroundTile = function(index, spriteId, type) {	
+		let placeGroundTile = function(index, groundId, type) {	
 			// pokud není definován tento typ tile, použij M typ (M=4)
-			let fill = fills[0][spriteId];			
-			if (fill.tiles[type] == undefined)
+			if (spritePalette.getGround(groundId)[type] == undefined)
 				type = 4;
 
 			let tile = level.grounds[index];
 			if (tile == undefined || tile.length == 0 || type == fullTileType) {
 				// prázdné nebo se nastavuje plně překrývající tile
-				level.grounds[index] = [spriteId, getRandomTileByType(0, spriteId, type)]; 
+				level.grounds[index] = [groundId, getRandomTileByType(groundId, type)]; 
 				return;
 			}
 						
 			let layers = tile.length / 2;				
 			for (let i = tile.length - 2; i >= 0; i -= 2) {				
-				let layerSpriteId = tile[i];
-				let layerType = getTypeByTile(0, layerSpriteId, tile[i + 1]);
+				let layerGroundId = tile[i];
+				let layerType = getTypeByTile(layerGroundId, tile[i + 1]);
 				// bude nový tile překrývat danou vrstvu? Pokud ano, vrstvu smaž
 				if (overlapMatrix[layerType][type] == 1) {
 					tile.splice(i, 2);
@@ -93,7 +92,7 @@ $.GIsoGame.MapSculptor = {
 					continue;
 				}
 				// je aktuální nový sprite stejný jako stávající v této vrstvě?
-				if (i == tile.length - 2 && layerSpriteId == spriteId) {
+				if (i == tile.length - 2 && layerGroundId == groundId) {
 					// zkus na něm provést merge
 					let mergedType = mergeMatrix[layerType][type];
 					// pokud se merge podařil, odeber vrstvu a změn type, který se bude přidávat
@@ -105,8 +104,8 @@ $.GIsoGame.MapSculptor = {
 					}
 				}	
 			}		
-			tile.push(spriteId);
-			tile.push(getRandomTileByType(0, spriteId, type));		
+			tile.push(groundId);
+			tile.push(getRandomTileByType(groundId, type));		
 		};
 				
 		let paintGround = function(mx, my, brush) {			

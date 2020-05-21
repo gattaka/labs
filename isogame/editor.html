@@ -10,6 +10,7 @@
 	<script type="text/javascript" src="./js/MapSculptor.js"></script>			
 	<script type="text/javascript" src="./js/PersistanceManager.js"></script>	
 	<script type="text/javascript" src="./js/FPS.js"></script>		
+	<script type="text/javascript" src="./js/SpritePalette.js"></script>			
 	<style>
 		#mapcode-div {
 			display: none;
@@ -74,7 +75,9 @@ $.GIsoGame.Editor = (function() {
 	
 	let fpsUI;
 	let persistanceManager;
+	
 	let spriteLoader;
+	let spritePalette;
 	let levelLoader;
 	let currentLevel;
 	let isoRenderer;
@@ -105,7 +108,6 @@ $.GIsoGame.Editor = (function() {
 	let objectsMenu = {};
 	
 	// Ground tiles vyplňování
-	let fills = [];	
 	let brush = {
 		size: 1,
 		mode: 1, // 1 malba, -1 mazání
@@ -321,20 +323,7 @@ $.GIsoGame.Editor = (function() {
 
 	/*
 	* INIT
-	*/
-	
-	let addFill = function(group, spriteId, ranges) {
-		if (fills[group] == undefined)
-			fills[group] = [];
-		fills[group][spriteId] = {
-			group: group,
-			spriteId: spriteId,
-			tiles: [ranges.tl, ranges.t, ranges.tr, 
-					ranges.l, ranges.m, ranges.r,
-					ranges.bl, ranges.b, ranges.br,
-					ranges.otl, ranges.otr, ranges.obl, ranges.obr]			
-		};
-	};
+	*/	
 	
 	let createButton = function(text, onClick) {	
 		let button = {};
@@ -601,7 +590,7 @@ $.GIsoGame.Editor = (function() {
 	
 	let prepareMapTools = function() {
 		currentLevel = $.GIsoGame.LevelLoader.createLevel(level);											
-		mapSculptor = $.GIsoGame.MapSculptor.create(fills, level);
+		mapSculptor = $.GIsoGame.MapSculptor.create(spritePalette, level);
 		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, currentLevel, spriteLoader, cursor);		
 		
 		let iso = isoRenderer.toIso(level.mapW / 2, level.mapH / 2);
@@ -619,30 +608,8 @@ $.GIsoGame.Editor = (function() {
 		canvas.style.top = "0";
 		//canvas.style.zIndex = "999";				
 		
-		spriteLoader = $.GIsoGame.SpriteLoader.create();				
-		let grounds = ["grass_medium_64x32.png", "stone_path_64x32.png", "grass_dry_64x32.png", "forest_ground_64x32.png", "sand_64x32.png", 
-						"dirt_dark_64x32.png"];
-		for (let i = 0; i < grounds.length; i++) {
-			spriteLoader.queueTexture(0, "./sprites/grounds/" + grounds[i], 8, 7, cellW, cellH, 0, 0);
-			addFill(0, i, {
-				m: [0, 20], r: [20, 24], b: [24, 28], t: [28, 32], l: [32, 36],
-				otr: [36, 38], obr: [38, 40], otl: [40, 42], obl: [42, 44],
-				tr: [44, 46], br: [46, 48], tl: [48, 50], bl: [50, 52]
-			});
-		}
-		spriteLoader.queueTexture(0, "./sprites/grounds/32_flagstone_tiles.png", 4, 8, cellW, cellH, 0, 0);
-		addFill(0, grounds.length, {m: [0, 32]});
-		for (let i = 1; i <= 6; i++)
-			spriteLoader.queueTexture(2, "./sprites/objects/weed0" + i + ".png", 1, 1, 128, 64, 34, 25);
-		for (let i = 1; i <= 2; i++)
-			spriteLoader.queueTexture(2, "./sprites/objects/swirl0" + i + ".png", 1, 1, 128, 64, 34, 30);		
-		for (let i = 1; i <= 5; i++)
-			spriteLoader.queueTexture(2, "./sprites/objects/grasses0" + i + ".png", 1, 1, 128, 64, 34, 30);				
-		spriteLoader.queueTexture(3, "./sprites/walls/iso_dungeon_walls_by_pfunked.png", 8, 4, 128, 128, 32, 64 + 16);
-		for (let i = 1; i <= 8; i++) 
-			spriteLoader.queueTexture(3, "./sprites/objects/pine-none0" + i + ".png", 1, 1, 256, 256, 64 + 50, 128 + 64);
-		spriteLoader.queueTexture(3, "./sprites/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);	
-		spriteLoader.load();
+		spriteLoader = $.GIsoGame.SpriteLoader.create();	
+		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader, cellW, cellH);
 						
 		createMenus();
 		createButtons();		
@@ -650,7 +617,7 @@ $.GIsoGame.Editor = (function() {
 		
 		updateWindowSize();
 		
-		fpsUI = $.GIsoGame.FPS.create(200, ctx, 20);
+		fpsUI = $.GIsoGame.FPS.create(100, ctx, 20);
 		
 		let self = this;
 		persistanceManager = $.GIsoGame.PersistanceManager.create();
