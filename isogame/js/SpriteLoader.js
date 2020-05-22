@@ -55,12 +55,11 @@ $.GIsoGame.SpriteLoader = {
 						continue;
 					for (let i = 0; i < group.length; i++) {
 						let texture = group[i];
-						
-						let shades = 10;
+												
 						texture.canvas = [];
 						texture.ctx = [];		
 						texture.imageData = [];
-						for (let s = 0; s < shades; s++) {
+						for (let s = 0; s <= 10; s++) {
 							let textureCanvas = document.createElement("canvas");
 							textureCanvas.width = texture.width * texture.cols;
 							textureCanvas.height = texture.height * texture.rows;
@@ -70,8 +69,8 @@ $.GIsoGame.SpriteLoader = {
 							textureCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
 							textureCtx.imageSmoothingEnabled = subCanvasSmoothing;
 							textureCtx.msImageSmoothingEnabled = subCanvasSmoothing; 						
-							texture.canvas.push(textureCanvas);
-							texture.ctx.push(textureCtx);
+							texture.canvas[s] = textureCanvas;
+							texture.ctx[s] = textureCtx;
 						}
 						
 						textureImg = new Image();			
@@ -84,13 +83,9 @@ $.GIsoGame.SpriteLoader = {
 								if (loadingProgress == 0)
 									loaded = true;
 								let tex = textures[seafGroup][seafIndex];
-								for (let s = 0; s < shades; s++) {
-									let bright = Math.floor(s / shades * 100);
-									tex.ctx[s].filter = "brightness(" + bright + "%)";
-									//tex.ctx[s].filter = "brightness(100%)";
-									tex.ctx[s].drawImage(seafImg, 0, 0);
-									//tex.ctx[s].filter = "none";
-									//tex.imageData[s] = tex.ctx[s].getImageData(0, 0, tex.canvas[s].width, tex.canvas[s].height);
+								for (let s = 0; s <= 10; s++) {
+									tex.ctx[s].filter = "brightness(" + (s * 10) + "%)";									
+									tex.ctx[s].drawImage(seafImg, 0, 0);									
 								}
 							}
 						})();

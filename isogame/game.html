@@ -83,7 +83,8 @@ $.GIsoGame.Game = (function() {
 		mx: 0, 
 		my: 0,
 		speed: 0.2,	
-		direction: 0
+		direction: 0,
+		light: 5,
 	};
 	
 	let target = {
@@ -398,6 +399,7 @@ $.GIsoGame.Game = (function() {
 		let my = 1.5;
 		hero.mx = mx;
 		hero.my = my;
+		levelBlueprint.lights.push(hero);
 		target.mx = mx;
 		target.my = my;
 		

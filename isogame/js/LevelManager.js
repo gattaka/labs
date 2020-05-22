@@ -5,15 +5,18 @@ $.GIsoGame.LevelManager = {
 		return {
 			mapW: mapW,
 			mapH: mapH,
+			baseLight: 10,
 			grounds:[],
 			objects: [],
-			walls: []
+			walls: [],
+			lights: [],
 		};
 	},
 	
 	createLevelReader: function(levelBlueprint) {		
 		let mapW = levelBlueprint.mapW;
 		let mapH = levelBlueprint.mapH;
+		let baseLight = levelBlueprint.baseLight;
 		
 		// mapa povrchů
 		let grounds = levelBlueprint.grounds;
@@ -21,7 +24,11 @@ $.GIsoGame.LevelManager = {
 		// mapa objektů
 		let objects = levelBlueprint.objects;
 		
+		// mapa kolizí
 		let walls = levelBlueprint.walls;
+		
+		// list světel
+		let lights = levelBlueprint.lights;
 		
 		let innerGetGroundAtIndex = function(index) {
 			return grounds[index];
@@ -45,6 +52,24 @@ $.GIsoGame.LevelManager = {
 				spriteId: tile[0],
 				frameId: tile[1]
 			};
+		};
+		
+		let innerGetLightAtCoord = function(mx, my) {
+			let light = baseLight;			
+			for (i = 0; i < lights.length; i++) {
+				let l = lights[i];				
+				let dx = Math.abs(l.mx - mx);
+				let dy = Math.abs(l.my - my);
+				let product = dx * dx + dy * dy;
+				if (product > 100)
+					continue;
+				light += Math.floor((10 - Math.sqrt(product)) / 10 * l.light);
+				if (light >= 10) {
+					light = 10;
+					break;
+				}
+			}
+			return light;
 		};
 				
 		return {
@@ -71,6 +96,9 @@ $.GIsoGame.LevelManager = {
 			},
 			getWallAtCoord: function(mx, my) {				
 				return innerGetWallAtIndex(mx + my * mapW);
+			},
+			getLightAtCoord: function(mx, my) {
+				return innerGetLightAtCoord(mx, my);
 			},
 		}
 	}	
