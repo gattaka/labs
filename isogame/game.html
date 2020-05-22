@@ -84,7 +84,8 @@ $.GIsoGame.Game = (function() {
 		my: 0,
 		speed: 0.2,	
 		direction: 0,
-		light: 5,
+		light: 70,
+		lightReach: 10,
 	};
 	
 	let target = {
@@ -462,7 +463,11 @@ $.GIsoGame.Game = (function() {
 		
 		changeOutlines: function(value) {
 			cfg.outlines = value;
-		},		
+		},
+		
+		getHero: function() {
+			return hero;
+		},
 	};
 
 })();

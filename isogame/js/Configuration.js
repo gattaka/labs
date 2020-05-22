@@ -13,4 +13,5 @@ $.GIsoGame.Configuration = {
 	uiSpacing: 10,
 	minimapWidth: 150,
 	minimapHeight: 150,
+	lightQuality: 50, // 10 - 50
 };

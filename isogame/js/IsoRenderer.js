@@ -2,6 +2,9 @@ var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.IsoRenderer = {	
 	create: function(ctx, width, height, cellW, cellH, levelManager, spriteLoader, cursor, onCellRenderFunc) {
+		let lightQuality = $.GIsoGame.Configuration.lightQuality;
+		let lightStep = 100 / lightQuality;
+		
 		let innerToIso = function(mx, my) {
 			let w = cellW / 2;
 			let h = cellH / 2;
@@ -37,10 +40,14 @@ $.GIsoGame.IsoRenderer = {
 			let col = frameId % tex.cols;
 			let row = Math.floor(frameId / tex.cols);
 			let x = Math.floor(ix - tex.offsetX);
-			let y = Math.floor(iy - tex.offsetY);		
-			if (light == undefined)
-				light = 10;			
-			ctx.drawImage(tex.canvas[light], 
+			let y = Math.floor(iy - tex.offsetY);	
+			let lightBucket;
+			if (light == undefined) {
+				lightBucket = 0;			
+			} else {
+				lightBucket = Math.floor((100 - light) / lightStep);
+			}				
+			ctx.drawImage(tex.canvas[lightBucket], 
 				col * tex.width, row * tex.height, tex.width, tex.height, 
 				x, y, tex.width, tex.height);			
 			if (showOutline) {

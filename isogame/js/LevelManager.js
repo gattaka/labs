@@ -14,6 +14,7 @@ $.GIsoGame.LevelManager = {
 	},
 	
 	createLevelReader: function(levelBlueprint) {		
+		let lightQuality = $.GIsoGame.Configuration.lightQuality;
 		let mapW = levelBlueprint.mapW;
 		let mapH = levelBlueprint.mapH;
 		let baseLight = levelBlueprint.baseLight;
@@ -61,13 +62,11 @@ $.GIsoGame.LevelManager = {
 				let dx = Math.abs(l.mx - mx);
 				let dy = Math.abs(l.my - my);
 				let product = dx * dx + dy * dy;
-				if (product > 100)
+				if (product > l.lightReach * l.lightReach)
 					continue;
-				light += Math.floor((10 - Math.sqrt(product)) / 10 * l.light);
-				if (light >= 10) {
-					light = 10;
-					break;
-				}
+				light += (l.lightReach - Math.sqrt(product)) / l.lightReach * l.light;
+				if (light >= 100)
+					return 100;				
 			}
 			return light;
 		};

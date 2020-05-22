@@ -93,7 +93,7 @@ $.GIsoGame.SpriteMenu = {
 				let leftTrim = leftOverlap > 0 ? leftOverlap : 0;
 				let rightTrim = rightOverlap > 0 ? rightOverlap : 0;
 				let trimWidth = texDetail.tex.width - leftTrim - rightTrim;
-				ctx.drawImage(texDetail.tex.canvas[10], 
+				ctx.drawImage(texDetail.tex.canvas[0], 
 					texDetail.col * texDetail.tex.width + leftTrim, texDetail.row * texDetail.tex.height, trimWidth, texDetail.tex.height, 
 					x + leftTrim, y, trimWidth, texDetail.tex.height);	
 			}
