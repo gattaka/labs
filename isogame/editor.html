@@ -238,8 +238,10 @@ $.GIsoGame.Editor = (function() {
 		button.switched = true;
 		groundsMenu.visible = false;
 		wallsMenu.visible = false;
-		objectsMenu.visible = false;
-		menu.visible = true;
+		objectsMenu.visible = false;	
+		if (menu != undefined)
+			menu.visible = true;
+		isoRenderer.setLights(false);		
 	};
 
 	let createButtons = function() {	
@@ -247,6 +249,10 @@ $.GIsoGame.Editor = (function() {
 		createButton("Povrchy", button => switchMenuButton(button, groundsMenu));
 		createButton("Kolizní objekty", button => switchMenuButton(button, wallsMenu));			
 		createButton("Nekolizní objekty", button => switchMenuButton(button, objectsMenu));
+		createButton("Světla", button => {
+			switchMenuButton(button); 
+			isoRenderer.setLights(true);
+		});
 	};
 	
 	let createGroundsMenu = function() {	
@@ -286,11 +292,9 @@ $.GIsoGame.Editor = (function() {
 	};
 	
 	let createMenus = function() {
-		wallsMenu = createSingleSpriteMenu(3);
-		objectsMenu = createSingleSpriteMenu(2);
-		objectsMenu.visible = false;
 		createGroundsMenu();
-		groundsMenu.visible = false;
+		wallsMenu = createSingleSpriteMenu(3);
+		objectsMenu = createSingleSpriteMenu(2);		
 	};
 	
 	let createDesktopArea = function() {
@@ -341,10 +345,21 @@ $.GIsoGame.Editor = (function() {
 		controls.addUIListener(desktopArea);
 	};
 	
+	let onCellRenderFunc = function(mx, my, ix, iy) {
+		if (!isoRenderer.isLights())
+			return;
+		levelBlueprint.lights.forEach(light => {
+			if (Math.floor(light.mx) == mx && Math.floor(light.my) == my) {
+				$.GIsoGame.GFXUtils.drawPoint(ctx, Math.floor(ix + spritePalette.getCellW() / 2), Math.floor(iy), "yellow", 4);			
+			}
+		});		
+	};
+	
 	let prepareMapTools = function() {
 		levelReader = $.GIsoGame.LevelManager.createLevelReader(levelBlueprint);											
 		mapSculptor = $.GIsoGame.MapSculptor.create(spritePalette, levelBlueprint);
-		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, spritePalette.getCellW(), spritePalette.getCellH(), levelReader, spriteLoader, cursor);		
+		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, spritePalette.getCellW(), spritePalette.getCellH(), 
+													levelReader, spriteLoader, cursor, onCellRenderFunc);		
 		
 		let iso = isoRenderer.toIso(levelReader.getMapW() / 2, levelReader.getMapH() / 2);
 		viewX = halfWidth - iso.ix;
@@ -374,11 +389,12 @@ $.GIsoGame.Editor = (function() {
 			
 			createMenus();
 			createButtons();		
-			createDesktopArea();								
+			createDesktopArea();	
 			
 			updateWindowSize();	
-
 			prepareMapTools();						
+			
+			switchMenuButton(buttons[2], wallsMenu);
 				
 			// https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
 			// https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-ref

@@ -70,7 +70,7 @@ $.GIsoGame.SpritePalette = {
 		spriteLoader.queueTexture(3, "./sprites/walls/barricade_tiles.png", 4, 3, 128, 128, 32, 64 + 16);	
 		spriteLoader.queueTexture(3, "./sprites/walls/woodRoom.png", 16, 3, 64, 128, 0, 64 + 32);
 		spriteLoader.queueTexture(3, "./sprites/objects/table.png", 4, 1, 64, 48, 0, 16 + 4);
-		spriteLoader.queueTexture(3, "./sprites/objects/chair.png", 8, 1, 64, 64, 0, 32);
+		spriteLoader.queueTexture(3, "./sprites/objects/chair.png", 8, 1, 64, 64, 0, 32);		
 		
 		spriteLoader.load();
 		

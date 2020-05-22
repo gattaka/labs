@@ -20,10 +20,13 @@ $.GIsoGame.GFXUtils = {
 		}
 	},
 	
-	drawPoint: function(ctx, x, y, color) {
+	drawPoint: function(ctx, x, y, color, size) {
+		if (size == undefined)
+			size = 1;		
+		let width = (size + 1) * 2 + 1;
 		ctx.fillStyle = "black";
-		ctx.fillRect(Math.floor(x - 2), Math.floor(y - 2), 5, 5);
+		ctx.fillRect(Math.floor(x - size - 1), Math.floor(y - size - 1), width, width);
 		ctx.fillStyle = color;
-		ctx.fillRect(Math.floor(x - 1), Math.floor(y - 1), 3, 3);
+		ctx.fillRect(Math.floor(x - size), Math.floor(y - size), width - 2, width - 2);
 	},
 };

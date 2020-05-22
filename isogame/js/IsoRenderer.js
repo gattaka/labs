@@ -4,6 +4,7 @@ $.GIsoGame.IsoRenderer = {
 	create: function(ctx, width, height, cellW, cellH, levelManager, spriteLoader, cursor, onCellRenderFunc) {
 		let lightQuality = $.GIsoGame.Configuration.lightQuality;
 		let lightStep = 100 / lightQuality;
+		let lightsOn = true;
 		
 		let innerToIso = function(mx, my) {
 			let w = cellW / 2;
@@ -42,7 +43,7 @@ $.GIsoGame.IsoRenderer = {
 			let x = Math.floor(ix - tex.offsetX);
 			let y = Math.floor(iy - tex.offsetY);	
 			let lightBucket;
-			if (light == undefined) {
+			if (light == undefined || !lightsOn) {
 				lightBucket = 0;			
 			} else {
 				lightBucket = Math.floor((100 - light) / lightStep);
@@ -108,7 +109,7 @@ $.GIsoGame.IsoRenderer = {
 				for (let my = 0; my < levelManager.getMapH(); my++) {				
 					let isoCell = isoCells[mx][my];
 					if (onCellRenderFunc != undefined)
-						onCellRenderFunc(mx, my);					
+						onCellRenderFunc(mx, my, isoCell.ix, isoCell.iy);					
 
 					let wall = levelManager.getWallAtCoord(mx, my);
 					if (wall != undefined) 
@@ -154,6 +155,14 @@ $.GIsoGame.IsoRenderer = {
 			
 			setHeight: function(h) {
 				innerSetHeight(h);
+			},
+			
+			setLights: function(show) {
+				lightsOn = show;
+			},
+			
+			isLights: function() {
+				return lightsOn;
 			},
 			
 			update: function(delay, viewX, viewY) {
