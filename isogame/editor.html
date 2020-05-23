@@ -9,7 +9,7 @@
 <script type="text/javascript" src="./js/Configuration.js"></script>		
 <script type="text/javascript" src="./js/MapSculptor.js"></script>			
 <script type="text/javascript" src="./js/PersistanceManager.js"></script>	
-<script type="text/javascript" src="./js/FPS.js"></script>		
+<script type="text/javascript" src="./js/stats.min.js"></script>		
 <script type="text/javascript" src="./js/SpritePalette.js"></script>			
 <script type="text/javascript" src="./js/EditorControls.js"></script>
 <script type="text/javascript" src="./js/SpriteMenu.js"></script>
@@ -77,7 +77,7 @@ $.GIsoGame.Editor = (function() {
 	
 	let cfg = $.GIsoGame.Configuration;
 	
-	let fpsUI;
+	let stats;
 	let persistanceManager;
 	
 	let spriteLoader;
@@ -124,7 +124,9 @@ $.GIsoGame.Editor = (function() {
 	*/	
 	
 	let draw = function(timestamp) {
+		stats.begin();
 		drawScene(timestamp);
+		stats.end();
 		window.requestAnimationFrame(draw);
 	};	
 				
@@ -160,9 +162,7 @@ $.GIsoGame.Editor = (function() {
 				brush.lastPaintedX = paintedX;		
 				brush.lastPaintedY = paintedY;
 			}
-		}		
-		
-		fpsUI.update(width - cfg.uiMargin, cfg.uiMargin, delay);		
+		}					
 	};			
 
 	let highlightBtns = function(buttons, highlighted) {
@@ -373,7 +373,9 @@ $.GIsoGame.Editor = (function() {
 		canvas.style.left = "0";
 		canvas.style.top = "0";
 		
-		fpsUI = $.GIsoGame.FPS.create(100, ctx, 20);
+		stats = new Stats();
+		stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+		document.body.appendChild(stats.dom);
 		
 		spriteLoader = $.GIsoGame.SpriteLoader.create();	
 		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader);

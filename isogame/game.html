@@ -11,7 +11,7 @@
 <script type="text/javascript" src="./js/Level1.dat.js"></script>
 <script type="text/javascript" src="./js/Level2.dat.js"></script>
 <script type="text/javascript" src="./js/SpritePalette.js"></script>		
-<script type="text/javascript" src="./js/FPS.js"></script>		
+<script type="text/javascript" src="./js/stats.min.js"></script>		
 <style>
 	body {
 		cursor: url('./cursor.png'), auto;	
@@ -36,7 +36,7 @@ $.GIsoGame.Game = (function() {
 	let halfWidth;
 	let halfHeight;
 				
-	let fpsUI;
+	let stats;
 	
 	let cfg;
 	
@@ -139,7 +139,9 @@ $.GIsoGame.Game = (function() {
 	};		
 		
 	let draw = function(timestamp) {
+		stats.begin();
 		drawScene(timestamp);
+		stats.end();
 		window.requestAnimationFrame(draw);
 	};
 			
@@ -156,8 +158,6 @@ $.GIsoGame.Game = (function() {
 		isoRenderer.update(delay, viewX, viewY);
 
 		$.GIsoGame.Minimap.drawMinimap(ctx, levelReader, target, hero);
-		
-		fpsUI.update(width - cfg.uiMargin, cfg.uiMargin, delay);
 	};		
 
 	/*
@@ -378,7 +378,9 @@ $.GIsoGame.Game = (function() {
 		window.addEventListener("resize", updateWindowSize);		
 		updateWindowSize();		
 		
-		fpsUI = $.GIsoGame.FPS.create(100, ctx, 20);
+		stats = new Stats();
+		stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+		document.body.appendChild(stats.dom);
 		
 		canvas.style.position = "absolute";
 		canvas.style.left = "0";
