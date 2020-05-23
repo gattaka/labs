@@ -19,7 +19,7 @@ $.GIsoGame.SpritePalette = {
 						ranges.otl, ranges.otr, ranges.obl, ranges.obr]);			
 		};
 		
-		let addCharacter = function(directionFrames, loops, loopsFrames, loopsMirror) {			
+		let addCharacter = function(directionFrames, loops, loopsFrames, loopsMirror, frameDuration) {			
 			characters.push({
 				// počet všech snímků v jednom směru
 				directionFrames: directionFrames,
@@ -29,7 +29,7 @@ $.GIsoGame.SpritePalette = {
 				loopsFrames: loopsFrames,
 				// které animace mají smyčku typu tam-zpět
 				loopsMirror: loopsMirror, 
-				frameDuration: 100,
+				frameDuration: frameDuration,
 			});
 		};
 		
@@ -51,7 +51,7 @@ $.GIsoGame.SpritePalette = {
 		// --- Characters ---
 		// Stance (4 frames), Walk (8 frames), Attack (4 frames), Cast (4 frames), Block (2 frames), Hit and Die (6 frames), Aim Crossbow (4 frames)
 		spriteLoader.queueTexture(1, "./sprites/characters/skeleton_0.png", 32, 8, 128, 128, 64, 128 - 32, false);	
-		addCharacter(32, [0, 4, 8, 4, 4, 2, 6], [4, 8, 4, 4, 2, 6, 4], [true, false, false, false, false, false, false], 100);
+		addCharacter(32, [0, 4, 8, 4, 4, 2, 6], [4, 8, 4, 4, 2, 6, 4], [true, false, false, false, false, false, false], 80);
 		
 		// --- Objects ---
 		
