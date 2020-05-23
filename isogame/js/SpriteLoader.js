@@ -11,9 +11,11 @@ $.GIsoGame.SpriteLoader = {
 		
 		// public
 		return {			
-			queueTexture: function(group, src, cols, rows, width, height, offsetX, offsetY) {
+			queueTexture: function(group, src, cols, rows, width, height, offsetX, offsetY, hasShades) {
 				if (textures[group] == undefined)
-					textures[group] = [];				
+					textures[group] = [];		
+				if (hasShades == undefined)
+					hasShades = true;
 				textures[group].push({
 					src: src,
 					cols: cols, 
@@ -21,7 +23,8 @@ $.GIsoGame.SpriteLoader = {
 					width: width,
 					height: height,
 					offsetX: offsetX,
-					offsetY: offsetY,					
+					offsetY: offsetY,
+					hasShades: hasShades,
 				});
 				loadingProgress++;
 				return textures[group].length - 1;
@@ -60,7 +63,8 @@ $.GIsoGame.SpriteLoader = {
 						texture.canvas = [];
 						texture.ctx = [];		
 						texture.imageData = [];
-						for (let s = 0; s < lightQuality; s++) {
+						let versions = texture.hasShades ? lightQuality : 1;
+						for (let s = 0; s < versions; s++) {
 							let textureCanvas = document.createElement("canvas");
 							textureCanvas.width = texture.width * texture.cols;
 							textureCanvas.height = texture.height * texture.rows;
@@ -84,7 +88,7 @@ $.GIsoGame.SpriteLoader = {
 								if (loadingProgress == 0)
 									loaded = true;
 								let tex = textures[seafGroup][seafIndex];
-								for (let s = 0; s < lightQuality; s++) {									
+								for (let s = 0; s < versions; s++) {									
 									tex.ctx[s].filter = "brightness(" + (100 - s * lightStep) + "%)";									
 									tex.ctx[s].drawImage(seafImg, 0, 0);									
 								}
