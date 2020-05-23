@@ -62,7 +62,8 @@ $.GIsoGame.LevelManager = {
 		let innerGetLightAtCoord = function(mx, my) {
 			let light = baseLight;			
 			for (i = 0; i < lights.length; i++) {
-				let l = lights[i];				
+				let l = lights[i];	
+				if (l == undefined) continue; // fallback
 				let dx = Math.abs(l.mx - mx);
 				let dy = Math.abs(l.my - my);
 				let product = dx * dx + dy * dy;

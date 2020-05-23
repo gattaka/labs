@@ -150,9 +150,27 @@ $.GIsoGame.MapSculptor = {
 			}
 		};
 		
+		let paintLight = function(mx, my, brush) {
+			if (mx >= level.mapW || mx < 0 || my >= level.mapH || my < 0) 
+				return;
+			let index = mx + my * level.mapW;
+			if (brush.mode == -1) {
+				for (i = 0; i < level.lights.length; i++) {
+					let l = level.lights[i];
+					if (l == undefined) continue; // fallback
+					if (l.mx == mx && l.my == my) {
+						level.lights.splice(i, 1);
+						return;
+					}
+				}
+			} else {
+				level.lights.push({mx: mx, my: my, light: brush.light, lightReach: brush.lightReach});
+			}
+		};
+		
 		return {
 			paint: function(mx, my, brush) {				
-				switch (brush.groupId) {
+				switch (brush.type) {
 				case 0:
 					paintGround(mx, my, brush);
 					break;
@@ -161,6 +179,9 @@ $.GIsoGame.MapSculptor = {
 					break;
 				case 3:
 					paintSprite(mx, my, brush, true);
+					break;
+				case 4:
+					paintLight(mx, my, brush);
 					break;
 				}
 			},

@@ -98,9 +98,11 @@ $.GIsoGame.Editor = (function() {
 	let brush = {
 		size: 1,
 		mode: 1, // 1 malba, -1 mazání
-		groupId: 0,
+		type: 0, // 0 grounds, 2 objects, 3 walls, 4 lights
 		spriteId: 0,
 		tileId: 0,
+		light: 70,
+		lightReach: 10,
 		lastPaintedX: -1,
 		lastPaintedY: -1,
 	};		
@@ -239,6 +241,7 @@ $.GIsoGame.Editor = (function() {
 		createButton("Světla", x, y + i++ * dy, button => {
 			switchMenuButton(button); 
 			isoRenderer.setLights(true);
+			brush.type = 4;
 		});
 	};
 	
@@ -247,14 +250,14 @@ $.GIsoGame.Editor = (function() {
 		let group = 0;
 		groundsMenu.texDetailFunc = function(i) { return { tex: spriteLoader.getTexture(group, i), col: 0, row: 0 } };
 		groundsMenu.chooseItemFunc = function(id) {
-			brush.groupId = group;
+			brush.type = 0;
 			brush.spriteId = id;
 		};
 		groundsMenu.itemsCount = spriteLoader.getGroupSize(group);
 		controls.addUIListener(groundsMenu);		
 	};
 	
-	let createSingleSpriteMenu = function(groupId) {
+	let createSingleSpriteMenu = function(type, groupId) {
 		menu = $.GIsoGame.SpriteMenu.create(spritePalette.getCellW());
 		let arr = [];
 		for (let i = 0; i < spriteLoader.getGroupSize(groupId); i++) {
@@ -269,7 +272,7 @@ $.GIsoGame.Editor = (function() {
 			return { tex: tex, col: tileId % tex.cols, row: Math.floor(tileId / tex.cols) };
 		};
 		menu.chooseItemFunc = function(i) {
-			brush.groupId = groupId;
+			brush.type = type;
 			brush.spriteId = arr[i][0];
 			brush.tileId = arr[i][1];
 		};
@@ -280,8 +283,8 @@ $.GIsoGame.Editor = (function() {
 	
 	let createMenus = function() {
 		createGroundsMenu();
-		wallsMenu = createSingleSpriteMenu(3);
-		objectsMenu = createSingleSpriteMenu(2);		
+		wallsMenu = createSingleSpriteMenu(3, 3);
+		objectsMenu = createSingleSpriteMenu(2, 2);		
 	};
 	
 	let createDesktopArea = function() {
@@ -335,8 +338,8 @@ $.GIsoGame.Editor = (function() {
 	let onCellRenderFunc = function(mx, my, ix, iy) {
 		if (!isoRenderer.isLights())
 			return;
-		levelBlueprint.lights.forEach(light => {
-			if (Math.floor(light.mx) == mx && Math.floor(light.my) == my) {
+		levelBlueprint.lights.forEach(light => {			
+			if (light != undefined && Math.floor(light.mx) == mx && Math.floor(light.my) == my) {
 				ctx.fillStyle = "black";				
 				let x = ix + spritePalette.getCellW() / 4;
 				ctx.fillRect(x, iy - 40, spritePalette.getCellW() / 2 + 5, 30); 
