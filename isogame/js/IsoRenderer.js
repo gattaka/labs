@@ -87,6 +87,7 @@ $.GIsoGame.IsoRenderer = {
 			for (let smx = 0; smx < sectorSize; smx++) {				
 				for (let smy = 0; smy < sectorSize; smy++) {								
 					let isoCell = innerToIso(smx, smy);			
+					isoCell.iy += sectorHeight / 2;
 					let mx = smx + mxOffset;
 					let my = smy + myOffset;
 					isoCell.value = levelManager.getGroundAtCoord(mx, my);					
@@ -95,18 +96,15 @@ $.GIsoGame.IsoRenderer = {
 					let y = [isoCell.iy, isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2];			
 					let filled = false;					
 					for (let i = 0; i < isoCell.value.length / 2; i++) {
-						innerDrawSprite(sector.ctx, 0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], isoCell.ix, isoCell.iy + sectorHeight / 2 - cellH / 2, false, isoCell.lightBucket);				
+						innerDrawSprite(sector.ctx, 0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.lightBucket);				
 						filled = true;
 					}
 					if ($.GIsoGame.Configuration.outlines || !filled) 
-						$.GIsoGame.GFXUtils.drawPolygon(objectsCtx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,40%,0.5)", false);
+						$.GIsoGame.GFXUtils.drawPolygon(sector.ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,40%,0.5)", false);
 				}
 			}
-			/*
-			sector.ctx.lineWidth = 2;
-			sector.ctx.strokeStyle = "#f00";
-			sector.ctx.strokeRect(0, 0, sectorWidth, sectorHeight);
-			*/
+			if ($.GIsoGame.Configuration.showSectors)
+				$.GIsoGame.GFXUtils.drawPolygon(sector.ctx, [0, sectorWidth / 2, sectorWidth, sectorWidth / 2], [sectorHeight / 2, 0, sectorHeight / 2, sectorHeight], "#f00", false);			
 		};
 		
 		let getOrCreateSector = function(sx, sy) {
@@ -128,7 +126,6 @@ $.GIsoGame.IsoRenderer = {
 			groundCtx.clearRect(0, 0, width, height);
 			objectsCtx.clearRect(0, 0, width, height);
 			
-			// colsOfSectors rowsOfSectors sectorWidth sectorHeight
 			for (let sy = 0; sy < rowsOfSectors; sy++) {
 				for (let sx = 0; sx < colsOfSectors; sx++) {
 					let isoSector = innerToIso(sx * sectorSize, sy * sectorSize);
@@ -141,8 +138,6 @@ $.GIsoGame.IsoRenderer = {
 					groundCtx.drawImage(sector.canvas, Math.floor(isoSector.ix), Math.floor(isoSector.iy));
 				}
 			}
-			
-			// todo cursor
 
 			// map se musí vykreslovat v opačném pořadí, než je X, aby se bloky správně překrývaly
 			// poté zdi, objekty, postavy apod.

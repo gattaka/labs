@@ -17,11 +17,23 @@
 		cursor: url('./cursor.png'), auto;	
 		background: black;
 	}
+	.checkbox-div {
+		z-index: 200;
+		position: absolute;
+		left: 10px;
+		background: #aaa;
+		border: 2px #555 solid;
+		border-radius: 4px;
+		font-size: 14px;
+		padding: 1px 4px 0px 0px;
+		font-family: monospace;
+	}
 </style>
 </head>
 <body>
-<input type="checkbox" onchange="$.GIsoGame.Game.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
-<input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
+<div class="checkbox-div" style="top: 10px;"><input type="checkbox" onchange="$.GIsoGame.Game.changeCentered(this.checked)" checked>Centered?</input></div>
+<div class="checkbox-div" style="top: 40px;"><input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)" checked>Outlines?</input></div>
+<div class="checkbox-div" style="top: 70px;"><input type="checkbox" onchange="$.GIsoGame.Game.changeShowSectors(this.checked)" checked>Show sectors?</input></div>
 <div style="margin: 10px 0;">
 	<canvas id="groundCanvas" style="width: 100%;" height="600"></canvas>
 	<canvas id="objectsCanvas" style="width: 100%;" height="600"></canvas>
@@ -485,6 +497,10 @@ $.GIsoGame.Game = (function() {
 		
 		changeOutlines: function(value) {
 			cfg.outlines = value;
+		},
+		
+		changeShowSectors: function(value) {
+			cfg.showSectors = value;
 		},
 		
 		getHero: function() {
