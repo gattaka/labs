@@ -6,7 +6,27 @@ $.GIsoGame.IsoRenderer = {
 		let lightStep = 100 / lightQuality;
 		let lightsOn = true;
 		
-		let cellCache = [];
+		let cacheCounter = 0;
+		let cacheCanvasSize = 5;
+		let cacheCanvases = [];
+		let cellCache = [];		
+		
+		let getOrCreateCacheCanvas = function(canvasId) {
+			let cacheCanvas = cacheCanvases[canvasId];	
+			if (cacheCanvas != undefined)
+				return cacheCanvas;							
+			cachedCanvas = document.createElement("canvas");
+			cachedCanvas.width = cacheCanvasSize * cellW;
+			cachedCanvas.height = cacheCanvasSize * cellH;
+			let cachedCtx = cachedCanvas.getContext("2d");
+			let smoothing = false;
+			cachedCtx.webkitImageSmoothingEnabled = smoothing;
+			cachedCtx.mozImageSmoothingEnabled = smoothing;
+			cachedCtx.imageSmoothingEnabled = smoothing;
+			cachedCtx.msImageSmoothingEnabled = smoothing;
+			cacheCanvases[canvasId] = {canvas: cachedCanvas, ctx: cachedCtx};
+			return cacheCanvases[canvasId];
+		};
 		
 		let drawFromCache = function(isoCell) {
 			if (isoCell.value.length < 4) {				
@@ -19,25 +39,27 @@ $.GIsoGame.IsoRenderer = {
 				vals.push(isoCell.value[i * 2 + 1]);
 			}
 			vals.push(isoCell.lightBucket);
-			let cachedCanvas = cellCache[vals];
-			if (cachedCanvas == undefined) {
-				cachedCanvas = document.createElement("canvas");
-				cachedCanvas.width = cellW;
-				cachedCanvas.height = cellH;
-				let cachedCtx = cachedCanvas.getContext("2d");
-				let smoothing = false;
-				cachedCtx.webkitImageSmoothingEnabled = smoothing;
-				cachedCtx.mozImageSmoothingEnabled = smoothing;
-				cachedCtx.imageSmoothingEnabled = smoothing;
-				cachedCtx.msImageSmoothingEnabled = smoothing;
+			let key = vals.toString();
+			let cacheRecord = cellCache[key];	
+			let cachedCanvas;
+			if (cacheRecord == undefined) {
+				cacheRecord = [];
+				cellCache[key] = cacheRecord;
+				cacheCounter++;				
+				cacheRecord[0] = Math.floor(cacheCounter / (cacheCanvasSize * cacheCanvasSize));
+				cachedCanvas = getOrCreateCacheCanvas(cacheRecord[0]);
+				let index = cacheCounter % (cacheCanvasSize * cacheCanvasSize);
+				cacheRecord[1] = (index % cacheCanvasSize) * cellW;
+				cacheRecord[2] = Math.floor(index / cacheCanvasSize) * cellH;
 				for (let i = 0; i < isoCell.value.length / 2; i++)
-					innerDrawSprite(cachedCtx, 0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], 0, 0, false, isoCell.lightBucket);
-				cellCache[vals] = cachedCanvas;			
-				//console.log("new cache item" + vals);
-			}
+					innerDrawSprite(cachedCanvas.ctx, 0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], cacheRecord[1], cacheRecord[2], false, isoCell.lightBucket);
+				console.log("new cache item" + vals);
+			} else {
+				cachedCanvas = getOrCreateCacheCanvas(cacheRecord[0]);				
+			}		
 			let x = Math.floor(isoCell.ix);
 			let y = Math.floor(isoCell.iy);			
-			groundCtx.drawImage(cachedCanvas, x, y - cellH / 2, cellW, cellH);
+			groundCtx.drawImage(cachedCanvas.canvas, cacheRecord[1], cacheRecord[2], cellW, cellH, x, y - cellH / 2, cellW, cellH);
 		};
 		
 		let getLightBucketFromLight = function(light) {
