@@ -118,7 +118,7 @@ $.GIsoGame.Game = (function() {
 	let drawHero = function() {							
 		let heroSpriteAdjustedX = Math.floor(heroSprite.vix + viewX);
 		let heroSpriteAdjustedY = Math.floor(heroSprite.viy + viewY);
-		isoRenderer.drawSprite(groundCtx, 1, 0, heroSprite.currentFrame, heroSpriteAdjustedX, heroSpriteAdjustedY, $.GIsoGame.Configuration.outlines);	
+		isoRenderer.drawSprite(objectsCtx, 1, 0, heroSprite.currentFrame, heroSpriteAdjustedX, heroSpriteAdjustedY, $.GIsoGame.Configuration.outlines);	
 		if ($.GIsoGame.Configuration.outlines) 
 			$.GIsoGame.GFXUtils.drawPoint(objectsCtx, heroSpriteAdjustedX, heroSpriteAdjustedY, "lime");			
 	};
@@ -407,9 +407,6 @@ $.GIsoGame.Game = (function() {
 		objectsCtx.imageSmoothingEnabled = subCanvasSmoothing;
 		objectsCtx.msImageSmoothingEnabled = subCanvasSmoothing;
 	
-		//groundCtx.globalCompositeOperation = "hard-light";		
-		console.log(groundCtx.globalCompositeOperation);
-	
 		cfg = $.GIsoGame.Configuration;
 		
 		//let level = $.GIsoGame.Level1.create();
@@ -419,10 +416,10 @@ $.GIsoGame.Game = (function() {
 		spriteLoader = $.GIsoGame.SpriteLoader.create();	
 		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader, cellW, cellH);		
 			
-		isoRenderer = $.GIsoGame.IsoRenderer.create(groundCtx, groundCtx, width, height, cellW, cellH, levelReader, spriteLoader, cursor, onCellRenderFunc);
+		isoRenderer = $.GIsoGame.IsoRenderer.create(groundCtx, objectsCtx, width, height, cellW, cellH, levelReader, spriteLoader, cursor, onCellRenderFunc);
 		
-		let mx = 2.5;
-		let my = 1.5;
+		let mx = 25.5;
+		let my = 20.5;
 		hero.mx = mx;
 		hero.my = my;
 		levelBlueprint.lights.push(hero);

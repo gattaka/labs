@@ -1,0 +1,30 @@
+Testy (herní Dell)
+
+	- prostředek mapy 
+	- 1 canvas layer + tiles group cache 5x5 + klíč cache je text		82FPS
+	- 1 canvas layer + tiles group cache 5x5 + klíč cache je objekt		84FPS
+	- 1 canvas layer + tiles group cache 7x7 + klíč cache je objekt		82-85FPS
+	- 1 canvas layer + tiles group cache 8x8 + klíč cache je objekt		83-84FPS
+	- 2 canvas layer + tiles group cache 5x5 + klíč cache je objekt		82FPS
+	- 1 canvas layer + tiles group cache 10x10 + klíč cache je objekt	73FPS
+	- 1 canvas layer + tiles group cache 2x2 + klíč cache je objekt		79-82FPS
+	- 1 canvas layer + tiles group cache 1x1 + klíč cache je objekt		80FPS
+	- 1 canvas layer + tiles single cache (1x1) + klíč cache je objekt	78FPS
+	- jenom grounds, 2 canvas layer + tiles group cache 5x5 + klíč cache je objekt		96FPS
+		
+
+Unlimited FPS na Chrome
+
+	- "C:\Program Files (x86)\Google\Chrome\Application\chrome.exe" --disable-frame-rate-limit --disable-gpu-vsync
+	- restart Chrome (zavřít všechna okna, zkontrolovat po restartu přes process explorer, že se argumenty projevily)
+
+globalCompositeOperation
+
+	https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation
+	- ctx.globalCompositeOperation
+	- nejvíc smysl a rychlost má výchozí source-over
+	- hard-light nic nezlepší a místy vypadá blbě
+	
+	
+
+	
