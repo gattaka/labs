@@ -493,10 +493,12 @@ $.GIsoGame.Game = (function() {
 		
 		changeOutlines: function(value) {
 			cfg.outlines = value;
+			isoRenderer.markAllDirty();
 		},
 		
 		changeShowSectors: function(value) {
 			cfg.showSectors = value;
+			isoRenderer.markAllDirty();
 		},
 		
 		getHero: function() {

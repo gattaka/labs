@@ -1,7 +1,7 @@
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.MapSculptor = {	
-	create: function(spritePalette, level) {
+	create: function(isoRenderer, spritePalette, level) {
 		
 		let mergeMatrix;
 		let overlapMatrix;

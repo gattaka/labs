@@ -142,6 +142,7 @@ $.GIsoGame.IsoRenderer = {
 						sector = createSector(sx, sy);
 					} else if (dirtySectors[sx] != undefined && dirtySectors[sx][sy]) {
 						updateSector(sx, sy);
+						dirtySectors[sx][sy] = undefined;
 					}											
 					groundCtx.drawImage(sector.canvas, Math.floor(isoSector.ix), Math.floor(isoSector.iy));
 				}
@@ -182,6 +183,12 @@ $.GIsoGame.IsoRenderer = {
 		let innerSetHeight = function(h) {
 			height = h;
 		};
+		
+		let innerMarkDirty = function(sx, sy) {			
+			if (dirtySectors[sx] == undefined)
+				dirtySectors[sx] = [];
+			dirtySectors[sx][sy] = true;
+		};
 				
 		return {
 			toIso: function(mx, my) {
@@ -217,12 +224,16 @@ $.GIsoGame.IsoRenderer = {
 				innerUpdate(delay, viewX, viewY);
 			},		
 
+			markAllDirty: function() {
+				for (let sy = 0; sy < rowsOfSectors; sy++)
+					for (let sx = 0; sx < colsOfSectors; sx++)
+						innerMarkDirty(sx, sy);
+			},
+
 			markDirty: function(mx, my) {
 				let sx = Math.floor(mx / sectorSize);
 				let sy = Math.floor(my / sectorSize);
-				if (dirtySectors[sx] == undefined)
-					dirtySectors[sx] = [];
-				dirtySectors[sx][sy] = true;
+				innerMarkDirty(sx, sy);
 			},
 		}
 	}	

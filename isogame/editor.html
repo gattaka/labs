@@ -236,6 +236,7 @@ $.GIsoGame.Editor = (function() {
 		if (menu != undefined)
 			menu.visible = true;
 		isoRenderer.setLights(false);
+		isoRenderer.markAllDirty();
 	};
 
 	let createButtons = function() {	
@@ -250,6 +251,7 @@ $.GIsoGame.Editor = (function() {
 		createButton("Světla", x, y + i++ * dy, button => {
 			switchMenuButton(button); 
 			isoRenderer.setLights(true);
+			isoRenderer.markAllDirty();
 			brush.type = 4;
 		});
 	};
@@ -263,6 +265,7 @@ $.GIsoGame.Editor = (function() {
 			brush.spriteId = id;
 		};
 		groundsMenu.itemsCount = spriteLoader.getGroupSize(group);
+		groundsMenu.visible = false;
 		controls.addUIListener(groundsMenu);		
 	};
 	
@@ -286,6 +289,7 @@ $.GIsoGame.Editor = (function() {
 			brush.tileId = arr[i][1];
 		};
 		menu.itemsCount = arr.length;
+		menu.visible = false;
 		controls.addUIListener(menu);		
 		return menu;
 	};
@@ -363,9 +367,9 @@ $.GIsoGame.Editor = (function() {
 	
 	let prepareMapTools = function() {
 		levelReader = $.GIsoGame.LevelManager.createLevelReader(levelBlueprint);											
-		mapSculptor = $.GIsoGame.MapSculptor.create(spritePalette, levelBlueprint);
 		isoRenderer = $.GIsoGame.IsoRenderer.create(groundCtx, objectsCtx, width, height, spritePalette.getCellW(), spritePalette.getCellH(), 
 													levelReader, spriteLoader, cursor, onCellRenderFunc);		
+		mapSculptor = $.GIsoGame.MapSculptor.create(isoRenderer, spritePalette, levelBlueprint);
 		
 		let iso = isoRenderer.toIso(levelReader.getMapW() / 2, levelReader.getMapH() / 2);
 		viewX = halfWidth - iso.ix;
