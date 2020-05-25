@@ -117,7 +117,7 @@ $.GIsoGame.IsoRenderer = {
 		
 		let innerUpdate = function(delay, viewX, viewY) {
 			groundCtx.clearRect(0, 0, width, height);
-			objectsCtx.clearRect(0, 0, width, height);
+			//objectsCtx.clearRect(0, 0, width, height);
 
 			let mapWH = levelManager.getMapW() / 2;
 			
