@@ -1,7 +1,7 @@
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.IsoRenderer = {	
-	create: function(ctx, width, height, cellW, cellH, levelManager, spriteLoader, cursor, onCellRenderFunc) {
+	create: function(groundCtx, objectsCtx, width, height, cellW, cellH, levelManager, spriteLoader, cursor, onCellRenderFunc) {
 		let lightQuality = $.GIsoGame.Configuration.lightQuality;
 		let lightStep = 100 / lightQuality;
 		let lightsOn = true;
@@ -25,7 +25,7 @@ $.GIsoGame.IsoRenderer = {
 			};
 		};
 		
-		let innerDrawSprite = function(groupId, spriteId, frameId, ix, iy, showOutline, light) {
+		let innerDrawSprite = function(ctx, groupId, spriteId, frameId, ix, iy, showOutline, light) {
 			let tex = spriteLoader.getTexture(groupId, spriteId);
 			if (tex == undefined) {
 				// chybějící textura
@@ -69,22 +69,21 @@ $.GIsoGame.IsoRenderer = {
 			let filled = false;
 			if (isoCell.value != undefined) {
 				for (let i = 0; i < isoCell.value.length / 2; i++) {
-					innerDrawSprite(0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.light);
+					innerDrawSprite(groundCtx, 0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.light);
 					filled = true;
 				}
 			}			
 			
 			if ($.GIsoGame.Configuration.outlines || !filled) 
-				$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,40%,0.5)", false);
+				$.GIsoGame.GFXUtils.drawPolygon(objectsCtx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,40%,0.5)", false);
 			
 			if (mx == Math.floor(cursor.mx) && my == Math.floor(cursor.my))
-				$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0] + 4, x[1], x[2] - 4, x[3]], [y[0], y[1] + 2, y[2], y[3] - 2], "hsla(100,100%,50%,0.4)", false, 2);
+				$.GIsoGame.GFXUtils.drawPolygon(objectsCtx, [x[0] + 4, x[1], x[2] - 4, x[3]], [y[0], y[1] + 2, y[2], y[3] - 2], "hsla(100,100%,50%,0.4)", false, 2);
 		};		
 		
 		let innerUpdate = function(delay, viewX, viewY) {
-			ctx.clearRect(0, 0, width, height);		
-			ctx.fillStyle = "black";
-			ctx.fillRect(0, 0, width, height);					
+			groundCtx.clearRect(0, 0, width, height);
+			objectsCtx.clearRect(0, 0, width, height);
 
 			let mapWH = levelManager.getMapW() / 2;
 			
@@ -113,17 +112,11 @@ $.GIsoGame.IsoRenderer = {
 
 					let wall = levelManager.getWallAtCoord(mx, my);
 					if (wall != undefined) 
-						innerDrawSprite(3, wall.spriteId, wall.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.light);	
+						innerDrawSprite(objectsCtx, 3, wall.spriteId, wall.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.light);	
 					
 					let object = levelManager.getObjectAtCoord(mx, my);
 					if (object != undefined) 
-						innerDrawSprite(2, object.spriteId, object.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.light);
-									
-					if ($.GIsoGame.Configuration.showNumbers) {
-						ctx.font = "30px Arial";
-						ctx.fillStyle = "white";
-						ctx.fillText(i, Math.floor(isoCell.ix + cellW / 3), Math.floor(isoCell.iy + cellH / 4));
-					}
+						innerDrawSprite(objectsCtx, 2, object.spriteId, object.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.light);
 				}
 			}
 		};
@@ -145,8 +138,8 @@ $.GIsoGame.IsoRenderer = {
 				return innerToMap(ix, iy);
 			},
 			
-			drawSprite: function(groupId, spriteId, frameId, ix, iy, showOutline, light) {
-				innerDrawSprite(groupId, spriteId, frameId, ix, iy, showOutline, light);
+			drawSprite: function(ctx, groupId, spriteId, frameId, ix, iy, showOutline, light) {
+				innerDrawSprite(ctx, groupId, spriteId, frameId, ix, iy, showOutline, light);
 			},
 					
 			setWidth: function(w) {

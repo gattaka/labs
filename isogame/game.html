@@ -15,6 +15,7 @@
 <style>
 	body {
 		cursor: url('./cursor.png'), auto;	
+		background: black;
 	}
 </style>
 </head>
@@ -22,15 +23,18 @@
 <input type="checkbox" onchange="$.GIsoGame.Game.changeCentered(this.checked)" style="width: 80px;" checked>Centered?</input>
 <input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)" style="width: 80px;" checked>Outlines?</input>
 <div style="margin: 10px 0;">
-	<canvas id="canvasT" style="width: 100%;" height="600"></canvas>
+	<canvas id="groundCanvas" style="width: 100%;" height="600"></canvas>
+	<canvas id="objectsCanvas" style="width: 100%;" height="600"></canvas>
 </div>
 <script>
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.Game = (function() {
 
-	let canvas = document.getElementById("canvasT");
-	let ctx = canvas.getContext("2d");
+	let groundCanvas = document.getElementById("groundCanvas");
+	let groundCtx = groundCanvas.getContext("2d", { alpha: false });
+	let objectsCanvas = document.getElementById("objectsCanvas");
+	let objectsCtx = objectsCanvas.getContext("2d");
 	let width;
 	let height;
 	let halfWidth;
@@ -114,14 +118,14 @@ $.GIsoGame.Game = (function() {
 	let drawHero = function() {							
 		let heroSpriteAdjustedX = Math.floor(heroSprite.vix + viewX);
 		let heroSpriteAdjustedY = Math.floor(heroSprite.viy + viewY);
-		isoRenderer.drawSprite(1, 0, heroSprite.currentFrame, heroSpriteAdjustedX, heroSpriteAdjustedY, $.GIsoGame.Configuration.outlines);	
+		isoRenderer.drawSprite(objectsCtx, 1, 0, heroSprite.currentFrame, heroSpriteAdjustedX, heroSpriteAdjustedY, $.GIsoGame.Configuration.outlines);	
 		if ($.GIsoGame.Configuration.outlines) 
-			$.GIsoGame.GFXUtils.drawPoint(ctx, heroSpriteAdjustedX, heroSpriteAdjustedY, "lime");			
+			$.GIsoGame.GFXUtils.drawPoint(objectsCtx, heroSpriteAdjustedX, heroSpriteAdjustedY, "lime");			
 	};
 	
 	let drawTarget = function() {							
 		if ($.GIsoGame.Configuration.outlines)
-			$.GIsoGame.GFXUtils.drawPoint(ctx, Math.floor(target.vix + viewX), Math.floor(target.viy + viewY), "yellow");			
+			$.GIsoGame.GFXUtils.drawPoint(objectsCtx, Math.floor(target.vix + viewX), Math.floor(target.viy + viewY), "yellow");			
 	};
 	
 	let onCellRenderFunc = function(mx, my) {
@@ -359,15 +363,16 @@ $.GIsoGame.Game = (function() {
 	* INIT
 	*/	
 	
-	let updateWindowSize = function() {
-		canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-			
-		width = canvas.width;
-		height = canvas.height;	
+	let updateWindowSize = function() {			
+		width = window.innerWidth;
+		height = window.innerHeight;	
 		halfWidth = width / 2;
 		halfHeight = height / 2;
-
+		groundCanvas.width = width;
+        groundCanvas.height = height;
+		objectsCanvas.width = width;
+        objectsCanvas.height = height;
+		
 		if (isoRenderer != undefined) {
 			isoRenderer.setWidth(width);
 			isoRenderer.setHeight(height);
@@ -382,10 +387,27 @@ $.GIsoGame.Game = (function() {
 		stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
 		document.body.appendChild(stats.dom);
 		
-		canvas.style.position = "absolute";
-		canvas.style.left = "0";
-		canvas.style.top = "0";
-		canvas.style.zIndex = "999";		
+		groundCanvas.style.position = "absolute";
+		groundCanvas.style.left = "0";
+		groundCanvas.style.top = "0";
+		groundCanvas.style.zIndex = "100";		
+		
+		objectsCanvas.style.position = "absolute";
+		objectsCanvas.style.left = "0";
+		objectsCanvas.style.top = "0";
+		objectsCanvas.style.zIndex = "101";		
+		
+		let subCanvasSmoothing = false;
+		groundCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
+		groundCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
+		groundCtx.imageSmoothingEnabled = subCanvasSmoothing;
+		groundCtx.msImageSmoothingEnabled = subCanvasSmoothing;		
+		objectsCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
+		objectsCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
+		objectsCtx.imageSmoothingEnabled = subCanvasSmoothing;
+		objectsCtx.msImageSmoothingEnabled = subCanvasSmoothing;
+	
+		console.log(groundCtx.globalCompositeOperation);
 	
 		cfg = $.GIsoGame.Configuration;
 		
@@ -396,7 +418,7 @@ $.GIsoGame.Game = (function() {
 		spriteLoader = $.GIsoGame.SpriteLoader.create();	
 		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader, cellW, cellH);		
 			
-		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, cellW, cellH, levelReader, spriteLoader, cursor, onCellRenderFunc);
+		isoRenderer = $.GIsoGame.IsoRenderer.create(groundCtx, objectsCtx, width, height, cellW, cellH, levelReader, spriteLoader, cursor, onCellRenderFunc);
 		
 		let mx = 2.5;
 		let my = 1.5;
@@ -425,21 +447,21 @@ $.GIsoGame.Game = (function() {
 		window.requestAnimationFrame(draw);		
 	};		
 	
-	canvas.addEventListener("mousedown", function (e) {
+	objectsCanvas.addEventListener("mousedown", function (e) {
 		mousedown = true;
 		updateTarget(e);
 	}, false);
  
-	canvas.addEventListener("mouseup", function (e) {
+	objectsCanvas.addEventListener("mouseup", function (e) {
 		mousedown = false;
 	}, false);
 	
-	canvas.addEventListener("mouseleave", function (e) {
+	objectsCanvas.addEventListener("mouseleave", function (e) {
 		mousedown = false;
 	}, false);
 	
-	canvas.addEventListener("mousemove", function (e) {
-		let bound = canvas.getBoundingClientRect();
+	objectsCanvas.addEventListener("mousemove", function (e) {
+		let bound = objectsCanvas.getBoundingClientRect();
 		let targetX = e.clientX - bound.x;
 		let targetY = e.clientY - bound.y;			
 		let ix = targetX - viewX;

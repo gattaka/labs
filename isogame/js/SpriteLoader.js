@@ -69,11 +69,11 @@ $.GIsoGame.SpriteLoader = {
 							textureCanvas.width = texture.width * texture.cols;
 							textureCanvas.height = texture.height * texture.rows;
 							let textureCtx = textureCanvas.getContext("2d");
-							let subCanvasSmoothing = true;
+							let subCanvasSmoothing = false;
 							textureCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
 							textureCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
 							textureCtx.imageSmoothingEnabled = subCanvasSmoothing;
-							textureCtx.msImageSmoothingEnabled = subCanvasSmoothing; 						
+							textureCtx.msImageSmoothingEnabled = subCanvasSmoothing;
 							texture.canvas.push(textureCanvas);
 							texture.ctx.push(textureCtx);
 						}
