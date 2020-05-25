@@ -13,6 +13,8 @@ $.GIsoGame.IsoRenderer = {
 		let sectorHeight = sectorSize * cellH;
 		let sectors = [];
 		
+		let dirtySectors = [];
+		
 		let innerToIso = function(mx, my) {
 			let w = cellW / 2;
 			let h = cellH / 2;
@@ -80,8 +82,9 @@ $.GIsoGame.IsoRenderer = {
 			return {canvas: cachedCanvas, ctx: cachedCtx};			
 		};
 		
-		let updateSector = function(sx, sy) {
+		let updateSector = function(sx, sy) {			
 			let sector = sectors[sx][sy];
+			sector.ctx.clearRect(0, 0, sectorWidth, sectorHeight);
 			let mxOffset = sx * sectorSize;
 			let myOffset = sy * sectorSize;
 			for (let smx = 0; smx < sectorSize; smx++) {				
@@ -107,19 +110,19 @@ $.GIsoGame.IsoRenderer = {
 				$.GIsoGame.GFXUtils.drawPolygon(sector.ctx, [0, sectorWidth / 2, sectorWidth, sectorWidth / 2], [sectorHeight / 2, 0, sectorHeight / 2, sectorHeight], "#f00", false);			
 		};
 		
-		let getOrCreateSector = function(sx, sy) {
-			let sectorCol = sectors[sx];
-			if (sectorCol == undefined) {
-				sectorCol = [];
-				sectors[sx] = sectorCol;				
-			}
-			let sector = sectorCol[sy]
-			if (sector != undefined)
-				return sector;
-			sector = createCanvas(sectorWidth, sectorHeight);
-			sectorCol[sy] = sector;
+		let createSector = function(sx, sy) {
+			if (sectors[sx] == undefined)
+				sectors[sx] = [];
+			let sector = createCanvas(sectorWidth, sectorHeight);
+			sectors[sx][sy] = sector;
 			updateSector(sx, sy);
-			return sector;
+			return sectors[sx][sy];
+		};
+		
+		let getSector = function(sx, sy) {
+			if (sectors[sx] == undefined)
+				return undefined;
+			return sectors[sx][sy];
 		};			
 		
 		let innerUpdate = function(delay, viewX, viewY) {
@@ -134,7 +137,12 @@ $.GIsoGame.IsoRenderer = {
 					if (isoSector.ix > width || isoSector.ix + sectorWidth < 0 ||
 						isoSector.iy > height || isoSector.iy + sectorHeight < 0)
 						continue;		
-					let sector = getOrCreateSector(sx, sy);
+					let sector = getSector(sx, sy);
+					if (sector == undefined) {
+						sector = createSector(sx, sy);
+					} else if (dirtySectors[sx] != undefined && dirtySectors[sx][sy]) {
+						updateSector(sx, sy);
+					}											
 					groundCtx.drawImage(sector.canvas, Math.floor(isoSector.ix), Math.floor(isoSector.iy));
 				}
 			}
@@ -207,7 +215,15 @@ $.GIsoGame.IsoRenderer = {
 			
 			update: function(delay, viewX, viewY) {
 				innerUpdate(delay, viewX, viewY);
-			},			
+			},		
+
+			markDirty: function(mx, my) {
+				let sx = Math.floor(mx / sectorSize);
+				let sy = Math.floor(my / sectorSize);
+				if (dirtySectors[sx] == undefined)
+					dirtySectors[sx] = [];
+				dirtySectors[sx][sy] = true;
+			},
 		}
 	}	
 };

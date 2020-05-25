@@ -30,6 +30,7 @@ $.GIsoGame.LevelManager = {
 		
 		// list světel
 		let lights = levelBlueprint.lights;
+		
 		if (lights == undefined) {
 			lights = [];
 			levelBlueprint.lights = lights;

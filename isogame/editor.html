@@ -17,7 +17,7 @@
 	#mapcode-div {
 		display: none;
 		position: absolute;
-		z-index: 10;
+		z-index: 300;
 		width: 100%;
 		height: 100%;
 		background-color: hsla(0, 0%, 0%, 0.61);
@@ -51,15 +51,21 @@
 	<a class="ui-button" onClick="$.GIsoGame.Editor.closeMenu()">Zavřít</a>
 </div>
 <div style="margin: 10px 0;">
-	<canvas id="canvasT" style="width: 100%;" height="600"></canvas>
+	<canvas id="groundCanvas" style="width: 100%;" height="600"></canvas>
+	<canvas id="objectsCanvas" style="width: 100%;" height="600"></canvas>
+	<canvas id="uiCanvas" style="width: 100%;" height="600"></canvas>
 </div>
 <script>
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.Editor = (function() {
 
-	let canvas = document.getElementById("canvasT");
-	let ctx = canvas.getContext("2d");
+	let groundCanvas = document.getElementById("groundCanvas");
+	let groundCtx = groundCanvas.getContext("2d", { alpha: false });
+	let objectsCanvas = document.getElementById("objectsCanvas");
+	let objectsCtx = objectsCanvas.getContext("2d");
+	let uiCanvas = document.getElementById("uiCanvas");
+	let uiCtx = uiCanvas.getContext("2d");
 	let width;
 	let height;
 	let halfWidth;
@@ -135,14 +141,16 @@ $.GIsoGame.Editor = (function() {
 
 		isoRenderer.update(delay, viewX, viewY);
 		
+		uiCtx.clearRect(0, 0, width, height);
+		
 		if (groundsMenu.visible)
-			$.GIsoGame.SpriteMenu.draw(ctx, groundsMenu);
+			$.GIsoGame.SpriteMenu.draw(uiCtx, groundsMenu);
 		if (wallsMenu.visible)
-			$.GIsoGame.SpriteMenu.draw(ctx, wallsMenu);
+			$.GIsoGame.SpriteMenu.draw(uiCtx, wallsMenu);
 		if (objectsMenu.visible)
-			$.GIsoGame.SpriteMenu.draw(ctx, objectsMenu);
+			$.GIsoGame.SpriteMenu.draw(uiCtx, objectsMenu);
 
-		$.GIsoGame.Minimap.drawMinimap(ctx, levelReader);
+		$.GIsoGame.Minimap.drawMinimap(uiCtx, levelReader);
 		
 		let offsetTolerance = 5;
 		if (cursor.mx < levelReader.getMapW() + offsetTolerance && cursor.mx >= -offsetTolerance 
@@ -184,13 +192,14 @@ $.GIsoGame.Editor = (function() {
 	};
 	
 	let updateWindowSize = function() {
-		canvas.width = window.innerWidth;
-        canvas.height = window.innerHeight;
-		
-		width = canvas.width;
-		height = canvas.height;	
+		width = window.innerWidth;
+		height = window.innerHeight;	
 		halfWidth = width / 2;
 		halfHeight = height / 2;
+		for (c of [groundCanvas, objectsCanvas, uiCanvas]) {
+			c.width = width;
+			c.height = height;
+		}
 		
 		desktopArea.width = width;
 		desktopArea.height = height;
@@ -211,7 +220,7 @@ $.GIsoGame.Editor = (function() {
 	let createButton = function(text, x, y, onClick) {
 		let button = document.createElement("a");
 		button.classList.add("ui-button");
-		button.style.cssText = "position: fixed; top: " + y + "px; left: " + x + "px; z-index: 2;";
+		button.style.cssText = "position: fixed; top: " + y + "px; left: " + x + "px; z-index: 200;";
 		button.innerHTML = text;	
 		button.addEventListener("click", function(a){ a.preventDefault(); onClick(button); });
 		document.body.appendChild(button);
@@ -340,14 +349,14 @@ $.GIsoGame.Editor = (function() {
 			return;
 		levelBlueprint.lights.forEach(light => {			
 			if (light != undefined && Math.floor(light.mx) == mx && Math.floor(light.my) == my) {
-				ctx.fillStyle = "black";				
+				objectsCtx.fillStyle = "black";				
 				let x = ix + spritePalette.getCellW() / 4;
-				ctx.fillRect(x, iy - 40, spritePalette.getCellW() / 2 + 5, 30); 
-				ctx.font = "15px Monospace";
-				ctx.fillStyle = "yellow";
-				ctx.fillText(light.light + "%", x, iy - 30);
-				ctx.fillText(light.lightReach + "%", x, iy - 15);
-				$.GIsoGame.GFXUtils.drawPoint(ctx, Math.floor(ix + spritePalette.getCellW() / 2), Math.floor(iy), "yellow", 4);
+				objectsCtx.fillRect(x, iy - 40, spritePalette.getCellW() / 2 + 5, 30); 
+				objectsCtx.font = "15px Monospace";
+				objectsCtx.fillStyle = "yellow";
+				objectsCtx.fillText(light.light + "%", x, iy - 30);
+				objectsCtx.fillText(light.lightReach + "%", x, iy - 15);
+				$.GIsoGame.GFXUtils.drawPoint(objectsCtx, Math.floor(ix + spritePalette.getCellW() / 2), Math.floor(iy), "yellow", 4);
 			}
 		});		
 	};
@@ -355,7 +364,7 @@ $.GIsoGame.Editor = (function() {
 	let prepareMapTools = function() {
 		levelReader = $.GIsoGame.LevelManager.createLevelReader(levelBlueprint);											
 		mapSculptor = $.GIsoGame.MapSculptor.create(spritePalette, levelBlueprint);
-		isoRenderer = $.GIsoGame.IsoRenderer.create(ctx, width, height, spritePalette.getCellW(), spritePalette.getCellH(), 
+		isoRenderer = $.GIsoGame.IsoRenderer.create(groundCtx, objectsCtx, width, height, spritePalette.getCellW(), spritePalette.getCellH(), 
 													levelReader, spriteLoader, cursor, onCellRenderFunc);		
 		
 		let iso = isoRenderer.toIso(levelReader.getMapW() / 2, levelReader.getMapH() / 2);
@@ -366,9 +375,22 @@ $.GIsoGame.Editor = (function() {
 	let init = function() {	
 		window.addEventListener("resize", updateWindowSize);				
 		
-		canvas.style.position = "absolute";
-		canvas.style.left = "0";
-		canvas.style.top = "0";
+		for (c of [groundCanvas, objectsCanvas, uiCanvas]) {
+			c.style.position = "absolute";
+			c.style.left = "0";
+			c.style.top = "0";
+		}
+		groundCanvas.style.zIndex = "100";
+		objectsCanvas.style.zIndex = "101";
+		uiCanvas.style.zIndex = "102";
+		
+		let subCanvasSmoothing = false;
+		for (c of [groundCtx, objectsCtx, uiCtx]) {
+			c.webkitImageSmoothingEnabled = subCanvasSmoothing;
+			c.mozImageSmoothingEnabled = subCanvasSmoothing;
+			c.imageSmoothingEnabled = subCanvasSmoothing;
+			c.msImageSmoothingEnabled = subCanvasSmoothing;
+		}
 		
 		let sheet = window.document.styleSheets[0];
 		sheet.insertRule(".ui-button {"
@@ -394,7 +416,7 @@ $.GIsoGame.Editor = (function() {
 		spriteLoader = $.GIsoGame.SpriteLoader.create();	
 		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader);
 
-		controls = $.GIsoGame.EditorControls.create(canvas);
+		controls = $.GIsoGame.EditorControls.create(uiCanvas);
 		
 		let self = this;
 		persistanceManager = $.GIsoGame.PersistanceManager.create();
