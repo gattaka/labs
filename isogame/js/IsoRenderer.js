@@ -6,6 +6,48 @@ $.GIsoGame.IsoRenderer = {
 		let lightStep = 100 / lightQuality;
 		let lightsOn = true;
 		
+		let cellCache = [];
+		
+		let drawFromCache = function(isoCell) {
+			if (isoCell.value.length < 4) {				
+				innerDrawSprite(groundCtx, 0, isoCell.value[0], isoCell.value[1], isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.lightBucket);
+				return;
+			}
+			let vals = [];
+			for (let i = 0; i < isoCell.value.length / 2; i++) {
+				vals.push(isoCell.value[i * 2]);
+				vals.push(isoCell.value[i * 2 + 1]);
+			}
+			vals.push(isoCell.lightBucket);
+			let cachedCanvas = cellCache[vals];
+			if (cachedCanvas == undefined) {
+				cachedCanvas = document.createElement("canvas");
+				cachedCanvas.width = cellW;
+				cachedCanvas.height = cellH;
+				let cachedCtx = cachedCanvas.getContext("2d");
+				let smoothing = false;
+				cachedCtx.webkitImageSmoothingEnabled = smoothing;
+				cachedCtx.mozImageSmoothingEnabled = smoothing;
+				cachedCtx.imageSmoothingEnabled = smoothing;
+				cachedCtx.msImageSmoothingEnabled = smoothing;
+				for (let i = 0; i < isoCell.value.length / 2; i++)
+					innerDrawSprite(cachedCtx, 0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], 0, 0, false, isoCell.lightBucket);
+				cellCache[vals] = cachedCanvas;			
+				//console.log("new cache item" + vals);
+			}
+			let x = Math.floor(isoCell.ix);
+			let y = Math.floor(isoCell.iy);			
+			groundCtx.drawImage(cachedCanvas, x, y - cellH / 2, cellW, cellH);
+		};
+		
+		let getLightBucketFromLight = function(light) {
+			if (light == undefined || !lightsOn) {
+				return 0;
+			} else {
+				return Math.floor((100 - light) / lightStep);
+			}	
+		};
+		
 		let innerToIso = function(mx, my) {
 			let w = cellW / 2;
 			let h = cellH / 2;
@@ -25,7 +67,7 @@ $.GIsoGame.IsoRenderer = {
 			};
 		};
 		
-		let innerDrawSprite = function(ctx, groupId, spriteId, frameId, ix, iy, showOutline, light) {
+		let innerDrawSprite = function(ctx, groupId, spriteId, frameId, ix, iy, showOutline, lightBucket) {
 			let tex = spriteLoader.getTexture(groupId, spriteId);
 			if (tex == undefined) {
 				// chybějící textura
@@ -41,16 +83,10 @@ $.GIsoGame.IsoRenderer = {
 			let col = frameId % tex.cols;
 			let row = Math.floor(frameId / tex.cols);
 			let x = Math.floor(ix - tex.offsetX);
-			let y = Math.floor(iy - tex.offsetY);	
-			let lightBucket;
-			if (light == undefined || !lightsOn) {
-				lightBucket = 0;			
-			} else {
-				lightBucket = Math.floor((100 - light) / lightStep);
-			}				
+			let y = Math.floor(iy - tex.offsetY);				
 			ctx.drawImage(tex.canvas[lightBucket], 
 				col * tex.width, row * tex.height, tex.width, tex.height, 
-				x, y, tex.width, tex.height);			
+				x, y, tex.width, tex.height);
 			if (showOutline) {
 				ctx.strokeStyle = "black";
 				ctx.lineWidth = 1;			
@@ -67,11 +103,9 @@ $.GIsoGame.IsoRenderer = {
 				return;
 								
 			let filled = false;
-			if (isoCell.value != undefined) {
-				for (let i = 0; i < isoCell.value.length / 2; i++) {
-					innerDrawSprite(groundCtx, 0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.light);
-					filled = true;
-				}
+			if (isoCell.value != undefined && isoCell.value.length > 0) {
+				filled = true;
+				drawFromCache(isoCell)				
 			}			
 			
 			if ($.GIsoGame.Configuration.outlines || !filled) 
@@ -96,8 +130,8 @@ $.GIsoGame.IsoRenderer = {
 					let isoCell = innerToIso(mx, my);
 					isoCell.ix += viewX;
 					isoCell.iy += viewY;															
-					isoCell.value = levelManager.getGroundAtCoord(mx, my);
-					isoCell.light = levelManager.getLightAtCoord(mx, my);					
+					isoCell.value = levelManager.getGroundAtCoord(mx, my);					
+					isoCell.lightBucket = getLightBucketFromLight(levelManager.getLightAtCoord(mx, my));
 					drawIsoCell(isoCell, mx, my);
 					isoCells[mx][my] = isoCell;
 				}
@@ -112,11 +146,11 @@ $.GIsoGame.IsoRenderer = {
 
 					let wall = levelManager.getWallAtCoord(mx, my);
 					if (wall != undefined) 
-						innerDrawSprite(objectsCtx, 3, wall.spriteId, wall.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.light);	
+						innerDrawSprite(objectsCtx, 3, wall.spriteId, wall.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.lightBucket);	
 					
 					let object = levelManager.getObjectAtCoord(mx, my);
 					if (object != undefined) 
-						innerDrawSprite(objectsCtx, 2, object.spriteId, object.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.light);
+						innerDrawSprite(objectsCtx, 2, object.spriteId, object.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.lightBucket);
 				}
 			}
 		};
@@ -139,7 +173,8 @@ $.GIsoGame.IsoRenderer = {
 			},
 			
 			drawSprite: function(ctx, groupId, spriteId, frameId, ix, iy, showOutline, light) {
-				innerDrawSprite(ctx, groupId, spriteId, frameId, ix, iy, showOutline, light);
+				let lightBucket = getLightBucketFromLight(light);
+				innerDrawSprite(ctx, groupId, spriteId, frameId, ix, iy, showOutline, lightBucket);
 			},
 					
 			setWidth: function(w) {

@@ -143,7 +143,7 @@ $.GIsoGame.Game = (function() {
 	};		
 		
 	let draw = function(timestamp) {
-		stats.begin();
+		stats.begin();		
 		drawScene(timestamp);
 		stats.end();
 		window.requestAnimationFrame(draw);
@@ -405,9 +405,7 @@ $.GIsoGame.Game = (function() {
 		objectsCtx.webkitImageSmoothingEnabled = subCanvasSmoothing;
 		objectsCtx.mozImageSmoothingEnabled = subCanvasSmoothing;
 		objectsCtx.imageSmoothingEnabled = subCanvasSmoothing;
-		objectsCtx.msImageSmoothingEnabled = subCanvasSmoothing;
-	
-		console.log(groundCtx.globalCompositeOperation);
+		objectsCtx.msImageSmoothingEnabled = subCanvasSmoothing;		
 	
 		cfg = $.GIsoGame.Configuration;
 		
