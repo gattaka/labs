@@ -11,6 +11,21 @@ Testy (herní Dell)
 	- 1 canvas layer + tiles group cache 1x1 + klíč cache je objekt		80FPS
 	- 1 canvas layer + tiles single cache (1x1) + klíč cache je objekt	78FPS
 	- jenom grounds, 2 canvas layer + tiles group cache 5x5 + klíč cache je objekt		96FPS
+	
+Testy (slabé Lenovo)
+
+	- prostředek mapy
+	- 2 canvas sektory 4x4		42FPS
+	- 2 canvas sektory 5x5		38FPS
+	- 2 canvas sektory 7x7		45-47FPS
+	- 2 canvas sektory 8x8		41-45FPS
+	- 2 canvas sektory 10x10	48-49FPS
+	- 1 canvas sektory 7x7		51-54FPS
+	
+Závěry
+
+	- více canvasů přes sebe se v praxi ukazuje spíš jako špatná věc -- pokud se budou obě stále překreslovat, 
+	tak to nemá žádné výhody -- asi to má smysl, jen kdyby se každé překreslovalo jindy (jedno stále, druhé skoro vůbec apod.)
 		
 
 Unlimited FPS na Chrome

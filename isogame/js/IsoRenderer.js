@@ -6,7 +6,7 @@ $.GIsoGame.IsoRenderer = {
 		let lightStep = 100 / lightQuality;
 		let lightsOn = true;
 		
-		let sectorSize = 5;
+		let sectorSize = 7;
 		let colsOfSectors = Math.ceil(levelManager.getMapW() / sectorSize);
 		let rowsOfSectors = Math.ceil(levelManager.getMapH() / sectorSize);		
 		let sectorWidth = sectorSize * cellW;
@@ -87,12 +87,14 @@ $.GIsoGame.IsoRenderer = {
 			sector.ctx.clearRect(0, 0, sectorWidth, sectorHeight);
 			let mxOffset = sx * sectorSize;
 			let myOffset = sy * sectorSize;
-			for (let smx = 0; smx < sectorSize; smx++) {				
-				for (let smy = 0; smy < sectorSize; smy++) {								
+			for (let smy = 0; smy < sectorSize; smy++) {								
+				let my = smy + myOffset;
+				if (my >= levelManager.getMapH()) break;
+				for (let smx = 0; smx < sectorSize; smx++) {				
+					let mx = smx + mxOffset;
+					if (mx >= levelManager.getMapW()) break;
 					let isoCell = innerToIso(smx, smy);			
 					isoCell.iy += sectorHeight / 2;
-					let mx = smx + mxOffset;
-					let my = smy + myOffset;
 					isoCell.value = levelManager.getGroundAtCoord(mx, my);					
 					isoCell.lightBucket = getLightBucketFromLight(levelManager.getLightAtCoord(mx, my));
 					let x = [isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix + cellW, isoCell.ix + cellW / 2];
@@ -127,7 +129,7 @@ $.GIsoGame.IsoRenderer = {
 		
 		let innerUpdate = function(delay, viewX, viewY) {
 			groundCtx.clearRect(0, 0, width, height);
-			objectsCtx.clearRect(0, 0, width, height);
+			//objectsCtx.clearRect(0, 0, width, height);
 			
 			for (let sy = 0; sy < rowsOfSectors; sy++) {
 				for (let sx = 0; sx < colsOfSectors; sx++) {

@@ -130,14 +130,14 @@ $.GIsoGame.Game = (function() {
 	let drawHero = function() {							
 		let heroSpriteAdjustedX = Math.floor(heroSprite.vix + viewX);
 		let heroSpriteAdjustedY = Math.floor(heroSprite.viy + viewY);
-		isoRenderer.drawSprite(objectsCtx, 1, 0, heroSprite.currentFrame, heroSpriteAdjustedX, heroSpriteAdjustedY, $.GIsoGame.Configuration.outlines);	
+		isoRenderer.drawSprite(groundCtx, 1, 0, heroSprite.currentFrame, heroSpriteAdjustedX, heroSpriteAdjustedY, $.GIsoGame.Configuration.outlines);	
 		if ($.GIsoGame.Configuration.outlines) 
-			$.GIsoGame.GFXUtils.drawPoint(objectsCtx, heroSpriteAdjustedX, heroSpriteAdjustedY, "lime");			
+			$.GIsoGame.GFXUtils.drawPoint(groundCtx, heroSpriteAdjustedX, heroSpriteAdjustedY, "lime");			
 	};
 	
 	let drawTarget = function() {							
 		if ($.GIsoGame.Configuration.outlines)
-			$.GIsoGame.GFXUtils.drawPoint(objectsCtx, Math.floor(target.vix + viewX), Math.floor(target.viy + viewY), "yellow");			
+			$.GIsoGame.GFXUtils.drawPoint(groundCtx, Math.floor(target.vix + viewX), Math.floor(target.viy + viewY), "yellow");			
 	};
 	
 	let onCellRenderFunc = function(mx, my) {
@@ -424,7 +424,7 @@ $.GIsoGame.Game = (function() {
 		spriteLoader = $.GIsoGame.SpriteLoader.create();	
 		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader, cellW, cellH);		
 			
-		isoRenderer = $.GIsoGame.IsoRenderer.create(groundCtx, objectsCtx, width, height, cellW, cellH, levelReader, spriteLoader, cursor, onCellRenderFunc);
+		isoRenderer = $.GIsoGame.IsoRenderer.create(groundCtx, groundCtx, width, height, cellW, cellH, levelReader, spriteLoader, cursor, onCellRenderFunc);
 		
 		let mx = 25.5;
 		let my = 20.5;
