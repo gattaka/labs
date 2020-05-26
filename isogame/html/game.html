@@ -1,17 +1,17 @@
 <!DOCTYPE html>
 <html>
 <head>
-<script type="text/javascript" src="./js/Astar.js"></script>	
-<script type="text/javascript" src="./js/SpriteLoader.js"></script>
-<script type="text/javascript" src="./js/LevelManager.js"></script>
-<script type="text/javascript" src="./js/GFXUtils.js"></script>
-<script type="text/javascript" src="./js/Minimap.js"></script>
-<script type="text/javascript" src="./js/IsoRenderer.js"></script>	
-<script type="text/javascript" src="./js/Configuration.js"></script>
-<script type="text/javascript" src="./js/Level1.dat.js"></script>
-<script type="text/javascript" src="./js/Level2.dat.js"></script>
-<script type="text/javascript" src="./js/SpritePalette.js"></script>		
-<script type="text/javascript" src="./js/stats.min.js"></script>		
+<script type="text/javascript" src="../js/Astar.js"></script>	
+<script type="text/javascript" src="../js/SpriteLoader.js"></script>
+<script type="text/javascript" src="../js/LevelManager.js"></script>
+<script type="text/javascript" src="../js/GFXUtils.js"></script>
+<script type="text/javascript" src="../js/Minimap.js"></script>
+<script type="text/javascript" src="../js/IsoRenderer.js"></script>	
+<script type="text/javascript" src="../js/Configuration.js"></script>
+<script type="text/javascript" src="../js/Level1.dat.js"></script>
+<script type="text/javascript" src="../js/Level2.dat.js"></script>
+<script type="text/javascript" src="../js/SpritePalette.js"></script>		
+<script type="text/javascript" src="../js/stats.min.js"></script>		
 <style>
 	body {
 		cursor: url('./cursor.png'), auto;	
@@ -35,7 +35,7 @@
 <div class="checkbox-div" style="top: 200px;"><input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)" checked>Outlines?</input></div>
 <div class="checkbox-div" style="top: 230px;"><input type="checkbox" onchange="$.GIsoGame.Game.changeShowSectors(this.checked)" checked>Show sectors?</input></div>
 <div style="margin: 10px 0;">
-	<canvas id="groundCanvas" style="width: 100%;" height="600"></canvas>
+	<canvas id="mapCanvas" style="width: 100%;" height="600"></canvas>
 	<canvas id="uiCanvas" style="width: 100%;" height="600"></canvas>
 </div>
 <script>
@@ -43,8 +43,8 @@ var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.Game = (function() {
 
-	let groundCanvas = document.getElementById("groundCanvas");
-	let groundCtx = groundCanvas.getContext("2d", { alpha: false });	
+	let mapCanvas = document.getElementById("mapCanvas");
+	let mapCtx = mapCanvas.getContext("2d", { alpha: false });	
 	let uiCanvas = document.getElementById("uiCanvas");
 	let uiCtx = uiCanvas.getContext("2d");	
 	let width;
@@ -132,12 +132,12 @@ $.GIsoGame.Game = (function() {
 		let heroSpriteAdjustedY = Math.floor(heroSprite.viy + viewY);
 		isoRenderer.drawSprite(1, 0, heroSprite.currentFrame, heroSpriteAdjustedX, heroSpriteAdjustedY, $.GIsoGame.Configuration.outlines);	
 		if ($.GIsoGame.Configuration.outlines) 
-			$.GIsoGame.GFXUtils.drawPoint(groundCtx, heroSpriteAdjustedX, heroSpriteAdjustedY, "lime");			
+			$.GIsoGame.GFXUtils.drawPoint(mapCtx, heroSpriteAdjustedX, heroSpriteAdjustedY, "lime");			
 	};
 	
 	let drawTarget = function() {							
 		if ($.GIsoGame.Configuration.outlines)
-			$.GIsoGame.GFXUtils.drawPoint(groundCtx, Math.floor(target.vix + viewX), Math.floor(target.viy + viewY), "yellow");			
+			$.GIsoGame.GFXUtils.drawPoint(mapCtx, Math.floor(target.vix + viewX), Math.floor(target.viy + viewY), "yellow");			
 	};
 	
 	let onCellRenderFunc = function(mx, my) {
@@ -380,7 +380,7 @@ $.GIsoGame.Game = (function() {
 		height = window.innerHeight;	
 		halfWidth = width / 2;
 		halfHeight = height / 2;
-		for (c of [groundCanvas, uiCanvas]) {
+		for (c of [mapCanvas, uiCanvas]) {
 			c.width = width;
 			c.height = height;
 		}
@@ -399,16 +399,16 @@ $.GIsoGame.Game = (function() {
 		stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
 		document.body.appendChild(stats.dom);
 		
-		for (c of [groundCanvas, uiCanvas]) {
+		for (c of [mapCanvas, uiCanvas]) {
 			c.style.position = "absolute";
 			c.style.left = "0";
 			c.style.top = "0";
 		}
-		groundCanvas.style.zIndex = "100";
+		mapCanvas.style.zIndex = "100";
 		uiCanvas.style.zIndex = "101";
 		
 		let subCanvasSmoothing = false;
-		for (c of [groundCtx, uiCtx]) {
+		for (c of [mapCtx, uiCtx]) {
 			c.webkitImageSmoothingEnabled = subCanvasSmoothing;
 			c.mozImageSmoothingEnabled = subCanvasSmoothing;
 			c.imageSmoothingEnabled = subCanvasSmoothing;
@@ -424,7 +424,7 @@ $.GIsoGame.Game = (function() {
 		spriteLoader = $.GIsoGame.SpriteLoader.create();	
 		spritePalette = $.GIsoGame.SpritePalette.create(spriteLoader, cellW, cellH);		
 			
-		isoRenderer = $.GIsoGame.IsoRenderer.create(groundCtx, width, height, cellW, cellH, levelReader, spriteLoader, cursor, onCellRenderFunc);
+		isoRenderer = $.GIsoGame.IsoRenderer.create(mapCtx, width, height, cellW, cellH, levelReader, spriteLoader, cursor, onCellRenderFunc);
 		
 		let mx = 25.5;
 		let my = 20.5;
