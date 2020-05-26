@@ -161,12 +161,14 @@ $.GIsoGame.MapSculptor = {
 					if (l == undefined) continue; // fallback
 					if (l.mx == mx && l.my == my) {
 						level.lights.splice(i, 1);
+						isoRenderer.markDirtyRange(l.mx - l.lightReach, l.my - l.lightReach, l.mx + l.lightReach, l.my + l.lightReach); 
 						return;
 					}
 				}
 			} else {
 				level.lights.push({mx: mx, my: my, light: brush.light, lightReach: brush.lightReach});
-			}
+				isoRenderer.markDirtyRange(mx - brush.lightReach, my - brush.lightReach, mx + brush.lightReach, my + brush.lightReach);
+			}			
 		};
 		
 		return {

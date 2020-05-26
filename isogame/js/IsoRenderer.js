@@ -237,6 +237,17 @@ $.GIsoGame.IsoRenderer = {
 				let sx = Math.floor(mx / sectorSize);
 				let sy = Math.floor(my / sectorSize);
 				innerMarkDirty(sx, sy);
+				console.log("Sector mark dirty: " + sx + ":" + sy); 
+			},
+			
+			markDirtyRange: function(fromMx, fromMy, toMx, toMy) {				
+				let fromSx = Math.floor(Math.min(fromMx, toMx) / sectorSize);
+				let fromSy = Math.floor(Math.min(fromMy, toMy) / sectorSize);
+				let toSx = Math.floor(Math.max(fromMx, toMx) / sectorSize);
+				let toSy = Math.floor(Math.max(fromMy, toMy) / sectorSize);
+				for (let y = fromSy; y <= toSy; y++)
+					for (let x = fromSx; x <= toSx; x++)
+						innerMarkDirty(x, y);				
 			},
 		}
 	}	

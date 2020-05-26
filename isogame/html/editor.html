@@ -356,7 +356,7 @@ $.GIsoGame.Editor = (function() {
 				mapCtx.font = "15px Monospace";
 				mapCtx.fillStyle = "yellow";
 				mapCtx.fillText(light.light + "%", x, iy - 30);
-				mapCtx.fillText(light.lightReach + "%", x, iy - 15);
+				mapCtx.fillText(light.lightReach, x, iy - 15);
 				$.GIsoGame.GFXUtils.drawPoint(mapCtx, Math.floor(ix + spritePalette.getCellW() / 2), Math.floor(iy), "yellow", 4);
 			}
 		});		
@@ -425,6 +425,8 @@ $.GIsoGame.Editor = (function() {
 			if (levelBlueprint == undefined) 
 				levelBlueprint = $.GIsoGame.LevelManager.createNewLevelBlueprint(10, 10);
 			
+			cfg.showSectors = true;
+			
 			createMenus();
 			createButtons();		
 			createDesktopArea();	
@@ -432,7 +434,7 @@ $.GIsoGame.Editor = (function() {
 			updateWindowSize();	
 			prepareMapTools();						
 			
-			//switchMenuButton(buttons[2], wallsMenu);
+			switchMenuButton(buttons[2], wallsMenu);
 				
 			// https://developer.mozilla.org/en-US/docs/Web/API/Canvas_API/Tutorial/Optimizing_canvas
 			// https://www.html5rocks.com/en/tutorials/canvas/performance/#toc-ref
