@@ -1,7 +1,7 @@
 var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.IsoRenderer = {	
-	create: function(groundCtx, objectsCtx, width, height, cellW, cellH, levelManager, spriteLoader, cursor, onCellRenderFunc) {
+	create: function(ctx, width, height, cellW, cellH, levelManager, spriteLoader, cursor, onCellRenderFunc) {
 		let lightQuality = $.GIsoGame.Configuration.lightQuality;
 		let lightStep = 100 / lightQuality;
 		let lightsOn = true;
@@ -42,30 +42,30 @@ $.GIsoGame.IsoRenderer = {
 			}	
 		};			
 		
-		let innerDrawSprite = function(ctx, groupId, spriteId, frameId, ix, iy, showOutline, lightBucket) {
+		let innerDrawSprite = function(targetCtx, groupId, spriteId, frameId, ix, iy, showOutline, lightBucket) {
 			let tex = spriteLoader.getTexture(groupId, spriteId);
 			if (tex == undefined) {
 				// chybějící textura
-				ctx.strokeStyle = "black";
-				ctx.fillStyle = "magenta";
-				ctx.lineWidth = 1;			
+				targetCtx.strokeStyle = "black";
+				targetCtx.fillStyle = "magenta";
+				targetCtx.lineWidth = 1;			
 				let w = cellW / 2, h = cellH;
 				let x = ix + w / 2, y = iy - h / 2;				
-				ctx.fillRect(x, y, w, h);
-				ctx.strokeRect(x, y, w, h);
+				targetCtx.fillRect(x, y, w, h);
+				targetCtx.strokeRect(x, y, w, h);
 				return;
 			}
 			let col = frameId % tex.cols;
 			let row = Math.floor(frameId / tex.cols);
 			let x = Math.floor(ix - tex.offsetX);
 			let y = Math.floor(iy - tex.offsetY);				
-			ctx.drawImage(tex.canvas[lightBucket], 
+			targetCtx.drawImage(tex.canvas[lightBucket], 
 				col * tex.width, row * tex.height, tex.width, tex.height, 
 				x, y, tex.width, tex.height);
 			if (showOutline) {
-				ctx.strokeStyle = "black";
-				ctx.lineWidth = 1;			
-				ctx.strokeRect(x, y, tex.width, tex.height);
+				targetCtx.strokeStyle = "black";
+				targetCtx.lineWidth = 1;			
+				targetCtx.strokeRect(x, y, tex.width, tex.height);
 			}
 		};	
 				
@@ -128,8 +128,7 @@ $.GIsoGame.IsoRenderer = {
 		};			
 		
 		let innerUpdate = function(delay, viewX, viewY) {
-			groundCtx.clearRect(0, 0, width, height);
-			//objectsCtx.clearRect(0, 0, width, height);
+			ctx.clearRect(0, 0, width, height);
 			
 			for (let sy = 0; sy < rowsOfSectors; sy++) {
 				for (let sx = 0; sx < colsOfSectors; sx++) {
@@ -146,7 +145,7 @@ $.GIsoGame.IsoRenderer = {
 						updateSector(sx, sy);
 						dirtySectors[sx][sy] = undefined;
 					}											
-					groundCtx.drawImage(sector.canvas, Math.floor(isoSector.ix), Math.floor(isoSector.iy));
+					ctx.drawImage(sector.canvas, Math.floor(isoSector.ix), Math.floor(isoSector.iy));
 				}
 			}
 
@@ -163,16 +162,16 @@ $.GIsoGame.IsoRenderer = {
 
 					let wall = levelManager.getWallAtCoord(mx, my);
 					if (wall != undefined) 
-						innerDrawSprite(objectsCtx, 3, wall.spriteId, wall.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.lightBucket);	
+						innerDrawSprite(ctx, 3, wall.spriteId, wall.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.lightBucket);	
 					
 					let object = levelManager.getObjectAtCoord(mx, my);
 					if (object != undefined) 
-						innerDrawSprite(objectsCtx, 2, object.spriteId, object.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.lightBucket);
+						innerDrawSprite(ctx, 2, object.spriteId, object.frameId, isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.lightBucket);
 					
 					if (mx == Math.floor(cursor.mx) && my == Math.floor(cursor.my)) {
 						let x = [isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix + cellW, isoCell.ix + cellW / 2];
 						let y = [isoCell.iy, isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2];			
-						$.GIsoGame.GFXUtils.drawPolygon(objectsCtx, [x[0] + 4, x[1], x[2] - 4, x[3]], [y[0], y[1] + 2, y[2], y[3] - 2], "hsla(100,100%,50%,0.4)", false, 2);
+						$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0] + 4, x[1], x[2] - 4, x[3]], [y[0], y[1] + 2, y[2], y[3] - 2], "hsla(100,100%,50%,0.4)", false, 2);
 					}
 				}
 			}
@@ -201,7 +200,7 @@ $.GIsoGame.IsoRenderer = {
 				return innerToMap(ix, iy);
 			},
 			
-			drawSprite: function(ctx, groupId, spriteId, frameId, ix, iy, showOutline, light) {
+			drawSprite: function(groupId, spriteId, frameId, ix, iy, showOutline, light) {
 				let lightBucket = getLightBucketFromLight(light);
 				innerDrawSprite(ctx, groupId, spriteId, frameId, ix, iy, showOutline, lightBucket);
 			},
