@@ -78,7 +78,7 @@ $.GIsoGame.Editor = (function() {
 	let spriteLoader;
 	let spritePalette;
 	
-	let levelReader;
+	let levelManager;
 	let levelBlueprint;
 	let isoRenderer;
 	let mapSculptor;
@@ -96,6 +96,10 @@ $.GIsoGame.Editor = (function() {
 	let objectsMenu = {};
 	
 	let buttons = [];
+	
+	let baseLightSlider;
+	let lightSlider;
+	let lightReachSlider;
 	
 	// Ground tiles vyplňování
 	let brush = {
@@ -147,11 +151,11 @@ $.GIsoGame.Editor = (function() {
 		if (objectsMenu.visible)
 			$.GIsoGame.SpriteMenu.draw(uiCtx, objectsMenu);
 
-		$.GIsoGame.Minimap.drawMinimap(uiCtx, levelReader);
+		$.GIsoGame.Minimap.drawMinimap(uiCtx, levelManager);
 		
 		let offsetTolerance = 5;
-		if (cursor.mx < levelReader.getMapW() + offsetTolerance && cursor.mx >= -offsetTolerance 
-				&& cursor.my < levelReader.getMapH() + offsetTolerance && cursor.my >= -offsetTolerance
+		if (cursor.mx < levelManager.getMapW() + offsetTolerance && cursor.mx >= -offsetTolerance 
+				&& cursor.my < levelManager.getMapH() + offsetTolerance && cursor.my >= -offsetTolerance
 				&& desktopArea.mouseDown) {			
 			let paintedX = Math.floor(cursor.mx); 
 			let paintedY = Math.floor(cursor.my);
@@ -223,6 +227,20 @@ $.GIsoGame.Editor = (function() {
 		document.body.appendChild(button);
 		buttons.push(button);
 	};
+
+	let createSlider = function(text, min, max, value, x, y, width, onChange) {
+		let slider = document.createElement("input");
+		slider.type = "range";
+		slider.min = min;
+		slider.max = max;
+		slider.value = value;
+		slider.classList.add("ui-slider");
+		slider.style.cssText = "position: fixed; top: " + y + "px; left: " + x + "px; z-index: 200;";
+		slider.innerHTML = text;	
+		slider.oninput = function(a){ a.preventDefault(); onChange(slider); };
+		document.body.appendChild(slider);
+		return slider;		
+	};
 		
 	let switchMenuButton = function(button, menu) {		
 		buttons.forEach(b => b.classList.remove("ui-button-selected"));
@@ -232,11 +250,14 @@ $.GIsoGame.Editor = (function() {
 		objectsMenu.visible = false;
 		if (menu != undefined)
 			menu.visible = true;
+		baseLightSlider.style.display = "none";
+		lightSlider.style.display = "none";
+		lightReachSlider.style.display = "none";
 		isoRenderer.setLights(false);
 		isoRenderer.markAllDirty();
 	};
 
-	let createButtons = function() {	
+	let createUI = function() {	
 		let x = cfg.uiMargin;
 		let y = cfg.uiMargin + cfg.minimapHeight + cfg.uiMargin;
 		let dy = cfg.uiButtonHeight + cfg.uiPadding * 2 + cfg.uiMargin;
@@ -250,7 +271,21 @@ $.GIsoGame.Editor = (function() {
 			isoRenderer.setLights(true);
 			isoRenderer.markAllDirty();
 			brush.type = 4;
+			baseLightSlider.style.display = "block";
+			lightSlider.style.display = "block";
+			lightReachSlider.style.display = "block";
 		});
+		y += i * dy;
+		baseLightSlider = createSlider("Základ světla", 10, 100, levelBlueprint.baseLight, x, y, 300, slider => {
+			levelBlueprint.baseLight = Number(slider.value);
+			isoRenderer.markAllDirty();
+		});
+		lightSlider = createSlider("Síla světla", 10, 100, brush.light, x, y + 30, 300, slider => {
+			brush.light = Number(slider.value);
+		});
+		lightReachSlider = createSlider("Rozsah světla", 1, 10, brush.lightReach, x, y + 60, 300, slider => {
+			brush.lightReach = Number(slider.value);
+		});	
 	};
 	
 	let createGroundsMenu = function() {	
@@ -363,12 +398,12 @@ $.GIsoGame.Editor = (function() {
 	};
 	
 	let prepareMapTools = function() {
-		levelReader = $.GIsoGame.LevelManager.createLevelReader(levelBlueprint);											
+		levelManager = $.GIsoGame.LevelManager.createLevelManager(levelBlueprint);											
 		isoRenderer = $.GIsoGame.IsoRenderer.create(mapCtx, width, height, spritePalette.getCellW(), spritePalette.getCellH(), 
-													levelReader, spriteLoader, cursor, onCellRenderFunc);		
+													levelManager, spriteLoader, cursor, onCellRenderFunc);		
 		mapSculptor = $.GIsoGame.MapSculptor.create(isoRenderer, spritePalette, levelBlueprint);
 		
-		let iso = isoRenderer.toIso(levelReader.getMapW() / 2, levelReader.getMapH() / 2);
+		let iso = isoRenderer.toIso(levelManager.getMapW() / 2, levelManager.getMapH() / 2);
 		viewX = halfWidth - iso.ix;
 		viewY = (height - groundsMenu.height - cfg.uiMargin * 2) / 2 - iso.iy;		
 	};
@@ -428,7 +463,7 @@ $.GIsoGame.Editor = (function() {
 			cfg.showSectors = true;
 			
 			createMenus();
-			createButtons();		
+			createUI();		
 			createDesktopArea();	
 			
 			updateWindowSize();	

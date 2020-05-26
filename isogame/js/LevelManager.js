@@ -13,11 +13,10 @@ $.GIsoGame.LevelManager = {
 		};
 	},
 	
-	createLevelReader: function(levelBlueprint) {		
+	createLevelManager: function(levelBlueprint) {		
 		let lightQuality = $.GIsoGame.Configuration.lightQuality;
 		let mapW = levelBlueprint.mapW;
-		let mapH = levelBlueprint.mapH;
-		let baseLight = levelBlueprint.baseLight;
+		let mapH = levelBlueprint.mapH;		
 		
 		// mapa povrchů
 		let grounds = levelBlueprint.grounds;
@@ -61,7 +60,7 @@ $.GIsoGame.LevelManager = {
 		};
 		
 		let innerGetLightAtCoord = function(mx, my) {
-			let light = baseLight;			
+			let light = levelBlueprint.baseLight;			
 			if (light == undefined) {
 				light = 10;
 				//console.error("Level nemá definován 'baseLight'");
