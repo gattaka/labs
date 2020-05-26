@@ -96,6 +96,8 @@ $.GIsoGame.IsoRenderer = {
 					let isoCell = innerToIso(smx, smy);			
 					isoCell.iy += sectorHeight / 2;
 					isoCell.value = levelManager.getGroundAtCoord(mx, my);					
+					if (isoCell.value == undefined)
+						continue;
 					isoCell.lightBucket = getLightBucketFromLight(levelManager.getLightAtCoord(mx, my));
 					let x = [isoCell.ix, isoCell.ix + cellW / 2, isoCell.ix + cellW, isoCell.ix + cellW / 2];
 					let y = [isoCell.iy, isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2];			

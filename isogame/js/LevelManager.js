@@ -63,9 +63,16 @@ $.GIsoGame.LevelManager = {
 		
 		let innerGetLightAtCoord = function(mx, my) {
 			let light = baseLight;			
+			if (light == undefined) {
+				light = 10;
+				//console.error("Level nemá definován 'baseLight'");
+			}
 			for (i = 0; i < lights.length; i++) {
 				let l = lights[i];	
-				if (l == undefined) continue; // fallback
+				if (l == undefined) {
+					//console.error("Level light item #" + i + " není definována");
+					continue; 
+				}
 				let dx = Math.abs(l.mx - mx);
 				let dy = Math.abs(l.my - my);
 				let product = dx * dx + dy * dy;
