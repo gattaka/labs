@@ -28,8 +28,9 @@ $.GIsoGame.LevelManager = {
 		// mapa kolizí
 		let walls = levelBlueprint.walls;
 		
-		// list světel
+		// list světel a mapa stětlosti
 		let lights = levelBlueprint.lights;
+		let lightMap = [];
 		
 		if (lights == undefined) {
 			lights = [];

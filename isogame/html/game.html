@@ -32,8 +32,8 @@
 </head>
 <body>
 <div class="checkbox-div" style="top: 170px;"><input type="checkbox" onchange="$.GIsoGame.Game.changeCentered(this.checked)" checked>Centered?</input></div>
-<div class="checkbox-div" style="top: 200px;"><input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)" checked>Outlines?</input></div>
-<div class="checkbox-div" style="top: 230px;"><input type="checkbox" onchange="$.GIsoGame.Game.changeShowSectors(this.checked)" checked>Show sectors?</input></div>
+<div class="checkbox-div" style="top: 200px;"><input type="checkbox" onchange="$.GIsoGame.Game.changeOutlines(this.checked)">Outlines?</input></div>
+<div class="checkbox-div" style="top: 230px;"><input type="checkbox" onchange="$.GIsoGame.Game.changeShowSectors(this.checked)">Show sectors?</input></div>
 <div style="margin: 10px 0;">
 	<canvas id="mapCanvas" style="width: 100%;" height="600"></canvas>
 	<canvas id="uiCanvas" style="width: 100%;" height="600"></canvas>
@@ -117,10 +117,12 @@ $.GIsoGame.Game = (function() {
 	};	
 	
 	let cursor = {
+		targetX: 0,
+		targetY: 0,
 		mx: 0, 
 		my: 0,
 		vix: 0,
-		viy: 0,		
+		viy: 0,
 	};		
 
 	/*
@@ -151,6 +153,8 @@ $.GIsoGame.Game = (function() {
 		if ($.GIsoGame.Configuration.centered) {
 			viewX = halfWidth - heroSprite.vix;
 			viewY = halfHeight - heroSprite.viy;
+			updateCursor();
+			updateTarget();
 		}
 	};		
 		
@@ -366,8 +370,18 @@ $.GIsoGame.Game = (function() {
 		nextTargetStep();
 	};
 	
-	let updateTarget = function(e) {		
-		if (!isCollision(cursor.mx, cursor.my))
+	let updateCursor = function() {
+		let ix = cursor.targetX - viewX;
+		let iy = cursor.targetY - viewY;
+		mapCoord = isoRenderer.toMap(ix, iy);	
+		cursor.mx = mapCoord.mx;
+		cursor.my = mapCoord.my;
+		cursor.vix = ix;
+		cursor.viy = iy;
+	}
+	
+	let updateTarget = function() {
+		if (mousedown && !isCollision(cursor.mx, cursor.my))
 			prepareNavigationSteps(cursor.mx, cursor.my, cursor.vix, cursor.viy);		
 	};
 	
@@ -455,7 +469,8 @@ $.GIsoGame.Game = (function() {
 	
 	uiCanvas.addEventListener("mousedown", function (e) {
 		mousedown = true;
-		updateTarget(e);
+		updateCursor();
+		updateTarget();
 	}, false);
  
 	uiCanvas.addEventListener("mouseup", function (e) {
@@ -468,18 +483,12 @@ $.GIsoGame.Game = (function() {
 	
 	uiCanvas.addEventListener("mousemove", function (e) {
 		let bound = uiCanvas.getBoundingClientRect();
-		let targetX = e.clientX - bound.x;
-		let targetY = e.clientY - bound.y;			
-		let ix = targetX - viewX;
-		let iy = targetY - viewY;
-		mapCoord = isoRenderer.toMap(ix, iy);	
-		cursor.mx = mapCoord.mx;
-		cursor.my = mapCoord.my;
-		cursor.vix = ix;
-		cursor.viy = iy;
+		cursor.targetX = e.clientX - bound.x;
+		cursor.targetY = e.clientY - bound.y;
+		updateCursor();
 		if (!mousedown) 
 			return;
-		updateTarget(e);
+		updateTarget();
 	}, false);
 		
 	return {	

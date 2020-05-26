@@ -2,7 +2,7 @@ var $ = $ || {};
 $.GIsoGame = $.GIsoGame || {};
 $.GIsoGame.Configuration = {	
 	centered: true,	
-	outlines: true,
+	outlines: false,
 	showNumbers: false,
 	uiPadding: 5,
 	uiBorder: 2,
@@ -19,5 +19,5 @@ $.GIsoGame.Configuration = {
 	minimapWidth: 150,
 	minimapHeight: 150,
 	lightQuality: 20, // 10 - 50
-	showSectors: true,
+	showSectors: false,
 };

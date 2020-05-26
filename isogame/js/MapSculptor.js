@@ -133,6 +133,7 @@ $.GIsoGame.MapSculptor = {
 						else type = 4; // prostředek					
 						placeGroundTile(index, brush.spriteId, type);
 					}
+					isoRenderer.markDirty(tx, ty);
 				}
 			}					
 		};		
