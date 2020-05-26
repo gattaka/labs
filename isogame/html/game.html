@@ -260,9 +260,11 @@ $.GIsoGame.Game = (function() {
 
 			adjustView();			
 						
-			mapCoord = isoRenderer.toMap(heroSprite.vix, heroSprite.viy);			
+			mapCoord = isoRenderer.toMap(heroSprite.vix, heroSprite.viy);				
+			isoRenderer.markDirtyRange(hero.mx - hero.lightReach, hero.my - hero.lightReach, hero.mx + hero.lightReach, hero.my + hero.lightReach);
 			hero.mx = mapCoord.mx;
 			hero.my = mapCoord.my;					
+			isoRenderer.markDirtyRange(hero.mx - hero.lightReach, hero.my - hero.lightReach, hero.mx + hero.lightReach, hero.my + hero.lightReach);
 		} else if (!nextTargetStep()) {
 			heroSprite.currentLoop = 0;
 		}		
