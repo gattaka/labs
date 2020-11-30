@@ -1,0 +1,29 @@
+Brightness
+	https://stackoverflow.com/questions/47118229/html5-canvas-brightness-control
+	https://stackoverflow.com/questions/42383507/adding-a-filter-to-image-before-drawing-on-canvas
+	https://www.smashingmagazine.com/2016/05/web-image-effects-performance-showdown/
+
+Isometric resources
+	https://opengameart.org/art-search-advanced?field_art_tags_tid=Isometric
+	https://opengameart.org/users/clint-bellanger?page=8
+					
+	https://opengameart.org/content/isometric-parts-2
+	https://opengameart.org/content/old-ruins-tileset
+	https://opengameart.org/content/potions
+	https://opengameart.org/content/food-pack
+	https://opengameart.org/content/grassland-tileset
+	https://opengameart.org/content/armor-icons-by-equipment-slot		
+	https://opengameart.org/content/wandering-vendor-npc
+	https://opengameart.org/content/dungeon-stairs
+	https://opengameart.org/content/variation-on-cbs-dungeon-stairs
+	https://opengameart.org/content/zombie-sprites
+	https://opengameart.org/content/cursed-grave
+	https://opengameart.org/content/tree-collection-v26-bleeds-game-art		
+	https://opengameart.org/content/crystal-game-pieces
+	https://opengameart.org/content/coin-piles-copper-silver-gold-mithril
+	https://opengameart.org/content/medieval-cart-prop
+	https://opengameart.org/content/crossbow-orc
+	https://opengameart.org/content/isometric-tileset-gothic-archways
+	https://opengameart.org/content/isometric-trees-1
+	https://opengameart.org/content/good-neighbors-pixel-font
+	https://opengameart.org/content/minimalist-pixel-fonts
