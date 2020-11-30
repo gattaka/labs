@@ -1,0 +1,170 @@
+[N1]Demo[/N1]
+[HTML]<div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="400"></canvas>
+</div>[/HTML][GJSLibColors][/GJSLibColors]
+<script>var $ = $ || {};
+$.fingerprint = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let hWidth = width / 2; 
+	let hHeight = height / 2;	
+	let maxResult = Math.pow(Math.max(width, height), 2) / 2;
+	
+	let interval = 1;
+	let innerIntervalCallback;
+		
+	let pointSize = 3;	
+	let colors = false;
+	let pw = Math.floor(width / pointSize);
+	let ph = Math.floor(height / pointSize);
+	
+	let done = false;
+	
+	let map = [];
+	for (let mx = 0; mx < pw; mx++)
+		map[mx] = [];	
+		
+	let x = Math.floor(Math.random() * pw);
+	let y = Math.floor(Math.random() * ph);
+	
+	let hue = 0;
+	let validateAlgorithm = 1;
+	
+	ctx.strokeStyle = "black";	
+	ctx.strokeRect(0, 0, width, height);
+		
+	let updateColor = function() {		
+		ctx.fillStyle = colors ? "hsl(" + hue + ", 100%, 50%)" : "black";
+	};
+		
+	let validateCell = function(x, y) {
+		if (x < 0 || x >= pw || y < 0 || y >= ph)
+			return false;
+		if (map[x][y])
+			return false;
+		return true;
+	};
+		
+	let validateMove = function(nx, ny) {
+		switch (validateAlgorithm) {
+		default:
+		case 0: return validateMoveA(nx, ny);		
+		case 1: return validateMoveB(nx, ny, 1);
+		case 2: return validateMoveB(nx, ny, 2);
+		case 3: return validateMoveB(nx, ny, 3);		
+		case 4: return validateMoveB(nx, ny, 4);
+		}
+	};	
+	
+	let validateMoveA = function(nx, ny) {
+		return validateCell(nx, ny)
+		   &&  (validateCell(nx - 1, ny) || validateCell(nx - 1, ny - 1) || validateCell(nx, ny - 1))
+		   &&  (validateCell(nx, ny - 1) || validateCell(nx + 1, ny - 1) || validateCell(nx + 1, ny))
+		   &&  (validateCell(nx - 1, ny) || validateCell(nx - 1, ny + 1) || validateCell(nx, ny + 1))
+		   &&  (validateCell(nx + 1, ny) || validateCell(nx + 1, ny + 1) || validateCell(nx, ny + 1));
+	};
+	
+	let validateMoveB = function(nx, ny, maxHits) {
+		if (!validateCell(nx, ny))
+			return false;
+		let hits = 0;
+		for (dx = -1; dx <= 1; dx++) {
+			for (dy = -1; dy <= 1; dy++) {				
+				if (nx + dx == x && ny + dy == y) 
+					continue;
+				if (!validateCell(nx + dx, ny + dy))
+					hits++;
+				if (hits > maxHits)
+					return false;
+			}
+		}
+		return true;
+	};
+		
+	let move = function() {
+		hue = (hue + 1) % 360;
+		updateColor();
+		let dir = Math.floor(Math.random() * 4);
+		for (let i = 0; i < 4; i++) {
+			switch (dir) {
+			case 0: // Right
+				if (validateMove(x + 1, y)) {
+					x++; return 0;
+				}
+			case 1: // Left
+				if (validateMove(x - 1, y)) {
+					x--; return 1;
+				}
+			case 2: // Down
+				if (validateMove(x, y + 1)) {
+					y++; return 2;
+				}
+			case 3: // Up
+				if (validateMove(x, y - 1)) {
+					y--; return 3;
+				}
+			}
+			dir = (dir + 1) % 4;
+		}
+		
+		// nenašel ani jeden volný směr
+		for (let mx = 0; mx < pw; mx++) 
+			for (let my = 0; my < pw; my++)
+				if (validateMove(mx, my)) {
+					x = mx;
+					y = my;
+					return;
+				}
+		done = true;
+		console.log("done");
+	};
+	
+	let draw = function() {	
+		let rx = x * pointSize;
+		let ry = y * pointSize;
+		ctx.fillRect(rx, ry, pointSize, pointSize);
+		map[x][y] = true;
+		move();		
+	};
+	
+	let step = function() {
+		if (!done)
+			draw();
+	}
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};
+	
+	let init = function() {	
+		ctx.lineWidth = 2;				
+		hue = 0;
+		updateColor();
+		innnerChangeInterval(interval);	
+	};	
+		
+	return {
+		start: function() {					
+			init();		
+		}		
+	};
+
+})();
+
+$.fingerprint.start();</script>

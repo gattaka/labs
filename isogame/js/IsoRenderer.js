@@ -6,14 +6,14 @@ $.GIsoGame.IsoRenderer = {
 		let lightStep = 100 / lightQuality;
 		let lightsOn = true;
 		
-		let sectorSize = 7;
+		let sectorSize = 6;
 		let colsOfSectors = Math.ceil(levelManager.getMapW() / sectorSize);
 		let rowsOfSectors = Math.ceil(levelManager.getMapH() / sectorSize);		
 		let sectorWidth = sectorSize * cellW;
 		let sectorHeight = sectorSize * cellH;
 		let sectors = [];
 		
-		let dirtySectors = [];
+		let dirtySectors = [];		
 		
 		let innerToIso = function(mx, my) {
 			let w = cellW / 2;
@@ -67,34 +67,18 @@ $.GIsoGame.IsoRenderer = {
 				targetCtx.lineWidth = 1;			
 				targetCtx.strokeRect(x, y, tex.width, tex.height);
 			}
-		};	
-				
-		let createCanvas = function(w, h) {					
-			let cachedCanvas = document.createElement("canvas");
-			cachedCanvas.width = w;
-			cachedCanvas.height = h;
-			let cachedCtx = cachedCanvas.getContext("2d");
-			let smoothing = false;
-			cachedCtx.webkitImageSmoothingEnabled = smoothing;
-			cachedCtx.mozImageSmoothingEnabled = smoothing;
-			cachedCtx.imageSmoothingEnabled = smoothing;
-			cachedCtx.msImageSmoothingEnabled = smoothing;
-			return {canvas: cachedCanvas, ctx: cachedCtx};			
-		};
+		};				
 		
-		let updateSector = function(sx, sy) {			
-			let sector = sectors[sx][sy];
-			sector.ctx.clearRect(0, 0, sectorWidth, sectorHeight);
-			let mxOffset = sx * sectorSize;
-			let myOffset = sy * sectorSize;
+		let drawSectorSprites = function(ctx, mxOffset, myOffset, ix, iy, cached) {
 			for (let smy = 0; smy < sectorSize; smy++) {								
 				let my = smy + myOffset;
 				if (my >= levelManager.getMapH()) break;
 				for (let smx = 0; smx < sectorSize; smx++) {				
 					let mx = smx + mxOffset;
 					if (mx >= levelManager.getMapW()) break;
-					let isoCell = innerToIso(smx, smy);			
-					isoCell.iy += sectorHeight / 2;
+					let isoCell = innerToIso(smx, smy);		
+					isoCell.ix += ix;
+					isoCell.iy += iy + sectorHeight / 2;
 					isoCell.value = levelManager.getGroundAtCoord(mx, my);					
 					if (isoCell.value == undefined)
 						continue;
@@ -103,53 +87,91 @@ $.GIsoGame.IsoRenderer = {
 					let y = [isoCell.iy, isoCell.iy - cellH / 2, isoCell.iy, isoCell.iy + cellH / 2];			
 					let filled = false;					
 					for (let i = 0; i < isoCell.value.length / 2; i++) {
-						innerDrawSprite(sector.ctx, 0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.lightBucket);				
+						innerDrawSprite(ctx, 0, isoCell.value[i * 2], isoCell.value[i * 2 + 1], isoCell.ix, isoCell.iy - cellH / 2, false, isoCell.lightBucket);				
 						filled = true;
 					}
-					if ($.GIsoGame.Configuration.outlines || !filled) 
-						$.GIsoGame.GFXUtils.drawPolygon(sector.ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,40%,0.5)", false);
+					if ($.GIsoGame.Configuration.outlines || !filled) {
+						$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "hsla(0,0%,40%,0.5)", false);
+					} else if (!cached && $.GIsoGame.Configuration.showSectors) {
+						$.GIsoGame.GFXUtils.drawPolygon(ctx, [x[0], x[1], x[2], x[3]], [y[0], y[1], y[2], y[3]], "#f00", false);
+					}
 				}
 			}
+		};
+		
+		let cacheSector = function(sx, sy) {			
+			let sector = sectors[sx][sy];
+			sector.ctx.clearRect(0, 0, sectorWidth, sectorHeight);
+			let mxOffset = sx * sectorSize;
+			let myOffset = sy * sectorSize;
+			drawSectorSprites(sector.ctx, mxOffset, myOffset, 0, 0, true);
 			if ($.GIsoGame.Configuration.showSectors)
 				$.GIsoGame.GFXUtils.drawPolygon(sector.ctx, [0, sectorWidth / 2, sectorWidth, sectorWidth / 2], [sectorHeight / 2, 0, sectorHeight / 2, sectorHeight], "#f00", false);			
 		};
 		
 		let createSector = function(sx, sy) {
 			if (sectors[sx] == undefined)
-				sectors[sx] = [];
-			let sector = createCanvas(sectorWidth, sectorHeight);
-			sectors[sx][sy] = sector;
-			updateSector(sx, sy);
-			return sectors[sx][sy];
+				sectors[sx] = [];			
+			let cachedCanvas = document.createElement("canvas");
+			cachedCanvas.width = sectorWidth;
+			cachedCanvas.height = sectorHeight;
+			let cachedCtx = cachedCanvas.getContext("2d");
+			let smoothing = false;
+			cachedCtx.webkitImageSmoothingEnabled = smoothing;
+			cachedCtx.mozImageSmoothingEnabled = smoothing;
+			cachedCtx.imageSmoothingEnabled = smoothing;
+			cachedCtx.msImageSmoothingEnabled = smoothing;
+			let sector = {
+				canvas: cachedCanvas, 
+				ctx: cachedCtx,
+				dirty: true,
+				wasDirty: true,
+			};					
+			sectors[sx][sy] = sector;			
+			return sector;
 		};
 		
-		let getSector = function(sx, sy) {
+		let readSector = function(sx, sy) {
 			if (sectors[sx] == undefined)
-				return undefined;
-			return sectors[sx][sy];
-		};			
+				sectors[sx] = [];
+			let sector;
+			if (sectors[sx][sy] == undefined)
+				sector = createSector(sx, sy);
+			sector = sectors[sx][sy];
+			sector.dirty = dirtySectors[sx] != undefined && dirtySectors[sx][sy];
+			return sector;
+		};
 		
 		let innerUpdate = function(delay, viewX, viewY) {
 			ctx.clearRect(0, 0, width, height);
 			
 			for (let sy = 0; sy < rowsOfSectors; sy++) {
+				let myOffset = sy * sectorSize;
 				for (let sx = 0; sx < colsOfSectors; sx++) {
-					let isoSector = innerToIso(sx * sectorSize, sy * sectorSize);
+					let mxOffset = sx * sectorSize;
+					let isoSector = innerToIso(mxOffset, myOffset);
 					isoSector.ix += viewX;
 					isoSector.iy += viewY - sectorHeight / 2;		
 					if (isoSector.ix > width || isoSector.ix + sectorWidth < 0 ||
 						isoSector.iy > height || isoSector.iy + sectorHeight < 0)
 						continue;		
-					let sector = getSector(sx, sy);
-					if (sector == undefined) {
-						sector = createSector(sx, sy);
-					} else if (dirtySectors[sx] != undefined && dirtySectors[sx][sy]) {
-						updateSector(sx, sy);
-						dirtySectors[sx][sy] = undefined;
-					}											
-					ctx.drawImage(sector.canvas, Math.floor(isoSector.ix), Math.floor(isoSector.iy));
+					let sector = readSector(sx, sy);
+					if (sector.dirty) {						
+						sector.wasDirty = true;
+						drawSectorSprites(ctx, mxOffset, myOffset, isoSector.ix, isoSector.iy);
+						//cacheSector(sx, sy);
+						//ctx.drawImage(sector.canvas, Math.floor(isoSector.ix), Math.floor(isoSector.iy));
+					} else {
+						if (sector.wasDirty) {
+							cacheSector(sx, sy);
+							sector.wasDirty = false;
+						}
+						ctx.drawImage(sector.canvas, Math.floor(isoSector.ix), Math.floor(isoSector.iy));
+					}
 				}
 			}
+			
+			dirtySectors = [];
 
 			// map se musí vykreslovat v opačném pořadí, než je X, aby se bloky správně překrývaly
 			// poté zdi, objekty, postavy apod.
