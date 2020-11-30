@@ -16,7 +16,8 @@ $.fingerprint = (function() {
 	let interval = 1;
 	let innerIntervalCallback;
 		
-	let pointSize = 5;	
+	let pointSize = 3;	
+	let colors = false;
 	let pw = Math.floor(width / pointSize);
 	let ph = Math.floor(height / pointSize);
 	
@@ -35,8 +36,8 @@ $.fingerprint = (function() {
 	ctx.strokeStyle = "black";	
 	ctx.strokeRect(0, 0, width, height);
 		
-	let updateColor = function() {
-		ctx.fillStyle = "hsl(" + hue + ", 100%, 50%)";
+	let updateColor = function() {		
+		ctx.fillStyle = colors ? "hsl(" + hue + ", 100%, 50%)" : "black";
 	};
 		
 	let validateCell = function(x, y) {
