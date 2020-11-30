@@ -1,7 +1,24 @@
 [N1]Demo[/N1]
-[HTML]<div style="margin: 10px 0;">
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Point size <2-20></td>			
+			<td>Speed (ms) <1-50></td>
+			<td>Spread <1/2/3/4/5></td>	
+			<td></td>
+			<td></td>	
+		</tr>
+		<tr>				
+			<td><input id="pointsInput" style="width: 120px;" value="10">	
+			<td><input id="speedInput" style="width: 100px;" value="10"></td>				
+			<td><input id="spreadInput" style="width: 100px;" value="1"></td>						
+			<td><input id="rainbowInput" type="checkbox" onclick="$.fingerprint.rainbow(this.checked)" >Rainbow?</input></td>
+			<td><button type="button" onclick="$.fingerprint.start()">Run!</button></td>			
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0;">
 	<canvas id="canvas" width="700" height="400"></canvas>
-</div>[/HTML][GJSLibColors][/GJSLibColors]
+</div>[/HTML]
 <script>var $ = $ || {};
 $.fingerprint = (function() {
 
@@ -16,25 +33,19 @@ $.fingerprint = (function() {
 	let interval = 1;
 	let innerIntervalCallback;
 		
-	let pointSize = 3;	
-	let colors = false;
-	let pw = Math.floor(width / pointSize);
-	let ph = Math.floor(height / pointSize);
+	let pointSize;
+	let colors;
+	let pw;
+	let ph;
 	
-	let done = false;
+	let done;
 	
-	let map = [];
-	for (let mx = 0; mx < pw; mx++)
-		map[mx] = [];	
-		
-	let x = Math.floor(Math.random() * pw);
-	let y = Math.floor(Math.random() * ph);
+	let map;
+	let x;
+	let y;
 	
-	let hue = 0;
-	let validateAlgorithm = 1;
-	
-	ctx.strokeStyle = "black";	
-	ctx.strokeRect(0, 0, width, height);
+	let hue;
+	let validateAlgorithm;
 		
 	let updateColor = function() {		
 		ctx.fillStyle = colors ? "hsl(" + hue + ", 100%, 50%)" : "black";
@@ -51,11 +62,11 @@ $.fingerprint = (function() {
 	let validateMove = function(nx, ny) {
 		switch (validateAlgorithm) {
 		default:
-		case 0: return validateMoveA(nx, ny);		
 		case 1: return validateMoveB(nx, ny, 1);
 		case 2: return validateMoveB(nx, ny, 2);
 		case 3: return validateMoveB(nx, ny, 3);		
 		case 4: return validateMoveB(nx, ny, 4);
+		case 5: return validateMoveA(nx, ny);		
 		}
 	};	
 	
@@ -148,21 +159,60 @@ $.fingerprint = (function() {
 			clearInterval(innerIntervalCallback);
 		
 		innerIntervalCallback = setInterval(function() {
-			step();
+			draw();
 		}, interval);
+	};
+
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
 	};
 	
 	let init = function() {	
-		ctx.lineWidth = 2;				
-		hue = 0;
-		updateColor();
-		innnerChangeInterval(interval);	
+		let pointsParam = validate("Invalid points", "pointsInput", 2, 20);					
+		let speedParam = validate("Invalid speed", "speedInput", 1, 50);	
+		let spreadParam = validate("Invalid spread", "spreadInput", 1, 5);			
+		if (speedParam && pointsParam && spreadParam) {						
+			pointSize = pointsParam;			
+			pw = Math.floor(width / pointSize);
+			ph = Math.floor(height / pointSize);			
+			done = false;
+			
+			validateAlgorithm = spreadParam;
+			
+			map = [];
+			for (let mx = 0; mx < pw; mx++)
+				map[mx] = [];	
+				
+			x = Math.floor(Math.random() * pw);
+			y = Math.floor(Math.random() * ph);
+			
+			ctx.clearRect(0, 0, width, height);
+			ctx.strokeStyle = "black";	
+			ctx.strokeRect(0, 0, width, height);
+			
+			hue = 0;
+			updateColor();
+			innnerChangeInterval(speedParam);				
+		}
 	};	
 		
 	return {
 		start: function() {					
 			init();		
-		}		
+		},
+		rainbow: function(value) {
+			colors = value;
+		},
 	};
 
 })();
