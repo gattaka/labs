@@ -1,0 +1,188 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Point size <2-20></td>			
+			<td></td>			
+		</tr>
+		<tr>				
+			<td><input id="pointsInput" style="width: 120px;" value="10">	
+			<td><button type="button" onclick="$.vitrage.start()">Run!</button></td>			
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.vitrage = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let hWidth = width / 2; 
+	let hHeight = height / 2;	
+	let maxResult = Math.pow(Math.max(width, height), 2) / 2;
+	
+	let interval = 1;
+	let innerIntervalCallback;
+		
+	let pointSize;
+	let pw;
+	let ph;
+	
+	let done;
+	
+	let map;
+	let x;
+	let y;
+	
+	let hue;	
+				
+	let validateCell = function(x, y) {
+		if (x < 0 || x >= pw || y < 0 || y >= ph)
+			return false;
+		if (map[x][y])
+			return false;
+		return true;
+	};
+		
+	let validateMove = function(nx, ny) {	
+		return validateMoveB(nx, ny, 2);
+	};
+	
+	let validateMoveB = function(nx, ny) {
+		if (!validateCell(nx, ny))
+			return false;
+		let hits = 0;
+		for (dx = -1; dx <= 1; dx++) {
+			for (dy = -1; dy <= 1; dy++) {				
+				if (nx + dx == x && ny + dy == y) 
+					continue;
+				if (!validateCell(nx + dx, ny + dy))
+					hits++;
+				if (hits > 2)
+					return false;
+			}
+		}
+		return true;
+	};
+		
+	let move = function() {		
+		let dir = Math.floor(Math.random() * 4);
+		for (let i = 0; i < 4; i++) {
+			switch (dir) {
+			case 0: // Right
+				if (validateMove(x + 1, y)) {
+					x++; return 0;
+				}
+			case 1: // Left
+				if (validateMove(x - 1, y)) {
+					x--; return 1;
+				}
+			case 2: // Down
+				if (validateMove(x, y + 1)) {
+					y++; return 2;
+				}
+			case 3: // Up
+				if (validateMove(x, y - 1)) {
+					y--; return 3;
+				}
+			}
+			dir = (dir + 1) % 4;
+		}
+		
+		// nenašel ani jeden volný směr
+		for (let mx = 0; mx < pw; mx++)
+			for (let my = 0; my < pw; my++)
+				if (validateMove(mx, my)) {
+					x = mx;
+					y = my;
+					return;
+				}
+		done = true;
+		console.log("done");
+		
+		for (let mx = 0; mx < pw; mx++)
+			for (let my = 0; my < pw; my++)
+				if (validateCell(mx, my)) {
+					hue = Math.floor(Math.random() * 360);
+					ctx.fillStyle = mx == 0 || my == 0 || mx == pw - 1 || my == ph - 1 ? "black" : "hsl(" + hue + ", 100%, 50%)";
+					fillCells(mx, my);
+				}		
+
+		for (let mx = 0; mx < pw; mx++)
+			for (let my = 0; my < pw; my++) {
+				ctx.fillStyle = map[mx][my];
+				ctx.fillRect(mx * pointSize, my * pointSize, pointSize, pointSize);
+			}
+	};
+	
+	let fillCells = function(mx, my) {		
+		if (validateCell(mx, my)) {			
+			map[mx][my] = mx == 0 || my == 0 || mx == pw - 1 || my == ph - 1 ? "black" : "hsl(" + hue + ", 100%, 50%)";
+			fillCells(mx - 1, my);
+			fillCells(mx, my - 1);
+			fillCells(mx + 1, my);
+			fillCells(mx, my + 1);
+		}
+	};
+	
+	let draw = function() {	
+		while (!done) {	
+			map[x][y] = "black";
+			move();
+		}
+	};
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	let init = function() {	
+		let pointsParam = validate("Invalid points", "pointsInput", 2, 20);							
+		if (pointsParam) {						
+			pointSize = pointsParam;			
+			pw = Math.floor(width / pointSize);
+			ph = Math.floor(height / pointSize);			
+			done = false;				
+			
+			map = [];
+			for (let mx = 0; mx < pw; mx++)
+				map[mx] = [];	
+				
+			x = Math.floor(Math.random() * pw);
+			y = Math.floor(Math.random() * ph);
+			
+			ctx.clearRect(0, 0, width, height);
+			ctx.strokeStyle = "black";	
+			ctx.strokeRect(0, 0, width, height);
+			
+			hue = 0;
+			ctx.fillStyle = "black";
+			draw();
+		}
+	};	
+		
+	return {
+		start: function() {					
+			init();		
+		},
+		rainbow: function(value) {
+			colors = value;
+		},
+	};
+
+})();
+
+$.vitrage.start();</script>

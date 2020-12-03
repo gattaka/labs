@@ -7,12 +7,14 @@
 			<td>Spread <1/2/3/4/5></td>	
 			<td></td>
 			<td></td>	
+			<td></td>
 		</tr>
 		<tr>				
 			<td><input id="pointsInput" style="width: 120px;" value="10">	
 			<td><input id="speedInput" style="width: 100px;" value="10"></td>				
 			<td><input id="spreadInput" style="width: 100px;" value="1"></td>						
 			<td><input id="rainbowInput" type="checkbox" onclick="$.fingerprint.rainbow(this.checked)" >Rainbow?</input></td>
+			<td><input id="rainbowInput" type="checkbox" onclick="$.fingerprint.infill(this.checked)" >Infill?</input></td>
 			<td><button type="button" onclick="$.fingerprint.start()">Run!</button></td>			
 		</tr>
 	</tbody>
@@ -35,6 +37,7 @@ $.fingerprint = (function() {
 		
 	let pointSize;
 	let colors;
+	let infill;
 	let pw;
 	let ph;
 	
@@ -122,7 +125,7 @@ $.fingerprint = (function() {
 		}
 		
 		// nenašel ani jeden volný směr
-		for (let mx = 0; mx < pw; mx++) 
+		for (let mx = 0; mx < pw; mx++)
 			for (let my = 0; my < pw; my++)
 				if (validateMove(mx, my)) {
 					x = mx;
@@ -131,6 +134,27 @@ $.fingerprint = (function() {
 				}
 		done = true;
 		console.log("done");
+		
+		if (infill)
+			for (let mx = 0; mx < pw; mx++)
+				for (let my = 0; my < pw; my++)
+					if (validateCell(mx, my)) {
+						hue = Math.floor(Math.random() * 360);
+						ctx.fillStyle = mx == 0 || my == 0 || mx == pw - 1 || my == ph - 1 ? "black" : "hsl(" + hue + ", 100%, 50%)";
+						fillCells(mx, my);
+					}				
+	};
+	
+	let fillCells = function(mx, my) {		
+		if (validateCell(mx, my)) {
+			ctx.fillStyle = mx == 0 || my == 0 || mx == pw - 1 || my == ph - 1 ? "black" : "hsl(" + hue + ", 100%, 50%)";
+			ctx.fillRect(mx * pointSize, my * pointSize, pointSize, pointSize);
+			map[mx][my] = true;
+			fillCells(mx - 1, my);
+			fillCells(mx, my - 1);
+			fillCells(mx + 1, my);
+			fillCells(mx, my + 1);
+		}
 	};
 	
 	let draw = function() {	
@@ -159,7 +183,7 @@ $.fingerprint = (function() {
 			clearInterval(innerIntervalCallback);
 		
 		innerIntervalCallback = setInterval(function() {
-			draw();
+			step();
 		}, interval);
 	};
 
@@ -212,6 +236,9 @@ $.fingerprint = (function() {
 		},
 		rainbow: function(value) {
 			colors = value;
+		},
+		infill: function(value) {
+			infill = value;
 		},
 	};
 
