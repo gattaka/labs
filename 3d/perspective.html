@@ -13,22 +13,18 @@
 				onchange="$.perspective.changeViewAngle(this.value)" style="width: 120px;" value="90"></td>
 			<td><input id="lensSize"
 				onchange="$.perspective.changeLensSize(this.value)" style="width: 120px;" value="10"></td>
-			<td><span id="fpsSpan" /></td>
-			<td><input id="showRays" type="checkbox" onclick="$.perspective.changeShowRays(this.checked)" checked>Show rays?</input></td>
+			<td><span id="fpsSpan" /></td>			
 			<td><input id="showLight" type="checkbox" onclick="$.perspective.changeShowLight(this.checked)" >Show light?</input></td>
 		</tr>
 	</tbody>
 </table>
 <div style="margin: 10px 0; display: inline-block; cursor: none;">
 	<canvas id="perspectiveCanvas" width="700" height="400" style="background: black"></canvas>
-</div>
-<div style="margin: 10px 0; display: inline-block;">
-	<canvas id="minimapCanvas" width="700" height="400" style="background: black"></canvas>
 </div>[/HTML]
 <script>var $ = $ || {};
 $.perspective = (function() {
 	
-	let smoothing = true;
+	let smoothing = false;
 
 	let canvas = document.getElementById("perspectiveCanvas");
 	let ctx = canvas.getContext("2d", { alpha: false });
@@ -43,20 +39,13 @@ $.perspective = (function() {
 	let halfWidth = width / 2; 
 	let halfHeight = height / 2;
 			
-	let writeAs32Bit = true;
+	let writeAs32Bit = false;
 			
 	let imageData = ctx.getImageData(0, 0, width, height);
 	let data = imageData.data;
 	let buf = new ArrayBuffer(imageData.data.length);
 	let buf8 = new Uint8ClampedArray(buf);
-	let data32 = new Uint32Array(buf);	
-			
-	let minimapCanvas = document.getElementById("minimapCanvas");
-	let minimapCtx = minimapCanvas.getContext("2d", { alpha: false });
-	let minimapWidth = minimapCanvas.width;
-	let minimapHeight = minimapCanvas.height;
-	let minimapHalfWidth = minimapWidth / 2; 
-	let minimapHalfHeight = minimapHeight / 2;	
+	let data32 = new Uint32Array(buf);			
 	
 	// Jednotky
 	// CLU -- cell unit, jednotka buňky mapy = 1
@@ -67,10 +56,7 @@ $.perspective = (function() {
 	// kolik jednotek má dílek mapy
 	let cluToMvu = 20;
 	let mvuToMmu = 1.2;
-				
-	// minimap cursor
-	let cursorSideMmu = 10;
-				
+					
 	// Wolfenstein typ -- dílky mapy mají konstantní velikost, 
 	// nemají patra a jsou vždy na sebe kolmé
 	// 0 = prázdno
@@ -248,14 +234,6 @@ $.perspective = (function() {
 		return Math.PI * angle / 180;
 	};
 	
-	let xMvuToMmu = function(xMvu) {
-		return minimapHalfWidth - (mapCols / 2 * cluToMvu - xMvu) * mvuToMmu;
-	};
-	
-	let yMvuToMmu = function(yMvu) {
-		return minimapHalfHeight - (mapRows / 2 * cluToMvu - yMvu) * mvuToMmu;
-	};
-
 	let updateFPS = function(timestamp) {
 		frames++;
 		let time = timestamp;
@@ -267,8 +245,7 @@ $.perspective = (function() {
 	};
 
 	let draw = function(timestamp) {		
-		updatePlayer();
-		drawMinimap();
+		updatePlayer();		
 		drawScene();
 		updateFPS(timestamp);
 		window.requestAnimationFrame(draw);
@@ -365,10 +342,6 @@ $.perspective = (function() {
 		if (!loaded)
 			return;
 
-		// minimap info
-		let playerXMmu = xMvuToMmu(playerXMvu);
-		let playerYMmu = yMvuToMmu(playerYMvu);
-
 		let angleStartRad = toRad(playerHOrient - angleRangeDeg / 2);
 		let angleIncrRad = toRad(angleIncrDeg);
 		
@@ -383,20 +356,7 @@ $.perspective = (function() {
 			rayXMvu = playerXMvu + Math.cos(angleRad) * mapRadiusMvu;
 			rayYMvu = playerYMvu + Math.sin(angleRad) * mapRadiusMvu;
 			
-			hitResult = checkHit(rayXMvu, rayYMvu, playerXMvu, playerYMvu);
-			
-			// minimap ray show
-			if (showRays || x == 0 || x + 1 >= width) {
-				let hitXMmu = xMvuToMmu(hitResult.point.x);
-				let hitYMmu = yMvuToMmu(hitResult.point.y);
-				
-				minimapCtx.beginPath();
-				minimapCtx.lineWidth = 2; 
-				minimapCtx.strokeStyle = "white";
-				minimapCtx.moveTo(playerXMmu, playerYMmu);
-				minimapCtx.lineTo(hitXMmu, hitYMmu);
-				minimapCtx.stroke();
-			}
+			hitResult = checkHit(rayXMvu, rayYMvu, playerXMvu, playerYMvu);	
 							
 			// pro každý řádek sloupce
 			for (let y = 0; y < height; y++) {
@@ -473,54 +433,6 @@ $.perspective = (function() {
 			data[smallIndex + 3] = a;    // alpha
 		}
 	};
-	
-	let drawMinimap = function() {
-		minimapCtx.clearRect(0, 0, minimapWidth, minimapHeight)
-
-		let minimapCellSize = cluToMvu * mvuToMmu;
-
-		for (let row = 0; row < mapRows; row++) {	
-			let rowData = map[row];
-			let y = minimapHalfHeight - (Math.floor(mapRows / 2) - row) * minimapCellSize - minimapCellSize / 2;
-			for (let col = 0; col < mapCols; col++) {
-				let colData = rowData[col];
-				if (colData == 0)
-					continue;
-				let x = minimapHalfWidth - (Math.floor(mapCols / 2) - col) * minimapCellSize;
-				minimapCtx.fillStyle = mapColor(colData); 
-				minimapCtx.fillRect(x, y, minimapCellSize, minimapCellSize);
-			}
-		}
-		
-		drawCursor();
-	};
-	
-	let drawCursor = function() {
-		minimapCtx.strokeStyle = "red";		
-				
-		let playerXMmu = xMvuToMmu(playerXMvu);
-		let playerYMmu = yMvuToMmu(playerYMvu);
-		
-		let orientRad = toRad(playerHOrient)
-		let midVertX = playerXMmu + Math.cos(orientRad) * cursorSideMmu;
-		let midVertY = playerYMmu + Math.sin(orientRad) * cursorSideMmu;
-		
-		let leftVertRad = orientRad + Math.PI * 1.25;
-		let leftVertX = playerXMmu + Math.cos(leftVertRad) * cursorSideMmu;
-		let leftVertY = playerYMmu + Math.sin(leftVertRad) * cursorSideMmu;
-		
-		let rightVertRad = orientRad - Math.PI * 1.25;
-		let rightVertX = playerXMmu + Math.cos(rightVertRad) * cursorSideMmu;
-		let rightVertY = playerYMmu + Math.sin(rightVertRad) * cursorSideMmu;
-		
-		minimapCtx.beginPath();
-		minimapCtx.lineWidth = 2; 
-		minimapCtx.strokeStyle = "red"; 
-		minimapCtx.moveTo(leftVertX, leftVertY);
-		minimapCtx.lineTo(midVertX, midVertY);
-		minimapCtx.lineTo(rightVertX, rightVertY);
-		minimapCtx.stroke();		
-	};	
 
 	return {
 	
