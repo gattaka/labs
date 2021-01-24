@@ -31,19 +31,23 @@ $.perspectiveBuilder = (function() {
 	// 0 = prázdno
 	// 1 = díl mapy (kostka) se zdmi typu 1
 	let map = [
-		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
-		[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-		[0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0],
-		[0, 1, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 1, 0],
-		[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 2, 0, 0, 0, 0, 2, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
-		[1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
-		[0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0],
+		[ ,1,1,1,1,1,1,1,1,1,1,1,1, ],
+		[ ,1, , , , , , , , , , ,1, ],
+		[ ,1, , , , , , , , , , ,1, ],
+		[ ,1, , ,2, , , , ,2, , ,1, ],
+		[1,1, , , , , , , , , , ,1,1],
+		[1, , , , , , , , , , , , ,1],
+		[1, , , , , , , , , , , , ,1],
+		[1, , , ,2, , , , ,2, , , ,1],
+		[1, , , ,1, , , , ,1, , , ,1],
+		[1, , , ,1, , , , ,1, , , ,1],
+		[1, , , ,1, , , , ,1, , , ,1],
+		[1, , , ,1, , , , ,1, , , ,1],
+		[1,1,1,1,1, , , , ,1,1,1,1,1],
+		[1, , , ,1, , , , ,1, , , ,1],
+		[1, , , ,2, , , , ,2, , , ,1],
+		[1, , , , , , , , , , , , ,1],
+		[1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 	];
 	let mapRows = map.length;
 	let mapCols = map[0].length;
@@ -56,20 +60,23 @@ $.perspectiveBuilder = (function() {
 	let playerYMvu = mapRows / 2 * cluToMvu;
 	let playerHOrient = PIHalf * 3; // 270° (0-360)
 	//let playerVOrient = 270; // 0-360	
+	let playerXClu = -1;
+	let playerYClu = -1;
 
 	// rozsah v jakém hráč vidí
 	let angleRangeDeg = PIHalf;
 	let angleIncrDeg = angleRangeDeg / width;
 	let lensMultiplier = 10;
 
+	let collisionPadding = 1;
+
 	let walkSpeedStepMvu = 2;
 	let walkSpeedForwardMvu = 0;
 	let walkSpeedSideMvu = 0;
 
 	let mouseHSensitivity = 0.8;
-
-	let showRays = true;
-	let showLight = false;
+	
+	let showLight = true;
 
 	let loaded = false;
 	let loadingProgress = 0;
@@ -137,8 +144,10 @@ $.perspectiveBuilder = (function() {
 			let row = map[yClu];
 			for (let xClu = 0; xClu < row.length; xClu++) {
 				let value = row[xClu];
-				if (value == 0)
+				if (typeof value === 'undefined' || value == 0) {
+					row[xClu] = 0;
 					continue;
+				}
 				// přímky buňky -- je potřeba aby byly zachovány normály, 
 				// které poslouží k odlišení počátku přímky od jejího konce
 				// normála je vždy ve směru doleva od přímky se směrem nahoru
@@ -207,15 +216,24 @@ $.perspectiveBuilder = (function() {
 	};
 
 	let updatePlayer = function() {
-		let draftPlayerXMvu = playerXMvu + Math.cos(playerHOrient) * walkSpeedForwardMvu + Math.cos(playerHOrient - PIHalf) * walkSpeedSideMvu;
-		let draftPlayerYMvu = playerYMvu + Math.sin(playerHOrient) * walkSpeedForwardMvu + Math.sin(playerHOrient - PIHalf) * walkSpeedSideMvu;
-		let draftPlayerXClu = Math.floor(draftPlayerXMvu / cluToMvu);
-		let draftPlayerYClu = Math.floor(draftPlayerYMvu / cluToMvu);
+		let dPlayerXMvu = Math.cos(playerHOrient) * walkSpeedForwardMvu + Math.cos(playerHOrient - PIHalf) * walkSpeedSideMvu;
+		let dPlayerYMvu = Math.sin(playerHOrient) * walkSpeedForwardMvu + Math.sin(playerHOrient - PIHalf) * walkSpeedSideMvu;
+		let draftPlayerXClu = Math.floor((playerXMvu + dPlayerXMvu + Math.sign(dPlayerXMvu) * collisionPadding) / cluToMvu);
+		let draftPlayerYClu = Math.floor((playerYMvu + dPlayerYMvu + Math.sign(dPlayerYMvu) * collisionPadding) / cluToMvu);
+		if (playerXClu == -1) playerXClu = draftPlayerXClu;
+		if (playerYClu == -1) playerYClu = draftPlayerYClu;
 		if (draftPlayerYClu >= 0 && draftPlayerYClu < mapRows && draftPlayerXClu >= 0 && draftPlayerXClu <= mapCols) {
-			let cellValue = map[draftPlayerYClu][draftPlayerXClu];
-			if (cellValue == 0) {
-				playerXMvu = draftPlayerXMvu;
-				playerYMvu = draftPlayerYMvu;
+			if (map[draftPlayerYClu][draftPlayerXClu] == 0) {			
+				playerXMvu += dPlayerXMvu;
+				playerYMvu += dPlayerYMvu;
+				playerXClu = draftPlayerXClu;
+				playerYClu = draftPlayerYClu;
+			} else if (map[playerYClu][draftPlayerXClu] == 0){
+				playerXMvu += dPlayerXMvu;
+				playerXClu = draftPlayerXClu;
+			} else if (map[draftPlayerYClu][playerXClu] == 0){
+				playerYMvu += dPlayerYMvu;
+				playerYClu = draftPlayerYClu;
 			}
 		}
 	};
@@ -319,6 +337,15 @@ $.perspectiveBuilder = (function() {
 				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitResult.point.x, 2) + Math.pow(playerYMvu - hitResult.point.y, 2));
 				let texture = textures[hitResult.value - 1];
 				
+				let lightMultiplier;
+				if (showLight) {
+					// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
+					let baseMvu = 300;
+					let minVal = 0.3;
+					let maxVal = 1;
+					lightMult = Math.max(minVal, Math.min(maxVal, 1 - distanceMvu / baseMvu));
+				}
+				
 				// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance				
 				let mvuToScu = lensMultiplier * 100 / distanceMvu;
 				
@@ -339,13 +366,14 @@ $.perspectiveBuilder = (function() {
 						let texY = Math.floor((y - targetYScu) * ratio);
 						let texIdx = texY * texture.width + texX;
 						let texData32 = texture.data32;
-						if (showLight) {
-							// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
-							let baseMvu = 300;
-							let minVal = 0.5;
-							let maxVal = 1;
-							let multiplier = Math.max(minVal, Math.min(maxVal, 1 - distanceMvu / baseMvu));
-							putPixel32(index, Math.floor(multiplier * texData32[texIdx]));
+						if (showLight) {						
+							let color = texData32[texIdx];
+							let r = lightMult * (texData32[texIdx] & 0xFF);
+							let g = lightMult * (texData32[texIdx] >> 8 & 0xFF);
+							let b = lightMult * (texData32[texIdx] >> 16 & 0xFF);
+							let a = texData32[texIdx] >> 24 & 0xFF;
+							color = (a << 24) | (b << 16) | (g << 8) | r;
+							putPixel32(index, color);
 						} else {
 							putPixel32(index, texData32[texIdx]);
 						}
@@ -380,7 +408,7 @@ $.perspectiveBuilder = (function() {
 				return;
 			let newValue = Number(value);
 			console.log("viewAngle changed from '" + angleRangeDeg + "' to '" + newValue + "'");
-			angleRangeDeg = newValue;
+			angleRangeDeg = toRad(newValue);
 			angleIncrDeg = angleRangeDeg / width;
 		},
 
