@@ -8,9 +8,7 @@ $.perspectiveBuilder = (function() {
 
 	let width = canvas.width;
 	let height = canvas.height;
-
-	let writeAs32Bit = true;
-
+	
 	let imageData = ctx.getImageData(0, 0, width, height);
 	let buf = new ArrayBuffer(imageData.data.length);
 	let buf8 = new Uint8ClampedArray(buf);
@@ -74,7 +72,7 @@ $.perspectiveBuilder = (function() {
 	let walkSpeedForwardMvu = 0;
 	let walkSpeedSideMvu = 0;
 
-	let mouseHSensitivity = 0.8;
+	let mouseHSensitivity = 0.5;
 	
 	let showLight = true;
 
@@ -85,6 +83,12 @@ $.perspectiveBuilder = (function() {
 	let fpsSpan = document.getElementById("fpsSpan");
 	let frames = 0;
 	let fpsTime = 0;
+	
+	let lightPrecision = 10;
+	let lightBaseMvu = 300;
+	let lightMinVal = 0.3;
+	let lightMaxVal = 1;
+	let lightStep = (lightMaxVal - lightMinVal) / lightPrecision;
 
 	let toRad = function(angle) {
 		return PIHalf * angle / 90;
@@ -111,27 +115,46 @@ $.perspectiveBuilder = (function() {
 		});
 
 		for (let i = 0; i < textures.length; i++) {
-			let texture = textures[i];
-			let textureCanvas = document.createElement("canvas");
-			textureCanvas.width = texture.width;
-			textureCanvas.height = texture.height;
+			let texture = textures[i];		
 			
 			// Převod MVU na IMG jednotky
 			texture.xMvuToImg = texture.width / cluToMvu;
 			texture.yMvuToImg = texture.height / cluToMvu;
-			texture.canvas = textureCanvas;
 			textureImg = new Image();
 			(function() {
 				let seafImg = textureImg;
 				let seafIndex = i;
 				textureImg.onload = function() {
-					let tex = textures[seafIndex];
-					let textureCtx = texture.canvas.getContext("2d");
-					textureCtx.drawImage(seafImg, 0, 0);
-					let texImageData = textureCtx.getImageData(0, 0, tex.width, tex.height);
-					// https://stackoverflow.com/questions/16679158/javascript-imagedata-typed-array-read-whole-pixel
-					let texBuf = texImageData.data.buffer;
-					tex.data32 = new Uint32Array(texBuf);
+					let tex = textures[seafIndex];					
+					tex.data32 = [];					
+					for (let i = 0; i < lightPrecision; i++) {
+						let lightMult = lightMinVal + i * lightStep;						
+						let textureCanvas = document.createElement("canvas");
+						textureCanvas.width = texture.width;
+						textureCanvas.height = texture.height;
+						let textureCtx = textureCanvas.getContext("2d");
+						textureCtx.drawImage(seafImg, 0, 0);
+						let texImageData = textureCtx.getImageData(0, 0, tex.width, tex.height);
+						// https://stackoverflow.com/questions/16679158/javascript-imagedata-typed-array-read-whole-pixel
+						let texBuf8 = texImageData.data.buffer;
+						let texData32 = new Uint32Array(texBuf8);
+						tex.data32[i] = texData32;
+						
+						if (lightMult < 1) {
+							for (let index = 0; index < tex.width * tex.height; index++) {
+								let color = texData32[index];
+								// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
+								let r = lightMult * (color & 0xFF);
+								let g = lightMult * (color >> 8 & 0xFF);
+								let b = lightMult * (color >> 16 & 0xFF);
+								let a = color >> 24 & 0xFF;
+								texData32[index] = (a << 24) | (b << 16) | (g << 8) | r;
+							}
+						}
+						
+						texImageData.data.set(texBuf8);
+						textureCtx.putImageData(texImageData, 0, 0);
+					}
 					loadingProgress++;
 					if (loadingProgress == textures.length)
 						loaded = true;
@@ -329,22 +352,15 @@ $.perspectiveBuilder = (function() {
 		let hitResult;
 
 		// pro každý sloupec obrazovky
-		for (let x = 0; x < width; x++, angleRad += angleIncrRad) {
-
+		for (let x = 0; x < width; x++, angleRad += angleIncrRad) {			
 			ray = processRay(playerXMvu, playerYMvu, angleRad);
 			hitResult = checkHit(ray.x, ray.y, playerXMvu, playerYMvu);
 			if (hitResult.hit) {
 				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitResult.point.x, 2) + Math.pow(playerYMvu - hitResult.point.y, 2));
 				let texture = textures[hitResult.value - 1];
 				
-				let lightMultiplier;
-				if (showLight) {
-					// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
-					let baseMvu = 300;
-					let minVal = 0.3;
-					let maxVal = 1;
-					lightMult = Math.max(minVal, Math.min(maxVal, 1 - distanceMvu / baseMvu));
-				}
+				let lightMult = Math.max(lightMinVal, Math.min(lightMaxVal, 1 - distanceMvu / lightBaseMvu));
+				let texLight = Math.floor((lightMult - lightMinVal) / lightStep);
 				
 				// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance				
 				let mvuToScu = lensMultiplier * 100 / distanceMvu;
@@ -365,29 +381,17 @@ $.perspectiveBuilder = (function() {
 					} else {
 						let texY = Math.floor((y - targetYScu) * ratio);
 						let texIdx = texY * texture.width + texX;
-						let texData32 = texture.data32;
-						if (showLight) {						
-							let color = texData32[texIdx];
-							let r = lightMult * (texData32[texIdx] & 0xFF);
-							let g = lightMult * (texData32[texIdx] >> 8 & 0xFF);
-							let b = lightMult * (texData32[texIdx] >> 16 & 0xFF);
-							let a = texData32[texIdx] >> 24 & 0xFF;
-							color = (a << 24) | (b << 16) | (g << 8) | r;
-							putPixel32(index, color);
-						} else {
-							putPixel32(index, texData32[texIdx]);
-						}
+						let texData32 = texture.data32[texLight];
+						putPixel32(index, texData32[texIdx]);
 					}
 				}
 			} else {
-				for (let y = 0; y < height; y++)
+				for (let y = 0; y < height; y++)					
 					putPixel32(y * width + x, 0);
 			}
 		}
-
-		if (writeAs32Bit)
-			imageData.data.set(buf8);
-
+		
+		imageData.data.set(buf8);
 		ctx.putImageData(imageData, 0, 0);
 	}
 
