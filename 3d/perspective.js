@@ -62,9 +62,9 @@ $.perspectiveBuilder = (function() {
 	let playerYClu = -1;
 
 	// rozsah v jakém hráč vidí
-	let angleRangeDeg = PIHalf;
-	let angleIncrDeg = angleRangeDeg / width;
-	let lensMultiplier = 10;
+	let angleRange = 50 * PIHalf / 90;
+	let angleIncr = angleRange / width;
+	let lensMultiplier = 15;
 
 	let collisionPadding = 1;
 
@@ -73,8 +73,6 @@ $.perspectiveBuilder = (function() {
 	let walkSpeedSideMvu = 0;
 
 	let mouseHSensitivity = 0.5;
-	
-	let showLight = true;
 
 	let loaded = false;
 	let loadingProgress = 0;
@@ -84,11 +82,12 @@ $.perspectiveBuilder = (function() {
 	let frames = 0;
 	let fpsTime = 0;
 	
-	let lightPrecision = 10;
-	let lightBaseMvu = 300;
-	let lightMinVal = 0.3;
-	let lightMaxVal = 1;
-	let lightStep = (lightMaxVal - lightMinVal) / lightPrecision;
+	let darkPrecision = 10;
+	let darkMinVal = 0;
+	let darkMaxVal = 300;
+	let darkStep = (darkMaxVal - darkMinVal) / darkPrecision;
+	// multiplier forma
+	let darkStepMult = 1 / darkStep;
 
 	let toRad = function(angle) {
 		return PIHalf * angle / 90;
@@ -120,6 +119,7 @@ $.perspectiveBuilder = (function() {
 			// Převod MVU na IMG jednotky
 			texture.xMvuToImg = texture.width / cluToMvu;
 			texture.yMvuToImg = texture.height / cluToMvu;
+			texture.size = texture.width * texture.height;
 			textureImg = new Image();
 			(function() {
 				let seafImg = textureImg;
@@ -127,8 +127,8 @@ $.perspectiveBuilder = (function() {
 				textureImg.onload = function() {
 					let tex = textures[seafIndex];					
 					tex.data32 = [];					
-					for (let i = 0; i < lightPrecision; i++) {
-						let lightMult = lightMinVal + i * lightStep;						
+					for (let i = 0; i < darkPrecision; i++) {
+						let lightMult = 1 - (darkMinVal + i * darkStep) / darkMaxVal;
 						let textureCanvas = document.createElement("canvas");
 						textureCanvas.width = texture.width;
 						textureCanvas.height = texture.height;
@@ -141,7 +141,7 @@ $.perspectiveBuilder = (function() {
 						tex.data32[i] = texData32;
 						
 						if (lightMult < 1) {
-							for (let index = 0; index < tex.width * tex.height; index++) {
+							for (let index = 0; index < tex.size; index++) {
 								let color = texData32[index];
 								// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
 								let r = lightMult * (color & 0xFF);
@@ -345,8 +345,8 @@ $.perspectiveBuilder = (function() {
 		if (!loaded)
 			return;
 
-		let angleStartRad = playerHOrient - angleRangeDeg / 2;
-		let angleIncrRad = angleIncrDeg;
+		let angleStartRad = playerHOrient - angleRange / 2;
+		let angleIncrRad = angleIncr;
 
 		let angleRad = angleStartRad;
 		let hitResult;
@@ -359,8 +359,13 @@ $.perspectiveBuilder = (function() {
 				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitResult.point.x, 2) + Math.pow(playerYMvu - hitResult.point.y, 2));
 				let texture = textures[hitResult.value - 1];
 				
-				let lightMult = Math.max(lightMinVal, Math.min(lightMaxVal, 1 - distanceMvu / lightBaseMvu));
-				let texLight = Math.floor((lightMult - lightMinVal) / lightStep);
+				let lightMult = distanceMvu;
+				if (lightMult < darkMinVal) { 
+					lightMult = darkMinVal; 
+				} else if (lightMult > darkMaxVal - 1) {
+					lightMult = darkMaxVal - 1;
+				}
+				let texLight = Math.floor((lightMult - darkMinVal) * darkStepMult);
 				
 				// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance				
 				let mvuToScu = lensMultiplier * 100 / distanceMvu;
@@ -374,12 +379,14 @@ $.perspectiveBuilder = (function() {
 				let texX = Math.floor(sourceXImg);
 				
 				// pro každý řádek sloupce
+				let minTargetYScu = targetYScu;
+				let maxTargetYScu = targetYScu + targetHeightScu;
 				for (let y = 0; y < height; y++) {
 					let index = y * width + x;
-					if (y < targetYScu || y > targetYScu + targetHeightScu) {
+					if (y < minTargetYScu || y > maxTargetYScu) {
 						putPixel32(index, 0);
 					} else {
-						let texY = Math.floor((y - targetYScu) * ratio);
+						let texY = Math.floor((y - minTargetYScu) * ratio);
 						let texIdx = texY * texture.width + texX;
 						let texData32 = texture.data32[texLight];
 						putPixel32(index, texData32[texIdx]);
@@ -394,7 +401,7 @@ $.perspectiveBuilder = (function() {
 		imageData.data.set(buf8);
 		ctx.putImageData(imageData, 0, 0);
 	}
-
+ 
 	// https://hacks.mozilla.org/2011/12/faster-canvas-pixel-manipulation-with-typed-arrays/
 	// https://jsperf.com/canvas-pixel-manipulation
 	let putPixel32 = function(index, pixel32) {
@@ -411,9 +418,9 @@ $.perspectiveBuilder = (function() {
 			if (isNaN(value))
 				return;
 			let newValue = Number(value);
-			console.log("viewAngle changed from '" + angleRangeDeg + "' to '" + newValue + "'");
-			angleRangeDeg = toRad(newValue);
-			angleIncrDeg = angleRangeDeg / width;
+			console.log("viewAngle changed from '" + angleRange + "' to '" + newValue + "'");
+			angleRange = toRad(newValue);
+			angleIncr = angleRange / width;
 		},
 
 		changeLensSize: function(value) {
