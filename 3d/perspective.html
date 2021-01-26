@@ -15,7 +15,7 @@
 				<td>View angle (0-90°)</td>
 				<td>Lens size (5-20)</td>
 				<td>FPS</td>
-				<td></td>
+				<td>Angle</td>
 				<td></td>
 			</tr>
 			<tr>
@@ -23,12 +23,16 @@
 					onchange="$.perspective.changeViewAngle(this.value)" style="width: 120px;" value="50"></td>
 				<td><input id="lensSize"
 					onchange="$.perspective.changeLensSize(this.value)" style="width: 120px;" value="15"></td>
-				<td><span id="fpsSpan" /></td>							
+				<td><span id="fpsSpan" /></td>
+				<td><span id="angleSpan" /></td>
 			</tr>
 		</tbody>
 	</table>
 	<div style="margin: 10px 0; display: inline-block; cursor: none;">
 		<canvas id="perspectiveCanvas" width="800" height="600" style="background: black"></canvas>
+	</div>
+	<div style="margin: 10px 0; display: inline-block;">
+		<canvas id="minimapCanvas" width="700" height="400"></canvas>
 	</div>
 	<script>
 		$.perspective = $.perspectiveBuilder();

@@ -4,6 +4,13 @@ $.perspectiveBuilder = (function() {
 	let canvas = document.getElementById("perspectiveCanvas");
 	let ctx = canvas.getContext("2d");
 
+	let minimapCanvas = document.getElementById("minimapCanvas");
+	let minimapCtx = minimapCanvas.getContext("2d");
+	let minimapWidth = minimapCanvas.width;
+	let minimapHeight = minimapCanvas.height;
+	let minimapHalfWidth = minimapWidth / 2; 
+	let minimapHalfHeight = minimapHeight / 2;
+
 	let width = canvas.width;
 	let height = canvas.height;
 	
@@ -21,14 +28,17 @@ $.perspectiveBuilder = (function() {
 	// kolik jednotek má dílek mapy
 	let cluToMvu = 20;
 	let mvuToClu = 1 / cluToMvu;
-	//	 let mvuToMmu = 1.2;
+	let mvuToMmu = 0.5;
+	
+	// minimap cursor
+	let cursorSideMmu = 10;
 
 	// Wolfenstein typ -- dílky mapy mají konstantní velikost, 
 	// nemají patra a jsou vždy na sebe kolmé
 	// 0 = prázdno
 	// 1 = díl mapy (kostka) se zdmi typu 1
 	let map = [
-		[ ,1,1,1,1,1,1,1,1,1,1,1,1,1, ],
+		[1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
 		[ ,1, , , , , , , , , , , ,1, ],
 		[ ,1, , , , , , , , , , , ,1, ],
 		[ ,1, , ,2, , , , , ,2, , ,1, ],
@@ -67,6 +77,7 @@ $.perspectiveBuilder = (function() {
 	let rad90 = Math.PI / 2;
 	let rad180 = rad90 * 2;
 	let rad270 = rad90 * 3;
+	let rad360 = rad90 * 4;
 	
 	// pozice a orientace hráče na mapě
 	let playerXMvu = mapCols / 2 * cluToMvu;
@@ -77,6 +88,7 @@ $.perspectiveBuilder = (function() {
 	let playerYClu = -1;
 
 	// rozsah v jakém hráč vidí
+	let angleSpan = document.getElementById("angleSpan");
 	let angleRange = 50 * rad90 / 90;
 	let angleIncr = angleRange / width;
 	let lensMultiplier = 15;
@@ -108,6 +120,14 @@ $.perspectiveBuilder = (function() {
 	let toRad = function(angle) {
 		return rad90 * angle / 90;
 	};
+	
+	let xMvuToMmu = function(xMvu) {
+		return minimapHalfWidth - (mapCols / 2 * cluToMvu - xMvu) * mvuToMmu;
+	};
+	
+	let yMvuToMmu = function(yMvu) {
+		return minimapHalfHeight - (mapRows / 2 * cluToMvu - yMvu) * mvuToMmu;
+	};
 
 	let init = function() {
 		document.addEventListener("keydown", onKeyDown);
@@ -116,9 +136,10 @@ $.perspectiveBuilder = (function() {
 		canvas.addEventListener("mousemove", function(e) {
 			let angle = mouseHSensitivity * (e.clientX - width / 2);
 			if (angle < 0) angle = 360 + angle;			
+			angleSpan.innerHTML = angle;
 			//console.log(angle);
 			playerHOrient = toRad(angle);
-			playerVOrient = mouseVSensitivity * (height / 2 - e.clientY);
+			//playerVOrient = mouseVSensitivity * (height / 2 - e.clientY);
 		}, false);
 
 		textures.push({
@@ -187,16 +208,16 @@ $.perspectiveBuilder = (function() {
 			textureImg.src = texture.src;
 		}
 
-		for (let yClu = 0; yClu < map.length; yClu++) {
+		for (let yClu = 0; yClu < mapRows; yClu++) {
 			let row = map[yClu];
 			let linesRow = lines[yClu];
 			linesRow = [];
 			lines[yClu] = linesRow;
-			for (let xClu = 0; xClu < row.length; xClu++) {
+			for (let xClu = 0; xClu < mapCols; xClu++) {
 				let value = row[xClu];
 				if (typeof value === 'undefined' || value == 0) {
 					row[xClu] = 0;
-					//linesRow[xClu] = [];
+					linesRow[xClu] = [];
 					continue;
 				}
 				// přímky buňky -- je potřeba aby byly zachovány normály, 
@@ -250,7 +271,7 @@ $.perspectiveBuilder = (function() {
 		frames++;
 		let time = timestamp;
 		if (time - fpsTime > 1000) {
-			fpsSpan.innerHTML = frames;
+			fpsSpan.innerHTML = frames;			
 			fpsTime = time;
 			frames = 0;
 		}
@@ -258,6 +279,7 @@ $.perspectiveBuilder = (function() {
 
 	let draw = function(timestamp) {
 		updatePlayer();
+		drawMinimap();
 		drawScene();
 		updateFPS(timestamp);
 		window.requestAnimationFrame(draw);
@@ -325,22 +347,23 @@ $.perspectiveBuilder = (function() {
 		};
 		let x0 = 0;
 		let y0 = 0;
-		let mx = mapCols;
-		let my = mapRows;
+		let mx = mapCols - 1;
+		let my = mapRows - 1;
 		
 		switch (clip) {
-			case 0: y = playerYClu; break;
-			case 1: x = playerXClu; break;
+			case 0: y0 = playerYClu; break;
+			case 1: mx = playerXClu; break;
 			case 2: my = playerYClu; break;
-			case 3: mx = playerXClu; break;
+			case 3: x0 = playerXClu; break;
 		}
 		
-		for (let x = x0; x < mx; x++) {
-			for (let y = y0; y < my; y++) {	
-				let cellLines = lines[y][x];
-				if (typeof cellLines === 'undefined')
-					continue;		
-				for (let i = 0; i < 4; i++) {					
+		let x = x0;;
+		while (x <= mx) {
+			let y = y0;
+			while (y <= my) {
+				let cellLines = lines[y][x];				
+				let i = 0, len = cellLines.length;
+				while (i < len) {				
 					let line = cellLines[i];
 					
 					let p = vec(line.x, line.y);
@@ -370,8 +393,11 @@ $.perspectiveBuilder = (function() {
 							};
 						}
 					}
+					++i;				
 				}
+				++y;
 			}
+			++x;
 		}
 
 		return result;
@@ -400,15 +426,16 @@ $.perspectiveBuilder = (function() {
 			clip = 1;
 		} else if (angleStartRad >= rad180 && angleStartRad < rad270) {
 			clip = 2;
-		} else if (angleStartRad >= rad270 && angleStartRad < 0) {
+		} else if (angleStartRad >= rad270 && angleStartRad < rad360) {
 			clip = 3;
 		}
 
+		let x = 0;
 		let angleRad = angleStartRad;
 		let hitResult;
 
 		// pro každý sloupec obrazovky
-		for (let x = 0; x < width; x++, angleRad += angleIncrRad) {			
+		while (x < width) {
 			let ray = processRay(playerXMvu, playerYMvu, angleRad);			
 			hitResult = checkHit(ray.x, ray.y, playerXMvu, playerYMvu, clip);
 			if (hitResult.hit) {
@@ -438,7 +465,8 @@ $.perspectiveBuilder = (function() {
 				// pro každý řádek sloupce
 				let minTargetYScu = targetYScu;
 				let maxTargetYScu = targetYScu + targetHeightScu;
-				for (let y = 0; y < height; y++) {
+				let y = 0;
+				while (y < height) {
 					let index = y * width + x;
 					if (y < minTargetYScu || y > maxTargetYScu) {
 						putPixel32(index, 0);
@@ -447,16 +475,80 @@ $.perspectiveBuilder = (function() {
 						let texIdx = texY * texture.width + texX;						
 						putPixel32(index, texData32[texIdx]);
 					}
+					++y;
 				}
 			} else {
-				for (let y = 0; y < height; y++)					
+				let y = 0;
+				while (y < height) { 	
 					putPixel32(y * width + x, 0);
+					++y;
+				}
 			}
+			++x;
+			angleRad += angleIncrRad;
 		}
 		
 		imageData.data.set(buf8);
 		ctx.putImageData(imageData, 0, 0);
-	}
+	}	
+	
+	let mapColor = function(id, light) {
+		if (id == 0) 		
+			return "black";
+		let hue = id * 255 / 10;
+		if (typeof light === "undefined")
+			return "hsl(" + hue + ", 100%, 50%)";
+		return "hsl(" + hue + ", 100%, " + light + "%)";
+	};
+	
+	let drawMinimap = function() {
+		minimapCtx.fillStyle = "black";
+		minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight);
+
+		let minimapCellSize = cluToMvu * mvuToMmu;
+
+		for (let row = 0; row < mapRows; row++) {	
+			let rowData = map[row];
+			let y = minimapHalfHeight - (Math.floor(mapRows / 2) - row) * minimapCellSize - minimapCellSize / 2;
+			for (let col = 0; col < mapCols; col++) {
+				let colData = rowData[col];
+				if (colData == 0)
+					continue;
+				let x = minimapHalfWidth - (Math.floor(mapCols / 2) - col) * minimapCellSize;
+				minimapCtx.fillStyle = mapColor(colData); 
+				minimapCtx.fillRect(x, y, minimapCellSize, minimapCellSize);
+			}
+		}
+		
+		drawCursor();
+	};
+	
+	let drawCursor = function() {
+		minimapCtx.strokeStyle = "red";		
+				
+		let playerXMmu = xMvuToMmu(playerXMvu);
+		let playerYMmu = yMvuToMmu(playerYMvu);
+		
+		let orientRad = playerHOrient;
+		let midVertX = playerXMmu + Math.cos(orientRad) * cursorSideMmu;
+		let midVertY = playerYMmu + Math.sin(orientRad) * cursorSideMmu;
+		
+		let leftVertRad = orientRad + Math.PI * 1.25;
+		let leftVertX = playerXMmu + Math.cos(leftVertRad) * cursorSideMmu;
+		let leftVertY = playerYMmu + Math.sin(leftVertRad) * cursorSideMmu;
+		
+		let rightVertRad = orientRad - Math.PI * 1.25;
+		let rightVertX = playerXMmu + Math.cos(rightVertRad) * cursorSideMmu;
+		let rightVertY = playerYMmu + Math.sin(rightVertRad) * cursorSideMmu;
+		
+		minimapCtx.beginPath();
+		minimapCtx.lineWidth = 2; 
+		minimapCtx.strokeStyle = "red"; 
+		minimapCtx.moveTo(leftVertX, leftVertY);
+		minimapCtx.lineTo(midVertX, midVertY);
+		minimapCtx.lineTo(rightVertX, rightVertY);
+		minimapCtx.stroke();		
+	};
  
 	// https://hacks.mozilla.org/2011/12/faster-canvas-pixel-manipulation-with-typed-arrays/
 	// https://jsperf.com/canvas-pixel-manipulation
