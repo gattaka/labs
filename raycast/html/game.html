@@ -3,7 +3,8 @@
 <head>
     <meta charset="utf-8">
     <title></title>
-    <script type="text/javascript" src="perspective.js"></script>
+    <script type="text/javascript" src="../js/game.js"></script>
+	<script type="text/javascript" src="../js/stats.min.js"></script>
     <style type="text/css">
     </style>
 </head>
@@ -14,16 +15,13 @@
 			<tr>
 				<td>View angle (0-90°)</td>
 				<td>Lens size (5-20)</td>
-				<td>FPS</td>
 				<td>Angle</td>
-				<td></td>
 			</tr>
 			<tr>
 				<td><input id="viewAngle" 
 					onchange="$.perspective.changeViewAngle(this.value)" style="width: 120px;" value="50"></td>
 				<td><input id="lensSize"
 					onchange="$.perspective.changeLensSize(this.value)" style="width: 120px;" value="15"></td>
-				<td><span id="fpsSpan" /></td>
 				<td><span id="angleSpan" /></td>
 			</tr>
 		</tbody>
@@ -35,8 +33,9 @@
 		<canvas id="minimapCanvas" width="700" height="400"></canvas>
 	</div>
 	<script>
-		$.perspective = $.perspectiveBuilder();
-		$.perspective.start();
+		let canvas = document.getElementById("perspectiveCanvas");
+		let minimapCanvas = document.getElementById("minimapCanvas");
+		$.raycast.game(canvas, minimapCanvas).start();
 	</script>
 </body>
 </html>

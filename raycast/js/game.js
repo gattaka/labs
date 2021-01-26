@@ -1,10 +1,9 @@
 var $ = $ || {};
-$.perspectiveBuilder = (function() {	
-
-	let canvas = document.getElementById("perspectiveCanvas");
+$.raycast = $.raycast || {};
+$.raycast.game = (function(canvas, minimapCanvas) {	
+	
 	let ctx = canvas.getContext("2d");
 
-	let minimapCanvas = document.getElementById("minimapCanvas");
 	let minimapCtx = minimapCanvas.getContext("2d");
 	let minimapWidth = minimapCanvas.width;
 	let minimapHeight = minimapCanvas.height;
@@ -14,16 +13,20 @@ $.perspectiveBuilder = (function() {
 	let width = canvas.width;
 	let height = canvas.height;
 	
+	let stats;
+	
 	let imageData = ctx.getImageData(0, 0, width, height);
 	let buf = new ArrayBuffer(imageData.data.length);
 	let buf8 = new Uint8ClampedArray(buf);
 	let data32 = new Uint32Array(buf);
 
 	// Jednotky
-	// CLU -- cell unit, jednotka buňky mapy = 1
-	// MVU -- map unit, jednotka virtuální mapy
-	// MMU -- minimapk unit, jednotka zobrazení minimapy
-	// SCU -- scena unit, jednotka zobrazení scény
+	// CL -- cell unit, jednotka buňky mapy = 1
+	// MU -- map unit, jednotka virtuální mapy
+	// MN -- minimapk unit, jednotka zobrazení minimapy
+	// SC -- scena unit, jednotka zobrazení scény
+	// DG -- degrees, stupně
+	// RD -- radians, radiány
 
 	// kolik jednotek má dílek mapy
 	let cluToMvu = 20;
@@ -79,9 +82,20 @@ $.perspectiveBuilder = (function() {
 	let rad270 = rad90 * 3;
 	let rad360 = rad90 * 4;
 	
+	// Player
+	let player = {
+		xMU: mapCols / 2 * cluToMvu,
+		yMU: mapRows / 2 * cluToMvu,
+		xCL: -1,
+		yCL: -1,
+		rotHorDG: 0,
+		rotHorRD: 0,
+		rotVerRD: 0,		
+	};
+	
 	// pozice a orientace hráče na mapě
-	let playerXMvu = mapCols / 2 * cluToMvu;
-	let playerYMvu = mapRows / 2 * cluToMvu;	
+	let playerXMvu = player.xMU;
+	let playerYMvu = player.yMU;	
 	
 	let playerHOrientDeg = 0;
 	let playerHOrient = 0;
@@ -153,6 +167,10 @@ $.perspectiveBuilder = (function() {
 	};
 
 	let init = function() {
+		stats = new Stats();
+		stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
+		document.body.appendChild(stats.dom);
+		
 		document.addEventListener("keydown", onKeyDown);
 		document.addEventListener("keyup", onKeyUp);
 
@@ -305,21 +323,12 @@ $.perspectiveBuilder = (function() {
 		}
 	};
 
-	let updateFPS = function(timestamp) {
-		frames++;
-		let time = timestamp;
-		if (time - fpsTime > 1000) {
-			fpsSpan.innerHTML = frames;			
-			fpsTime = time;
-			frames = 0;
-		}
-	};
-
-	let draw = function(timestamp) {
+	let draw = function() {
+		stats.begin();		
 		updatePlayer();
 		drawMinimap();
 		drawScene();
-		updateFPS(timestamp);
+		stats.end();
 		window.requestAnimationFrame(draw);
 	};
 
