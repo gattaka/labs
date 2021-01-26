@@ -25,11 +25,11 @@ $.raycast.minimap = (function() {
 	};
 	
 	let xMvuToMmu = function(xMvu) {
-		return minimapHalfWidth - (uts.mapCols / 2 * uts.cluToMvu - xMvu) * uts.mvuToMmu;
+		return minimapHalfWidth - (map.mapCols / 2 * uts.cluToMvu - xMvu) * uts.mvuToMmu;
 	};
 	
 	let yMvuToMmu = function(yMvu) {
-		return minimapHalfHeight - (uts.mapRows / 2 * uts.cluToMvu - yMvu) * uts.mvuToMmu;
+		return minimapHalfHeight - (map.mapRows / 2 * uts.cluToMvu - yMvu) * uts.mvuToMmu;
 	};
 	
 	let drawMinimap = function() {
