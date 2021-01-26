@@ -248,15 +248,24 @@ $.perspectiveBuilder = (function() {
 				// ^ ---> |
 				// |	  |
 				// | <--- v				
-				let lineLeft = { x: xClu * cluToMvu, y: yClu * cluToMvu, w: 0, h: cluToMvu, value: value };
-				let lineRight = { x: (xClu + 1) * cluToMvu, y: (yClu + 1) * cluToMvu, w: 0, h: -cluToMvu, value: value };
-				let lineTop = { x: xClu * cluToMvu, y: (yClu + 1) * cluToMvu, w: cluToMvu, h: 0, value: value };
-				let lineBottom = { x: (xClu + 1) * cluToMvu, y: yClu * cluToMvu, w: -cluToMvu, h: 0, value: value };
+				let lineLeft = createLine(xClu * cluToMvu, yClu * cluToMvu, 0, cluToMvu, value);
+				let lineRight = createLine((xClu + 1) * cluToMvu, (yClu + 1) * cluToMvu, 0, -cluToMvu, value);
+				let lineTop = createLine(xClu * cluToMvu, (yClu + 1) * cluToMvu, cluToMvu, 0, value);
+				let lineBottom = createLine((xClu + 1) * cluToMvu, yClu * cluToMvu, -cluToMvu, 0, value);
 				linesRow[xClu] = [lineLeft, lineRight, lineTop, lineBottom];
 			}
 		}
 
 		window.requestAnimationFrame(draw);
+	};
+	
+	let createLine = function(x, y, w, h, value) {
+		return { 
+			x: x, y: y, w: w, h: h,
+			value: value,
+			p: vec(x, y),
+			r: vec(w, h),
+		};
 	};
 
 	let onKeyDown = function(event) {
@@ -386,7 +395,7 @@ $.perspectiveBuilder = (function() {
 			case 3: x0 = playerXClu; break;
 		}
 		
-		let x = x0;;
+		let x = x0;
 		while (x <= mx) {
 			let y = y0;
 			while (y <= my) {
@@ -395,31 +404,32 @@ $.perspectiveBuilder = (function() {
 				while (i < len) {				
 					let line = cellLines[i];
 					
-					let p = vec(line.x, line.y);
-					let r = vec(line.w, line.h);
-
-					// t = (q − p) × s / (r × s)
-					let t = vecCross(vecDiff(q, p), s) / vecCross(r, s);
-
-					// u = (p − q) × r / (s × r)
-					let u = vecCross(vecDiff(p, q), r) / vecCross(s, r);
+					let p = line.p;
+					let r = line.r;
 
 					// If r × s = 0 and (q − p) × r = 0, then the two lines are collinear
 					// If r × s = 0 and (q − p) × r ≠ 0, then the two lines are parallel and non-intersecting.
 					// If r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t r = q + u s.
-					// Otherwise, the two line segments are not parallel but do not intersect.
-					if (vecCross(r, s) != 0 && t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-						// hit -- ale je nejbližší?
-						let hitPoint = vecAdd(p, vecScal(r, t));
-						let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitPoint.x, 2) + Math.pow(playerYMvu - hitPoint.y, 2))
-						if (!result.hit || result.distanceMvu > distanceMvu) {
-							result = {
-								hit: true,
-								value: line.value, // TODO povrch stěny, ne celé kostky
-								distanceMvu: distanceMvu,
-								point: hitPoint,
-								lineOriginDistanceMvu: Math.sqrt(Math.pow(p.x - hitPoint.x, 2) + Math.pow(p.y - hitPoint.y, 2))
-							};
+					// Otherwise, the two line segments are not parallel but do not intersect.					
+					// t = (q − p) × s / (r × s)
+					// u = (p − q) × r / (s × r)
+					let rsCross = vecCross(r, s);
+					let t = vecCross(vecDiff(q, p), s) / rsCross;
+					if (t >= 0 && t <= 1) {
+						let u = vecCross(vecDiff(p, q), r) / vecCross(s, r);
+						if (u >= 0 && u <= 1 && rsCross != 0) {
+							// hit -- ale je nejbližší?
+							let point = vecAdd(p, vecScal(r, t));
+							let distanceMvu = Math.sqrt(Math.pow(playerXMvu - point.x, 2) + Math.pow(playerYMvu - point.y, 2))
+							if (!result.hit || result.distanceMvu > distanceMvu) {
+								result = {
+									hit: true,
+									value: line.value, // TODO povrch stěny, ne celé kostky
+									distanceMvu: distanceMvu,
+									point: point,
+									p: p
+								};
+							}							
 						}
 					}
 					++i;				
@@ -428,6 +438,9 @@ $.perspectiveBuilder = (function() {
 			}
 			++x;
 		}
+		
+		// tohle má smysl počítat jen jednou a to až u toho nejbližšího hit záznamu
+		result.lineOriginDistanceMvu = Math.sqrt(Math.pow(result.p.x - result.point.x, 2) + Math.pow(result.p.y - result.point.y, 2));
 
 		return result;
 	};
