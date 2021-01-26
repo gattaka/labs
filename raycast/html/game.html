@@ -3,8 +3,13 @@
 <head>
     <meta charset="utf-8">
     <title></title>
-    <script type="text/javascript" src="../js/game.js"></script>
 	<script type="text/javascript" src="../js/stats.min.js"></script>
+	<script type="text/javascript" src="../js/units.js"></script>
+	<script type="text/javascript" src="../js/math.js"></script>
+	<script type="text/javascript" src="../js/controls.js"></script>
+	<script type="text/javascript" src="../js/map.js"></script>
+	<script type="text/javascript" src="../js/minimap.js"></script>
+    <script type="text/javascript" src="../js/game.js"></script>
     <style type="text/css">
     </style>
 </head>
@@ -33,9 +38,12 @@
 		<canvas id="minimapCanvas" width="700" height="400"></canvas>
 	</div>
 	<script>
-		let canvas = document.getElementById("perspectiveCanvas");
-		let minimapCanvas = document.getElementById("minimapCanvas");
-		$.raycast.game(canvas, minimapCanvas).start();
+		let ui = {
+			canvas: document.getElementById("perspectiveCanvas"),
+			minimapCanvas: document.getElementById("minimapCanvas"),
+			angleSpan: document.getElementById("angleSpan"),
+		};
+		$.raycast.game.init(ui);
 	</script>
 </body>
 </html>
