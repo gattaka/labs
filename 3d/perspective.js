@@ -307,6 +307,11 @@ $.perspectiveBuilder = (function() {
 		// https://www.mathsisfun.com/algebra/vectors-cross-product.html
 		// https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect		
 		let ray = { x: playerXMvu, y: playerYMvu, w: rayXMvu - playerXMvu, h: rayYMvu - playerYMvu };
+		let q = vec(ray.x, ray.y);
+		let s = vec(ray.w, ray.h);
+		// ax + b
+		let a = ray.h / ray.w;
+		let b = ray.y - a * ray.x;
 		let result = {
 			hit: false,
 			point: {
@@ -316,11 +321,9 @@ $.perspectiveBuilder = (function() {
 		};
 		for (let i = 0; i < lines.length; i++) {
 			let line = lines[i];
-
+			
 			let p = vec(line.x, line.y);
 			let r = vec(line.w, line.h);
-			let q = vec(ray.x, ray.y);
-			let s = vec(ray.w, ray.h);
 
 			// t = (q − p) × s / (r × s)
 			let t = vecCross(vecDiff(q, p), s) / vecCross(r, s);
@@ -370,8 +373,13 @@ $.perspectiveBuilder = (function() {
 		let hitResult;
 
 		// pro každý sloupec obrazovky
+		let startRay = processRay(playerXMvu, playerYMvu, angleRad);
+		let endRay = processRay(playerXMvu, playerYMvu, angleRad + width * angleIncrRad);
 		for (let x = 0; x < width; x++, angleRad += angleIncrRad) {			
-			ray = processRay(playerXMvu, playerYMvu, angleRad);
+			let ray;
+			if (x == 0) ray = startRay ;
+			else if (x == width - 1) ray = endRay;
+			else ray = processRay(playerXMvu, playerYMvu, angleRad);			
 			hitResult = checkHit(ray.x, ray.y, playerXMvu, playerYMvu);
 			if (hitResult.hit) {
 				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitResult.point.x, 2) + Math.pow(playerYMvu - hitResult.point.y, 2));
