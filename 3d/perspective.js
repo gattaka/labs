@@ -1,7 +1,5 @@
 var $ = $ || {};
-$.perspectiveBuilder = (function() {
-
-	let PIHalf = Math.PI / 2;
+$.perspectiveBuilder = (function() {	
 
 	let canvas = document.getElementById("perspectiveCanvas");
 	let ctx = canvas.getContext("2d");
@@ -22,6 +20,7 @@ $.perspectiveBuilder = (function() {
 
 	// kolik jednotek má dílek mapy
 	let cluToMvu = 20;
+	let mvuToClu = 1 / cluToMvu;
 	//	 let mvuToMmu = 1.2;
 
 	// Wolfenstein typ -- dílky mapy mají konstantní velikost, 
@@ -49,11 +48,11 @@ $.perspectiveBuilder = (function() {
 		[1,1, , , , , , , , , , , ,1,1],
 		[1,3, , , , , , , , , , , ,3,1],
 		[1,1, , , , , , , , , , , ,1,1],
-		[ ,1, , ,2, , , , ,2, , , ,1, ],
+		[ ,1, , ,2, , , , , ,2, , ,1, ],
 		[1,1, , , , , , , , , , , ,1,1],
 		[1,3, , , , , , , , , , , ,3,1],
 		[1,1, , , , , , , , , , , ,1,1],
-		[ ,1, , ,2, , , , ,2, , , ,1, ],
+		[ ,1, , ,2, , , , , ,2, , ,1, ],
 		[1,1, , , , , , , , , , , ,1,1],
 		[1,3, , , , , , , , , , , ,3,1],
 		[1,1, , , , , , , , , , , ,1,1],
@@ -65,16 +64,20 @@ $.perspectiveBuilder = (function() {
 	let mapRadiusMvu = Math.sqrt(mapRows * mapRows + mapCols * mapCols) * cluToMvu;
 	let lines = [];
 
+	let rad90 = Math.PI / 2;
+	let rad180 = rad90 * 2;
+	let rad270 = rad90 * 3;
+	
 	// pozice a orientace hráče na mapě
 	let playerXMvu = mapCols / 2 * cluToMvu;
 	let playerYMvu = mapRows / 2 * cluToMvu;
-	let playerHOrient = PIHalf * 3; // 270° (0-360)
-	let playerVOrient = PIHalf * 3; // 270° (0-360)
+	let playerHOrient = rad270; // 270° (0-360)
+	let playerVOrient = rad270; // 270° (0-360)
 	let playerXClu = -1;
 	let playerYClu = -1;
 
 	// rozsah v jakém hráč vidí
-	let angleRange = 50 * PIHalf / 90;
+	let angleRange = 50 * rad90 / 90;
 	let angleIncr = angleRange / width;
 	let lensMultiplier = 15;
 
@@ -103,7 +106,7 @@ $.perspectiveBuilder = (function() {
 	let darkStepMult = 1 / darkStep;
 
 	let toRad = function(angle) {
-		return PIHalf * angle / 90;
+		return rad90 * angle / 90;
 	};
 
 	let init = function() {
@@ -111,7 +114,10 @@ $.perspectiveBuilder = (function() {
 		document.addEventListener("keyup", onKeyUp);
 
 		canvas.addEventListener("mousemove", function(e) {
-			playerHOrient = toRad(mouseHSensitivity * (e.clientX - width / 2));
+			let angle = mouseHSensitivity * (e.clientX - width / 2);
+			if (angle < 0) angle = 360 + angle;			
+			//console.log(angle);
+			playerHOrient = toRad(angle);
 			playerVOrient = mouseVSensitivity * (height / 2 - e.clientY);
 		}, false);
 
@@ -183,10 +189,14 @@ $.perspectiveBuilder = (function() {
 
 		for (let yClu = 0; yClu < map.length; yClu++) {
 			let row = map[yClu];
+			let linesRow = lines[yClu];
+			linesRow = [];
+			lines[yClu] = linesRow;
 			for (let xClu = 0; xClu < row.length; xClu++) {
 				let value = row[xClu];
 				if (typeof value === 'undefined' || value == 0) {
 					row[xClu] = 0;
+					//linesRow[xClu] = [];
 					continue;
 				}
 				// přímky buňky -- je potřeba aby byly zachovány normály, 
@@ -199,10 +209,7 @@ $.perspectiveBuilder = (function() {
 				let lineRight = { x: (xClu + 1) * cluToMvu, y: (yClu + 1) * cluToMvu, w: 0, h: -cluToMvu, value: value };
 				let lineTop = { x: xClu * cluToMvu, y: (yClu + 1) * cluToMvu, w: cluToMvu, h: 0, value: value };
 				let lineBottom = { x: (xClu + 1) * cluToMvu, y: yClu * cluToMvu, w: -cluToMvu, h: 0, value: value };
-				lines.push(lineLeft);
-				lines.push(lineRight);
-				lines.push(lineTop);
-				lines.push(lineBottom);
+				linesRow[xClu] = [lineLeft, lineRight, lineTop, lineBottom];
 			}
 		}
 
@@ -257,8 +264,8 @@ $.perspectiveBuilder = (function() {
 	};
 
 	let updatePlayer = function() {
-		let dPlayerXMvu = Math.cos(playerHOrient) * walkSpeedForwardMvu + Math.cos(playerHOrient - PIHalf) * walkSpeedSideMvu;
-		let dPlayerYMvu = Math.sin(playerHOrient) * walkSpeedForwardMvu + Math.sin(playerHOrient - PIHalf) * walkSpeedSideMvu;
+		let dPlayerXMvu = Math.cos(playerHOrient) * walkSpeedForwardMvu + Math.cos(playerHOrient - rad90) * walkSpeedSideMvu;
+		let dPlayerYMvu = Math.sin(playerHOrient) * walkSpeedForwardMvu + Math.sin(playerHOrient - rad90) * walkSpeedSideMvu;
 		let draftPlayerXClu = Math.floor((playerXMvu + dPlayerXMvu + Math.sign(dPlayerXMvu) * collisionPadding) / cluToMvu);
 		let draftPlayerYClu = Math.floor((playerYMvu + dPlayerYMvu + Math.sign(dPlayerYMvu) * collisionPadding) / cluToMvu);
 		if (playerXClu == -1) playerXClu = draftPlayerXClu;
@@ -303,15 +310,12 @@ $.perspectiveBuilder = (function() {
 		return { x: x, y: y };
 	};
 
-	let checkHit = function(rayXMvu, rayYMvu, playerXMvu, playerYMvu) {
+	let checkHit = function(rayXMvu, rayYMvu, playerXMvu, playerYMvu, clip) {
 		// https://www.mathsisfun.com/algebra/vectors-cross-product.html
 		// https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect		
 		let ray = { x: playerXMvu, y: playerYMvu, w: rayXMvu - playerXMvu, h: rayYMvu - playerYMvu };
 		let q = vec(ray.x, ray.y);
 		let s = vec(ray.w, ray.h);
-		// ax + b
-		let a = ray.h / ray.w;
-		let b = ray.y - a * ray.x;
 		let result = {
 			hit: false,
 			point: {
@@ -319,34 +323,53 @@ $.perspectiveBuilder = (function() {
 				y: rayYMvu
 			}
 		};
-		for (let i = 0; i < lines.length; i++) {
-			let line = lines[i];
-			
-			let p = vec(line.x, line.y);
-			let r = vec(line.w, line.h);
+		let x0 = 0;
+		let y0 = 0;
+		let mx = mapCols;
+		let my = mapRows;
+		
+		switch (clip) {
+			case 0: y = playerYClu; break;
+			case 1: x = playerXClu; break;
+			case 2: my = playerYClu; break;
+			case 3: mx = playerXClu; break;
+		}
+		
+		for (let x = x0; x < mx; x++) {
+			for (let y = y0; y < my; y++) {	
+				let cellLines = lines[y][x];
+				if (typeof cellLines === 'undefined')
+					continue;		
+				for (let i = 0; i < 4; i++) {					
+					let line = cellLines[i];
+					
+					let p = vec(line.x, line.y);
+					let r = vec(line.w, line.h);
 
-			// t = (q − p) × s / (r × s)
-			let t = vecCross(vecDiff(q, p), s) / vecCross(r, s);
+					// t = (q − p) × s / (r × s)
+					let t = vecCross(vecDiff(q, p), s) / vecCross(r, s);
 
-			// u = (p − q) × r / (s × r)
-			let u = vecCross(vecDiff(p, q), r) / vecCross(s, r);
+					// u = (p − q) × r / (s × r)
+					let u = vecCross(vecDiff(p, q), r) / vecCross(s, r);
 
-			// If r × s = 0 and (q − p) × r = 0, then the two lines are collinear
-			// If r × s = 0 and (q − p) × r ≠ 0, then the two lines are parallel and non-intersecting.
-			// If r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t r = q + u s.
-			// Otherwise, the two line segments are not parallel but do not intersect.
-			if (vecCross(r, s) != 0 && t >= 0 && t <= 1 && u >= 0 && u <= 1) {
-				// hit -- ale je nejbližší?
-				let hitPoint = vecAdd(p, vecScal(r, t));
-				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitPoint.x, 2) + Math.pow(playerYMvu - hitPoint.y, 2))
-				if (!result.hit || result.distanceMvu > distanceMvu) {
-					result = {
-						hit: true,
-						value: line.value, // TODO povrch stěny, ne celé kostky
-						distanceMvu: distanceMvu,
-						point: hitPoint,
-						lineOriginDistanceMvu: Math.sqrt(Math.pow(p.x - hitPoint.x, 2) + Math.pow(p.y - hitPoint.y, 2))
-					};
+					// If r × s = 0 and (q − p) × r = 0, then the two lines are collinear
+					// If r × s = 0 and (q − p) × r ≠ 0, then the two lines are parallel and non-intersecting.
+					// If r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t r = q + u s.
+					// Otherwise, the two line segments are not parallel but do not intersect.
+					if (vecCross(r, s) != 0 && t >= 0 && t <= 1 && u >= 0 && u <= 1) {
+						// hit -- ale je nejbližší?
+						let hitPoint = vecAdd(p, vecScal(r, t));
+						let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitPoint.x, 2) + Math.pow(playerYMvu - hitPoint.y, 2))
+						if (!result.hit || result.distanceMvu > distanceMvu) {
+							result = {
+								hit: true,
+								value: line.value, // TODO povrch stěny, ne celé kostky
+								distanceMvu: distanceMvu,
+								point: hitPoint,
+								lineOriginDistanceMvu: Math.sqrt(Math.pow(p.x - hitPoint.x, 2) + Math.pow(p.y - hitPoint.y, 2))
+							};
+						}
+					}
 				}
 			}
 		}
@@ -368,19 +391,26 @@ $.perspectiveBuilder = (function() {
 
 		let angleStartRad = playerHOrient - angleRange / 2;
 		let angleIncrRad = angleIncr;
+		
+		// clipping segment
+		let clip;
+		if (angleStartRad >= 0 && angleStartRad < rad90) {
+			clip = 0;
+		} else if (angleStartRad >= rad90 && angleStartRad < rad180) {
+			clip = 1;
+		} else if (angleStartRad >= rad180 && angleStartRad < rad270) {
+			clip = 2;
+		} else if (angleStartRad >= rad270 && angleStartRad < 0) {
+			clip = 3;
+		}
 
 		let angleRad = angleStartRad;
 		let hitResult;
 
 		// pro každý sloupec obrazovky
-		let startRay = processRay(playerXMvu, playerYMvu, angleRad);
-		let endRay = processRay(playerXMvu, playerYMvu, angleRad + width * angleIncrRad);
 		for (let x = 0; x < width; x++, angleRad += angleIncrRad) {			
-			let ray;
-			if (x == 0) ray = startRay ;
-			else if (x == width - 1) ray = endRay;
-			else ray = processRay(playerXMvu, playerYMvu, angleRad);			
-			hitResult = checkHit(ray.x, ray.y, playerXMvu, playerYMvu);
+			let ray = processRay(playerXMvu, playerYMvu, angleRad);			
+			hitResult = checkHit(ray.x, ray.y, playerXMvu, playerYMvu, clip);
 			if (hitResult.hit) {
 				let distanceMvu = Math.sqrt(Math.pow(playerXMvu - hitResult.point.x, 2) + Math.pow(playerYMvu - hitResult.point.y, 2));
 				let texture = textures[hitResult.value - 1];
