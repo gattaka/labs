@@ -83,6 +83,7 @@ $.raycast.game = (function() {
 		textures.push({ src: "../sprites/wall1.jpg", width: 128, height: 128 });
 		textures.push({	src: "../sprites/wall2.jpg", width: 128, height: 128 });
 		textures.push({	src: "../sprites/bookcase.png",	width: 128,	height: 128	});		
+		textures.push({ src: "../sprites/wall1_torch.jpg", width: 128, height: 128, frames: 4, shadow: false});
 
 		for (let i = 0; i < textures.length; i++) {
 			let texture = textures[i];		
@@ -97,34 +98,44 @@ $.raycast.game = (function() {
 				let seafIndex = i;
 				textureImg.onload = function() {
 					let tex = textures[seafIndex];					
-					tex.data32 = [];					
-					for (let i = 0; i < darkPrecision; i++) {
-						let lightMult = 1 - (darkMinVal + i * darkStep) / darkMaxVal;
-						let textureCanvas = document.createElement("canvas");
-						textureCanvas.width = texture.width;
-						textureCanvas.height = texture.height;
-						let textureCtx = textureCanvas.getContext("2d");
-						textureCtx.drawImage(seafImg, 0, 0);
-						let texImageData = textureCtx.getImageData(0, 0, tex.width, tex.height);
-						// https://stackoverflow.com/questions/16679158/javascript-imagedata-typed-array-read-whole-pixel
-						let texBuf8 = texImageData.data.buffer;
-						let texData32 = new Uint32Array(texBuf8);
-						tex.data32[i] = texData32;
-						
-						if (lightMult < 1) {
-							for (let index = 0; index < tex.size; index++) {
-								let color = texData32[index];
-								// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
-								let r = lightMult * (color & 0xFF);
-								let g = lightMult * (color >> 8 & 0xFF);
-								let b = lightMult * (color >> 16 & 0xFF);
-								let a = color >> 24 & 0xFF;
-								texData32[index] = (a << 24) | (b << 16) | (g << 8) | r;
+					tex.data32 = [];		
+					let spriteXOffset = 0;
+					let spriteYOffset = 0;
+					if (typeof tex.frames === 'undefined')
+						tex.frames = 1;
+					for (let f = 0; f < tex.frames; f++) {					
+						if (f > 0)
+							spriteXOffset += tex.width;
+						if (spriteXOffset == textureImg.width)
+							spriteYOffset += tex.height;
+						for (let i = 0; i < darkPrecision; i++) {
+							let lightMult = 1 - (darkMinVal + i * darkStep) / darkMaxVal;
+							let textureCanvas = document.createElement("canvas");
+							textureCanvas.width = texture.width;
+							textureCanvas.height = texture.height;
+							let textureCtx = textureCanvas.getContext("2d");
+							textureCtx.drawImage(seafImg, spriteXOffset, spriteYOffset, tex.width, tex.height, 0, 0, tex.width, tex.height);
+							let texImageData = textureCtx.getImageData(0, 0, tex.width, tex.height);
+							// https://stackoverflow.com/questions/16679158/javascript-imagedata-typed-array-read-whole-pixel
+							let texBuf8 = texImageData.data.buffer;
+							let texData32 = new Uint32Array(texBuf8);
+							tex.data32[i] = texData32;
+							
+							if (lightMult < 1 && (typeof tex.shadow === 'undefined' || tex.shadow)) {
+								for (let index = 0; index < tex.size; index++) {
+									let color = texData32[index];
+									// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
+									let r = lightMult * (color & 0xFF);
+									let g = lightMult * (color >> 8 & 0xFF);
+									let b = lightMult * (color >> 16 & 0xFF);
+									let a = color >> 24 & 0xFF;
+									texData32[index] = (a << 24) | (b << 16) | (g << 8) | r;
+								}
 							}
+							
+							texImageData.data.set(texBuf8);
+							textureCtx.putImageData(texImageData, 0, 0);
 						}
-						
-						texImageData.data.set(texBuf8);
-						textureCtx.putImageData(texImageData, 0, 0);
 					}
 					loadingProgress++;
 					if (loadingProgress == textures.length)
