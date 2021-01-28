@@ -180,40 +180,52 @@ $.raycast.game = (function() {
 		}
 	};
 
-	let checkHit = function(rayXMvu, rayYMvu, clip) {
+	let getLines = function(y, x) {
+		if (y < 0 || y == map.mapRows || x < 0 || x == map.mapCols) return [];
+		return map.lines[y][x];
+	};
+
+	let checkHit = function(ray) {
 		// https://www.mathsisfun.com/algebra/vectors-cross-product.html
 		// https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect		
-		let ray = { x: player.xMU, y: player.yMU, w: rayXMvu - player.xMU, h: rayYMvu - player.yMU };
 		let q = mth.vec(ray.x, ray.y);
 		let s = mth.vec(ray.w, ray.h);
 		let result = {
 			hit: false,
-			point: {
-				x: rayXMvu,
-				y: rayYMvu
-			}
 		};
-		let x0 = 0;
-		let y0 = 0;
-		let mx = map.mapCols - 1;
-		let my = map.mapRows - 1;
-		
-		switch (clip) {
-			case 0: y0 = player.yCL; break;
-			case 1: mx = player.xCL; break;
-			case 2: my = player.yCL; break;
-			case 3: x0 = player.xCL; break;
-		}
-		
-		let x = x0;
-		while (x <= mx) {
-			let y = y0;
-			while (y <= my) {
-				let cellLines = map.lines[y][x];				
-				let i = 0, len = cellLines.length;
-				while (i < len) {				
-					let line = cellLines[i];
-					
+		let dx = Math.sign(ray.dx);
+		let dy = Math.sign(ray.dy);
+		let xLimit = dx > 0 ? map.mapCols - 1 : 0;
+		let yLimit = dy > 0 ? map.mapRows - 1 : 0;
+		let x = player.xCL;
+		let y = player.yCL;
+		while (x != xLimit && dx != 0 || y != yLimit && dy != 0) {
+			x += x == xLimit ? 0 : dx;
+			y += y == yLimit ? 0 : dy;
+			let cells = [map.lines[y][x]];			
+			
+			if (dy != 0) {
+				let cx = x;
+				while (cx != player.xCL) {
+					cx -= dx;
+					cells.push(map.lines[y][cx]);
+				}
+			}
+
+			if (dx != 0) {
+				let cy = y;
+				while (cy != player.yCL) {
+					cy -= dy;
+					cells.push(map.lines[cy][x]);
+				}
+			}
+			
+			let c = 0, cellsCount = cells.length;
+			while (c < cellsCount) {
+				let lines = cells[c];
+				let i = 0, linesCount = lines.length;
+				while (i < linesCount) {
+					let line = lines[i];
 					let p = line.p;
 					let r = line.r;
 
@@ -231,24 +243,23 @@ $.raycast.game = (function() {
 							// hit -- ale je nejbližší?
 							let point = mth.vecAdd(p, mth.vecScal(r, t));
 							let distanceMvu = Math.sqrt(Math.pow(player.xMU - point.x, 2) + Math.pow(player.yMU - point.y, 2))
-							if (!result.hit || result.distanceMvu > distanceMvu) {
+							if (!result.hit || result.distanceMvu > distanceMvu) 
 								result = {
 									hit: true,
 									value: line.value, // TODO povrch stěny, ne celé kostky
 									distanceMvu: distanceMvu,
 									point: point,
-									p: p
+									p: p,
 								};
-							}							
 						}
 					}
-					++i;				
+					++i;
 				}
-				++y;
+				++c;
 			}
-			++x;
+			//if (result.hit) break;
 		}
-		
+
 		if (typeof result.p !== 'undefined') {
 			// tohle má smysl počítat jen jednou a to až u toho nejbližšího hit záznamu
 			result.lineOriginDistanceMvu = Math.sqrt(Math.pow(result.p.x - result.point.x, 2) + Math.pow(result.p.y - result.point.y, 2));
@@ -258,9 +269,20 @@ $.raycast.game = (function() {
 	};
 
 	let processRay = function(angleRad) {
+		let dCos = Math.cos(angleRad);
+		let dSin = Math.sin(angleRad);
+		let w = dCos * map.mapRadiusMvu;
+		let h = dSin * map.mapRadiusMvu;		
 		return {
-			x: player.xMU + Math.cos(angleRad) * map.mapRadiusMvu,
-			y: player.yMU + Math.sin(angleRad) * map.mapRadiusMvu
+			angleRad: angleRad,
+			x: player.xMU,
+			y: player.yMU,
+			x2: w + player.xMU,
+			y2: h + player.yMU,
+			w: w,
+			h: h,
+			dx: dCos,
+			dy: dSin,
 		};
 	};
 
@@ -272,18 +294,6 @@ $.raycast.game = (function() {
 		let angleStartRad = player.rotHorRD - angleRange / 2;
 		let angleIncrRad = angleIncr;
 		
-		// clipping segment
-		let clip;
-		if (angleStartRad >= 0 && angleStartRad < uts.rad90) {
-			clip = 0;
-		} else if (angleStartRad >= uts.rad90 && angleStartRad < uts.rad180) {
-			clip = 1;
-		} else if (angleStartRad >= uts.rad180 && angleStartRad < uts.rad270) {
-			clip = 2;
-		} else if (angleStartRad >= uts.rad270 && angleStartRad < uts.rad360) {
-			clip = 3;
-		}
-
 		let x = 0;
 		let angleRad = angleStartRad;
 		let hitResult;
@@ -291,7 +301,7 @@ $.raycast.game = (function() {
 		// pro každý sloupec obrazovky
 		while (x < width) {
 			let ray = processRay(angleRad);			
-			hitResult = checkHit(ray.x, ray.y, clip);
+			hitResult = checkHit(ray);
 			if (hitResult.hit) {
 				let distanceMvu = Math.sqrt(Math.pow(player.xMU - hitResult.point.x, 2) + Math.pow(player.yMU - hitResult.point.y, 2));
 				let texture = textures[hitResult.value - 1];

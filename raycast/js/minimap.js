@@ -51,14 +51,26 @@ $.raycast.minimap = (function() {
 			}
 		}
 		
-		drawCursor();
-	};
-	
-	let drawCursor = function() {
-		minimapCtx.strokeStyle = "red";		
-				
 		let playerXMmu = xMvuToMmu(plr.xMU);
 		let playerYMmu = yMvuToMmu(plr.yMU);
+		
+		drawCursor(playerXMmu, playerYMmu);
+	};
+	
+	let drawRays = function(playerXMmu, playerYMmu) {
+		let rayXMmu = xMvuToMmu(rayXMvu);
+		let rayYMmu = yMvuToMmu(rayYMvu);
+		
+		minimapCtx.beginPath();
+		minimapCtx.lineWidth = 2; 
+		minimapCtx.strokeStyle = "white";
+		minimapCtx.moveTo(playerXMmu, playerYMmu);
+		minimapCtx.lineTo(rayXMmu, rayYMmu);
+		minimapCtx.stroke();
+	};
+	
+	let drawCursor = function(playerXMmu, playerYMmu) {
+		minimapCtx.strokeStyle = "red";						
 		
 		let orientRad = plr.rotHorRD;
 		let midVertX = playerXMmu + Math.cos(orientRad) * cursorSideMmu;
