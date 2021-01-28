@@ -199,6 +199,8 @@ $.raycast.game = (function() {
 		let yLimit = dy > 0 ? map.mapRows - 1 : 0;
 		let x = player.xCL;
 		let y = player.yCL;
+		let xmLimit = x - dx;
+		let ymLimit = y - dy;
 		while (x != xLimit && dx != 0 || y != yLimit && dy != 0) {
 			x += x == xLimit ? 0 : dx;
 			y += y == yLimit ? 0 : dy;
@@ -206,7 +208,7 @@ $.raycast.game = (function() {
 			
 			if (dy != 0) {
 				let cx = x;
-				while (cx != player.xCL) {
+				while (cx != xmLimit) {
 					cx -= dx;
 					cells.push(map.lines[y][cx]);
 				}
@@ -214,7 +216,7 @@ $.raycast.game = (function() {
 
 			if (dx != 0) {
 				let cy = y;
-				while (cy != player.yCL) {
+				while (cy != ymLimit) {
 					cy -= dy;
 					cells.push(map.lines[cy][x]);
 				}
