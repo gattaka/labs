@@ -13,6 +13,7 @@ $.raycast.game = (function() {
 	let ctx;
 	let width;
 	let height;
+	let heightHalf;
 	
 	let imageData;
 	let buf;
@@ -72,6 +73,7 @@ $.raycast.game = (function() {
 		ctx = canvas.getContext("2d");
 		width = canvas.width;
 		height = canvas.height;
+		heightHalf = height / 2;
 		
 		imageData = ctx.getImageData(0, 0, width, height);
 		buf = new ArrayBuffer(imageData.data.length);
@@ -354,8 +356,12 @@ $.raycast.game = (function() {
 				let y = 0;
 				while (y < height) {
 					let index = y * width + x;
-					if (y < minTargetYScu || y > maxTargetYScu) {
-						putPixel32(index, 0);
+					if (y < minTargetYScu) {						
+						let val = Math.floor(.2 * 0xFF * (heightHalf - y) / heightHalf);
+						putPixel32(index, 0xFF << 24 | val << 16 | val << 8 | val);
+					} else if (y > maxTargetYScu) {
+						let val = Math.floor(.2 * 0xFF * (y - heightHalf) / heightHalf);
+						putPixel32(index, 0xFF << 24 | val << 16 | val << 8 | val);
 					} else {
 						let texY = Math.floor((y - minTargetYScu) * ratio);
 						let texIdx = texY * texture.width + texX;						
