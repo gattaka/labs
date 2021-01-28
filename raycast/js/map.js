@@ -53,11 +53,16 @@ $.raycast.map = (function() {
 		};
 	};
 	
+	let isEmpty = function(x, y) {
+		let value = ret.map[y][x];
+		return typeof value === 'undefined' || value == 0;
+	};
+	
 	ret.init = function() {
 		let cluToMvu = $.raycast.units.cluToMvu;
 				
 		ret.mapRadiusMvu = Math.sqrt(ret.mapRows * ret.mapRows + ret.mapCols * ret.mapCols) * cluToMvu; 
-		
+		let linescount = 0;
 		for (let yClu = 0; yClu < ret.mapRows; yClu++) {
 			let row = ret.map[yClu];
 			let linesRow = ret.lines[yClu];
@@ -75,14 +80,28 @@ $.raycast.map = (function() {
 				// normála je vždy ve směru doleva od přímky se směrem nahoru
 				// ^ ---> |
 				// |	  |
-				// | <--- v				
-				let lineLeft = createLine(xClu * cluToMvu, yClu * cluToMvu, 0, cluToMvu, value);
-				let lineRight = createLine((xClu + 1) * cluToMvu, (yClu + 1) * cluToMvu, 0, -cluToMvu, value);
-				let lineTop = createLine(xClu * cluToMvu, (yClu + 1) * cluToMvu, cluToMvu, 0, value);
-				let lineBottom = createLine((xClu + 1) * cluToMvu, yClu * cluToMvu, -cluToMvu, 0, value);
-				linesRow[xClu] = [lineLeft, lineRight, lineTop, lineBottom];
+				// | <--- v		
+				let cellLines = [];
+				linesRow[xClu] = cellLines;
+				if (xClu > 0 && isEmpty(xClu - 1, yClu)) {
+					cellLines.push(createLine(xClu * cluToMvu, yClu * cluToMvu, 0, cluToMvu, value)); // left
+					linescount++;
+				}
+				if (xClu < ret.mapCols - 1 && isEmpty(xClu + 1, yClu)) {
+					cellLines.push(createLine((xClu + 1) * cluToMvu, (yClu + 1) * cluToMvu, 0, -cluToMvu, value)); // right
+					linescount++;
+				}
+				if (yClu < ret.mapRows - 1 && isEmpty(xClu, yClu + 1)) {
+					cellLines.push(createLine(xClu * cluToMvu, (yClu + 1) * cluToMvu, cluToMvu, 0, value)); // top
+					linescount++;
+				}
+				if (yClu > 0 && isEmpty(xClu, yClu - 1)) {
+					cellLines.push(createLine((xClu + 1) * cluToMvu, yClu * cluToMvu, -cluToMvu, 0, value)); // bottom	 
+					linescount++;
+				}				
 			}
 		}
+		console.log(linescount); // 552
 		return ret;
 	};
 	
