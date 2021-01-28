@@ -22,6 +22,7 @@ $.raycast.game = (function() {
 	let angleSpan;	
 		
 	let stats;		
+	let lastTime = 0;
 	
 	// Player
 	let player;
@@ -83,7 +84,7 @@ $.raycast.game = (function() {
 		textures.push({ src: "../sprites/wall1.jpg", width: 128, height: 128 });
 		textures.push({	src: "../sprites/wall2.jpg", width: 128, height: 128 });
 		textures.push({	src: "../sprites/bookcase.png",	width: 128,	height: 128	});		
-		textures.push({ src: "../sprites/wall1_torch.jpg", width: 128, height: 128, frames: 4, shadow: false});
+		textures.push({ src: "../sprites/wall1_torch.jpg", width: 128, height: 128, frames: 4, delay: 200, shadow: false});
 
 		for (let i = 0; i < textures.length; i++) {
 			let texture = textures[i];		
@@ -91,6 +92,8 @@ $.raycast.game = (function() {
 			// Převod MVU na IMG jednotky
 			texture.xMvuToImg = texture.width / uts.cluToMvu;
 			texture.yMvuToImg = texture.height / uts.cluToMvu;
+			texture.frame = 0;
+			texture.time = 0;
 			texture.size = texture.width * texture.height;
 			textureImg = new Image();
 			(function() {
@@ -103,11 +106,18 @@ $.raycast.game = (function() {
 					let spriteYOffset = 0;
 					if (typeof tex.frames === 'undefined')
 						tex.frames = 1;
-					for (let f = 0; f < tex.frames; f++) {					
+					if (typeof tex.shadow === 'undefined')
+						tex.shadow = true;
+					tex.frame = 0;
+					tex.time = 0;
+					for (let f = 0; f < tex.frames; f++) {	
+						tex.data32[f] = [];
 						if (f > 0)
 							spriteXOffset += tex.width;
-						if (spriteXOffset == textureImg.width)
+						if (spriteXOffset == textureImg.width) {
 							spriteYOffset += tex.height;
+							spriteXOffset = 0;
+						}
 						for (let i = 0; i < darkPrecision; i++) {
 							let lightMult = 1 - (darkMinVal + i * darkStep) / darkMaxVal;
 							let textureCanvas = document.createElement("canvas");
@@ -119,9 +129,9 @@ $.raycast.game = (function() {
 							// https://stackoverflow.com/questions/16679158/javascript-imagedata-typed-array-read-whole-pixel
 							let texBuf8 = texImageData.data.buffer;
 							let texData32 = new Uint32Array(texBuf8);
-							tex.data32[i] = texData32;
+							tex.data32[f][i] = texData32;
 							
-							if (lightMult < 1 && (typeof tex.shadow === 'undefined' || tex.shadow)) {
+							if (lightMult < 1 && tex.shadow) {
 								for (let index = 0; index < tex.size; index++) {
 									let color = texData32[index];
 									// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
@@ -148,8 +158,18 @@ $.raycast.game = (function() {
 		window.requestAnimationFrame(draw);
 	};
 
-	let draw = function() {
-		stats.begin();		
+	let draw = function(time) {
+		stats.begin();
+		let delay = time - lastTime;
+		lastTime = time;
+		for (let i = 0; i < textures.length; i++) {
+			let tex = textures[i];
+			if (tex.frames == 1) continue;
+			tex.time += delay;
+			tex.frame = (tex.frame + Math.floor(tex.time / tex.delay)) % tex.frames;
+			tex.time = tex.time % tex.delay;
+		}
+		
 		updatePlayer();
 		mnp.drawMinimap();
 		drawScene();
@@ -314,8 +334,8 @@ $.raycast.game = (function() {
 				} else if (lightMult > darkMaxVal - 1) {
 					lightMult = darkMaxVal - 1;
 				}
-				let texLight = Math.floor((lightMult - darkMinVal) * darkStepMult);
-				let texData32 = texture.data32[texLight];
+				let texLight = texture.shadow ? Math.floor((lightMult - darkMinVal) * darkStepMult) : 0;
+				let texData32 = texture.data32[texture.frame][texLight];
 				
 				// https://math.stackexchange.com/questions/859760/calculating-size-of-an-object-based-on-distance				
 				let mvuToScu = lensMultiplier * 100 / distanceMvu;
