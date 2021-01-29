@@ -10,7 +10,12 @@ $.raycast.controls = (function() {
 	let walkSpeedStepMvu = 2;
 	let mouseHSensitivity = 0.5;
 	let mouseVSensitivity = 1;
-		
+	
+	let left = false;
+	let right = false;
+	let forward = false;
+	let back = false;
+	
 	let player;
 	let canvas;
 	let angleSpan;
@@ -37,41 +42,39 @@ $.raycast.controls = (function() {
 		//player.rotVerRD = mouseVSensitivity * (height / 2 - e.clientY);
 	};
 	
-	let onKeyDown = function(event) {
-		switch (event.keyCode) {
-			case 87:
-				ret.walkSpeedForwardMvu = walkSpeedStepMvu;
-				break;
-			case 83:
-				ret.walkSpeedForwardMvu = -walkSpeedStepMvu;
-				break;
-			case 65:
-				ret.walkSpeedSideMvu = walkSpeedStepMvu;
-				break;
-			case 68:
-				ret.walkSpeedSideMvu = -walkSpeedStepMvu;
-				break;
-			// Browser to dělá sám
-			/*
-			case 27:
-				canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
-				canvas.requestPointerLock();
-				break;
-			*/
+	ret.updateSpeed = function() {
+		if (forward) {
+			ret.walkSpeedForwardMvu = walkSpeedStepMvu;
+		} else if (back) {
+			ret.walkSpeedForwardMvu = -walkSpeedStepMvu;
+		} else {
+			ret.walkSpeedForwardMvu = 0;
 		}
+		
+		if (left) {
+			ret.walkSpeedSideMvu = walkSpeedStepMvu;
+		} else if (right) {
+			ret.walkSpeedSideMvu = -walkSpeedStepMvu;
+		} else {
+			ret.walkSpeedSideMvu = 0;
+		}		
+	};
+	
+	let changeState = function(event, state) {
+		switch (event.keyCode) {
+			case 87: forward = state; break;
+			case 83: back = state; break;
+			case 65: left = state; break;
+			case 68: right = state; break;
+		}
+	}
+	
+	let onKeyDown = function(event) {
+		changeState(event, true);
 	};
 
 	let onKeyUp = function(event) {
-		switch (event.keyCode) {
-			case 87:
-			case 83:
-				ret.walkSpeedForwardMvu = 0;
-				break;
-			case 65:
-			case 68:
-				ret.walkSpeedSideMvu = 0;
-				break;
-		}
+		changeState(event, false);
 	};
 	
 	ret.init = function(ui, playerRef) {

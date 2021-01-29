@@ -171,7 +171,7 @@ $.raycast.game = (function() {
 			tex.frame = (tex.frame + Math.floor(tex.time / tex.delay)) % tex.frames;
 			tex.time = tex.time % tex.delay;
 		}
-		
+		ctr.updateSpeed();
 		updatePlayer();
 		mnp.drawMinimap();
 		drawScene();
