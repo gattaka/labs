@@ -206,6 +206,42 @@ $.raycast.game = (function() {
 		if (y < 0 || y == map.mapRows || x < 0 || x == map.mapCols) return [];
 		return map.lines[y][x];
 	};
+	
+	let checkLines = function(lines, q, s, result) {
+		let i = 0, len = lines.length;
+		while (i < len) {
+			let line = lines[i];
+			let p = line.p;
+			let r = line.r;
+
+			// If r × s = 0 and (q − p) × r = 0, then the two lines are collinear
+			// If r × s = 0 and (q − p) × r ≠ 0, then the two lines are parallel and non-intersecting.
+			// If r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t r = q + u s.
+			// Otherwise, the two line segments are not parallel but do not intersect.					
+			// t = (q − p) × s / (r × s)
+			// u = (p − q) × r / (s × r)
+			let rsCross = mth.vecCross(r, s);
+			let t = mth.vecCross(mth.vecDiff(q, p), s) / rsCross;
+			if (t >= 0 && t <= 1) {
+				let u = mth.vecCross(mth.vecDiff(p, q), r) / mth.vecCross(s, r);
+				if (u >= 0 && u <= 1 && rsCross != 0) {
+					// hit -- ale je nejbližší?
+					let point = mth.vecAdd(p, mth.vecScal(r, t));
+					let distanceMvu = Math.sqrt(Math.pow(player.xMU - point.x, 2) + Math.pow(player.yMU - point.y, 2))
+					if (!result.hit || result.distanceMvu > distanceMvu) 
+						result = {
+							hit: true,
+							value: line.value, // TODO povrch stěny, ne celé kostky
+							distanceMvu: distanceMvu,
+							point: point,
+							p: p,
+						};
+				}
+			}
+			++i;
+		}
+		return result;
+	};
 
 	let checkHit = function(ray) {
 		// https://www.mathsisfun.com/algebra/vectors-cross-product.html
@@ -226,13 +262,13 @@ $.raycast.game = (function() {
 		while (x != xLimit && dx != 0 || y != yLimit && dy != 0) {
 			x += x == xLimit ? 0 : dx;
 			y += y == yLimit ? 0 : dy;
-			let cells = [map.lines[y][x]];			
+			result = checkLines(map.lines[y][x], q, s, result);
 			
 			if (dy != 0) {
 				let cx = x;
 				while (cx != xmLimit) {
 					cx -= dx;
-					cells.push(map.lines[y][cx]);
+					result = checkLines(map.lines[y][cx], q, s, result);
 				}
 			}
 
@@ -240,48 +276,11 @@ $.raycast.game = (function() {
 				let cy = y;
 				while (cy != ymLimit) {
 					cy -= dy;
-					cells.push(map.lines[cy][x]);
+					result = checkLines(map.lines[cy][x], q, s, result);
 				}
 			}
-			
-			let c = 0, cellsCount = cells.length;
-			while (c < cellsCount) {
-				let lines = cells[c];
-				let i = 0, linesCount = lines.length;
-				while (i < linesCount) {
-					let line = lines[i];
-					let p = line.p;
-					let r = line.r;
 
-					// If r × s = 0 and (q − p) × r = 0, then the two lines are collinear
-					// If r × s = 0 and (q − p) × r ≠ 0, then the two lines are parallel and non-intersecting.
-					// If r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t r = q + u s.
-					// Otherwise, the two line segments are not parallel but do not intersect.					
-					// t = (q − p) × s / (r × s)
-					// u = (p − q) × r / (s × r)
-					let rsCross = mth.vecCross(r, s);
-					let t = mth.vecCross(mth.vecDiff(q, p), s) / rsCross;
-					if (t >= 0 && t <= 1) {
-						let u = mth.vecCross(mth.vecDiff(p, q), r) / mth.vecCross(s, r);
-						if (u >= 0 && u <= 1 && rsCross != 0) {
-							// hit -- ale je nejbližší?
-							let point = mth.vecAdd(p, mth.vecScal(r, t));
-							let distanceMvu = Math.sqrt(Math.pow(player.xMU - point.x, 2) + Math.pow(player.yMU - point.y, 2))
-							if (!result.hit || result.distanceMvu > distanceMvu) 
-								result = {
-									hit: true,
-									value: line.value, // TODO povrch stěny, ne celé kostky
-									distanceMvu: distanceMvu,
-									point: point,
-									p: p,
-								};
-						}
-					}
-					++i;
-				}
-				++c;
-			}
-			//if (result.hit) break;
+			if (result.hit) break;
 		}
 
 		if (typeof result.p !== 'undefined') {
