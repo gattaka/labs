@@ -9,10 +9,10 @@
 			<td><input id="lensSize"
 				onchange="$.transform.changeLensSize(this.value)" style="width: 120px;" value="10"></td>
 			<td>
-				<input id="modeRadio" type="radio" name="mode" value="wave" onchange="$.transform.changeMode(0)"> Wave 
+				<input id="modeRadio" type="radio" name="mode" value="perspective" onchange="$.transform.changeMode(3)"> Perspective
+				<input type="radio" name="mode" value="wave" onchange="$.transform.changeMode(0)"> Wave 
 				<input type="radio" name="mode" value="curve" onchange="$.transform.changeMode(1)"> Curve
 				<input type="radio" name="mode" value="falsePerspective" onchange="$.transform.changeMode(2)"> False perspective
-				<input type="radio" name="mode" value="perspective" onchange="$.transform.changeMode(3)"> Perspective
 			</td>
 		</tr>
 	</tbody>
@@ -54,7 +54,7 @@ $.transform = (function() {
 	let loadingProgress = 0;
 	let textures = [];
 	
-	let mode = 0;
+	let mode = 3;
 	
 	let init = function() {
 
@@ -183,28 +183,58 @@ $.transform = (function() {
 	};
 	
 	let processPerspective = function(timestamp, x, y, widthImg, heightImg) {
-		let cx = x - width / 2;
-		let cy = y - height / 2;
-		let ratio = widthImg / width;
-		let projection = (height / 2) / Math.max(1, Math.abs(cy));
-		let lens = 10000 * lensMultiplier;
-		let timeYSlide = timestamp / 100 * lensMultiplier;
+			
+		// https://en.wikipedia.org/wiki/3D_projection#Diagram
+		// s screen coord (from screen center)
+		// m model coord (from screen center)
+		// f screen length (distance of screen from viewer)
+		// d model distance (distance of model from viewer)
+		// s = m * (f / d)
+		// d = m * (f / s)		
+
+		// pozice na obrazovce (počátek je ve středu)				
+		let cx = x - halfWidth;
+		let cy = y - halfHeight;
 		
-		let angleRad = toRad(90 + viewAngleOffset);
-		let xOffset = viewAngleOffset / 45 * (height / 2 - Math.abs(cy));
+		// střed, horizont, nekonečno
+		if (cy <= 0)
+			return { textureFill: false };			
+
+		// Y souřadnice musí být víc, jinak to bude jako kdybych koukal přilepený k podlaze
+		let my = 10 * height;
 		
-		let texX = Math.floor((cx + xOffset) * ratio * projection + widthImg / 2);
-		let texY = Math.floor(1 / Math.abs(cy) * ratio * lens + timeYSlide + Math.cos(angleRad) * (texX - widthImg / 2)) % heightImg;
-		if (texX >= 0 && texX < widthImg) {					
+		// pozice na textuře (počátek je ve středu) -- stojím u prostřed pole s texturou
+		let texStandX = widthImg / 2;
+		let texStandY = heightImg / 2;
+		
+		// focal length
+		let f = 1;
+				
+		let rx = 0.005;
+		
+		// TODO použít
+		let xOffset = timestamp / 10;
+		let rad = toRad(viewAngleOffset);
+		let xRotShift = Math.cos(rad);
+		let yRotShift = Math.sin(rad);
+								
+		// d = m * (f / s)
+		let d = my * f / cy;
+		let texY = Math.floor(texStandY + d) % heightImg;
+		// m = d * (s / f)
+		let m = rx * d * cx / f;
+		// pokud vyjde záporné číslo, musí se přepočítat, aby stále fungovalo navázání
+		let texX = Math.floor(texStandX + m % widthImg + widthImg) % widthImg;
+
+		if (texX >= 0 && texX < widthImg && texY >= 0 && texY < heightImg) {					
 			return {
 				textureFill: true,
-				texIdx: (texY * widthImg + texX) * 4
+				texIdx: (texY * widthImg + texX) * 4 // 4 byte jump
 			};
 		} else {
 			return { textureFill: false };
 		}		
 	};
-	
 	
 	let drawScene = function(timestamp) {	
 		// musí být nahrané textury
