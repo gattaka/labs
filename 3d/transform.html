@@ -61,7 +61,8 @@ $.transform = (function() {
 		canvas.addEventListener("mousemove", function (e) {
 			let bound = canvas.getBoundingClientRect();
 			let x = e.clientX - bound.x;
-			viewAngleOffset = 90 * (width / 2 - x) / (width / 2);			
+			viewAngleOffset = 360 * (halfWidth - x) / halfWidth;
+			rotateVector = rotateVectorFactory(toRad(viewAngleOffset), 0, 0);
 		}, false);
 		
 		textures.push({
@@ -182,6 +183,22 @@ $.transform = (function() {
 		}		
 	};
 	
+	// https://codereview.stackexchange.com/questions/47003/optimize-vector-rotation
+	let rotateVectorFactory = function(angle, x0, y0) {
+		let cos = Math.cos(angle);
+		let sin = Math.sin(angle);
+		return function(xp, yp) {
+			let x = xp - x0;
+			let y = yp - y0;
+			return {
+				x: x * cos - y * sin + x0,
+				y: x * sin + y * cos + y0,
+			};
+		}
+	}
+	
+	let rotateVector = rotateVectorFactory(0, 0, 0);
+	
 	let processPerspective = function(timestamp, x, y, widthImg, heightImg) {
 			
 		// https://en.wikipedia.org/wiki/3D_projection#Diagram
@@ -203,28 +220,28 @@ $.transform = (function() {
 		// Y souřadnice musí být víc, jinak to bude jako kdybych koukal přilepený k podlaze
 		let my = 10 * height;
 		
-		// pozice na textuře (počátek je ve středu) -- stojím u prostřed pole s texturou
-		let texStandX = widthImg / 2;
-		let texStandY = heightImg / 2;
-		
-		// focal length
-		let f = 1;
-				
-		let rx = 0.005;
-		
 		// TODO použít
 		let xOffset = timestamp / 10;
-		let rad = toRad(viewAngleOffset);
-		let xRotShift = Math.cos(rad);
-		let yRotShift = Math.sin(rad);
-								
+		
+		// pozice na textuře (počátek je ve středu) -- stojím u prostřed pole s texturou
+		let texStandX = widthImg / 2;
+		let texStandY = heightImg / 2 + xOffset;
+		
+		// focal length
+		let f = 2;
+				
+		let rx = 0.005;
+													
 		// d = m * (f / s)
 		let d = my * f / cy;
-		let texY = Math.floor(texStandY + d) % heightImg;
+		
 		// m = d * (s / f)
 		let m = rx * d * cx / f;
-		// pokud vyjde záporné číslo, musí se přepočítat, aby stále fungovalo navázání
-		let texX = Math.floor(texStandX + m % widthImg + widthImg) % widthImg;
+		
+		// otočení dle úhlu
+		let rotated = rotateVector(m, d);		
+		texX = Math.floor(texStandX + rotated.x % widthImg + widthImg) % widthImg;
+		texY = Math.floor(texStandY + rotated.y % heightImg + heightImg) % heightImg;
 
 		if (texX >= 0 && texX < widthImg && texY >= 0 && texY < heightImg) {					
 			return {
