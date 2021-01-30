@@ -14,7 +14,7 @@ $.raycast.units = (function() {
 
 	ret.cluToMvu = 20;
 	ret.mvuToClu = 1 / ret.cluToMvu;
-	ret.mvuToMmu = 0.5;
+	ret.mvuToMmu = 0.5;	
 	
 	ret.rad90 = Math.PI / 2;
 	ret.rad180 = ret.rad90 * 2;

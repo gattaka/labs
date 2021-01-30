@@ -36,7 +36,7 @@ $.raycast.controls = (function() {
 		if (player.rotHorDG < 0) player.rotHorDG += 360;
 		if (player.rotHorDG > 360) player.rotHorDG -= 360;
 		// ! zhoršuje performance
-		//angleSpan.innerHTML = player.rotHorDG;
+		angleSpan.innerHTML = player.rotHorDG;
 		//console.log(player.rotHorDG);
 		player.rotHorRD = $.raycast.units.toRad(player.rotHorDG);
 		//player.rotVerRD = mouseVSensitivity * (height / 2 - e.clientY);
