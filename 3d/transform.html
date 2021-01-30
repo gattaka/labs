@@ -210,6 +210,72 @@ $.transform = (function() {
 		// d = m * (f / s)		
 
 		// pozice na obrazovce (počátek je ve středu)				
+		let sx = x - halfWidth;
+		let sy = y - halfHeight;
+		
+		// střed, horizont, nekonečno
+		if (sy <= 0)
+			return { textureFill: false };			
+
+		// Y souřadnice musí být víc, jinak to bude jako kdybych koukal přilepený k podlaze
+		let my = heightImg / 2; //timestamp / 100;
+			
+		// pozice na textuře (počátek je ve středu) -- stojím u prostřed pole s texturou
+		let texStandX = widthImg / 2;
+		let texStandY = heightImg / 2 + timestamp / 10;
+		
+		// spočítám dvě projekce -- horizontální a vertikální		
+		
+		// focal length
+		let fh = 300;
+		// fv je přepona pro fh a sx
+		let fv = Math.sqrt(fh * fh + sx * sx);
+		// dv = my * (fv / sy)
+		let dv = my * fv / sy;
+		// cos(alfa) * fv = sx
+		let alfa = Math.acos(sx / fv);
+		// mx = cos(alfa) * dv
+		let mx = Math.cos(alfa) * dv;
+
+		// tan(alfa) = fh / sx
+		// cos(alfa) = sx / fv
+		// fh = sin(alfa) * fv
+		// dh = sin(alfa) * dv		
+		let dh = Math.sin(alfa) * dv;
+				
+		// otočení dle úhlu
+		let zoom = 1;
+		let rotated = rotateVector(mx * zoom, dh * zoom);		
+		texX = Math.floor(texStandX + rotated.x % widthImg + widthImg) % widthImg;
+		texY = Math.floor(texStandY + rotated.y % heightImg + heightImg) % heightImg;
+		
+		//texX = Math.floor(texStandX + rotated.x);
+		//texY = Math.floor(texStandY + rotated.y);
+		
+		//texX = Math.floor(texStandX + mx % widthImg + widthImg) % widthImg;
+		//texY = Math.floor(texStandY + dx % heightImg + heightImg) % heightImg;
+
+		if (texX >= 0 && texX < widthImg && texY >= 0 && texY < heightImg) {					
+			return {
+				textureFill: true,
+				texIdx: (texY * widthImg + texX) * 4 // 4 byte jump
+			};
+		} else {
+			return { textureFill: false };
+		}	
+	};
+	
+	let processPerspectiveA = function(timestamp, x, y, widthImg, heightImg) {
+			
+		// https://en.wikipedia.org/wiki/3D_projection#Diagram
+		// s screen coord (from screen center)
+		// m model coord (from screen center)
+		// f screen length (distance of screen from viewer)
+		// d model distance (distance of model from viewer)
+		// s = m * (f / d)
+		// d = m * (f / s)		
+
+		// pozice na obrazovce (počátek je ve středu)				
 		let cx = x - halfWidth;
 		let cy = y - halfHeight;
 		
