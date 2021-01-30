@@ -31,7 +31,7 @@ $.raycast.game = (function() {
 
 	// focal length
 	let foc = 300;
-	let extrusionHeight = 128 / 2;
+	let extrusionHeight = 32;
 	let collisionPadding = 1;
 
 	let loaded = false;
@@ -301,8 +301,8 @@ $.raycast.game = (function() {
 		return {
 			x: player.xMU,
 			y: player.yMU,
-			w: vec.x,
-			h: vec.y,			
+			w: vec.x * map.mapRadiusMvu,
+			h: vec.y * map.mapRadiusMvu,
 		};
 	};
 	
@@ -368,14 +368,23 @@ $.raycast.game = (function() {
 				
 		// otočení dle úhlu
 		let zoom = 1;
-		let rotated = rotateVector(mx * zoom, dh * zoom);		
-		//texX = Math.floor(texStandX + rotated.x % widthImg + widthImg) % widthImg;
-		//texY = Math.floor(texStandY + rotated.y % heightImg + heightImg) % heightImg;
+		let rotateVec = rotateVectorFactory(-player.rotHorRD, 0, 0)
+		let rotated = rotateVec(mx * zoom, dh * zoom);		
+		texX = Math.floor(texStandX + rotated.x % widthImg + widthImg) % widthImg;
+		texY = Math.floor(texStandY + rotated.y % heightImg + heightImg) % heightImg;
 		
-		texX = Math.floor(texStandX + rotated.x );
-		texY = Math.floor(texStandY + rotated.y ) ;
+		//texX = Math.floor(texStandX + rotated.x );
+		//texY = Math.floor(texStandY + rotated.y ) ;
+		
+		let lightMult = dv;
+		if (lightMult < darkMinVal) { 
+			lightMult = darkMinVal; 
+		} else if (lightMult > darkMaxVal - 1) {
+			lightMult = darkMaxVal - 1;
+		}
+		let texLight = Math.floor((lightMult - darkMinVal) * darkStepMult);
 
-		return { texX: texX, texY: texY };
+		return { texX: texX, texY: texY, texLight: texLight };
 	};
 
 	let drawScene = function() {
@@ -416,7 +425,7 @@ $.raycast.game = (function() {
 				let targetHeightScu = 2 * Math.abs(topSy);
 				let targetYScu = Math.floor(height / 2 - targetHeightScu / 2) + player.rotVerRD;	
 				let ratio = sourceHeightImg / targetHeightScu;
-				let texX = Math.floor(sourceXImg);
+				let texX = Math.floor(sourceXImg);				
 				
 				// pro každý řádek sloupce
 				let minTargetYScu = targetYScu;
@@ -431,10 +440,9 @@ $.raycast.game = (function() {
 						putPixel32(index, 0xFF << 24 | val << 16 | val << 8 | val);
 					} else if (sy > topSy) {
 						// podlaha
-						let floorTex = textures[0];
-						let light = 0;						
-						let floorTexData32 = floorTex.data32[0][light];
+						let floorTex = textures[0];			
 						let floorTexCoord = drawFloor(x, y, floorTex.width, floorTex.height);
+						let floorTexData32 = floorTex.data32[0][floorTexCoord.texLight];
 						let texIdx = floorTexCoord.texY * floorTex.width + floorTexCoord.texX;						
 						putPixel32(index, floorTexData32[texIdx]);
 					} else {
