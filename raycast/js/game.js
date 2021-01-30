@@ -88,8 +88,8 @@ $.raycast.game = (function() {
 		textures.push({ src: "../sprites/wall1_torch.jpg", width: 128, height: 128, frames: 4, delay: 200, shadow: false});
 		textures.push({	src: "../sprites/floor.png", width: 128, height: 128 });
 		
-		for (let i = 0; i < textures.length; i++) {
-			let texture = textures[i];		
+		for (let t = 0; t < textures.length; t++) {
+			let texture = textures[t];		
 			
 			// Převod MVU na IMG jednotky
 			texture.xMvuToImg = texture.width / uts.cluToMvu;
@@ -98,11 +98,8 @@ $.raycast.game = (function() {
 			texture.time = 0;
 			texture.size = texture.width * texture.height;
 			textureImg = new Image();
-			(function() {
-				let seafImg = textureImg;
-				let seafIndex = i;
-				textureImg.onload = function() {
-					let tex = textures[seafIndex];					
+			(function(tex, textureImg) {
+				textureImg.onload = function() {			
 					tex.data32 = [];		
 					let spriteXOffset = 0;
 					let spriteYOffset = 0;
@@ -126,7 +123,7 @@ $.raycast.game = (function() {
 							textureCanvas.width = texture.width;
 							textureCanvas.height = texture.height;
 							let textureCtx = textureCanvas.getContext("2d");
-							textureCtx.drawImage(seafImg, spriteXOffset, spriteYOffset, tex.width, tex.height, 0, 0, tex.width, tex.height);
+							textureCtx.drawImage(textureImg, spriteXOffset, spriteYOffset, tex.width, tex.height, 0, 0, tex.width, tex.height);
 							let texImageData = textureCtx.getImageData(0, 0, tex.width, tex.height);
 							// https://stackoverflow.com/questions/16679158/javascript-imagedata-typed-array-read-whole-pixel
 							let texBuf8 = texImageData.data.buffer;
@@ -147,13 +144,16 @@ $.raycast.game = (function() {
 							
 							texImageData.data.set(texBuf8);
 							textureCtx.putImageData(texImageData, 0, 0);
+							
+							if (!tex.shadow)
+								break;
 						}
 					}
 					loadingProgress++;
 					if (loadingProgress == textures.length)
 						loaded = true;
 				}
-			})();
+			})(texture, textureImg);
 			textureImg.src = texture.src;
 		}
 
