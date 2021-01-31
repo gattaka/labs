@@ -54,9 +54,9 @@ $.raycast.game = (function() {
 	let initSkybox = function() {
 		skybox = {
 			tex: textures[8],
-			xRatio: 90 / width,			
+			sxWidthToDeg: 90 / width,			
 		};
-		skybox.ratio = skybox.tex.width / 180;
+		skybox.degToTexWidth = skybox.tex.width / 180;
 		skybox.yRatio = skybox.tex.height / heightHalf;		
 		skybox.texData32 = skybox.tex.data32[0][0];
 	};
@@ -110,7 +110,7 @@ $.raycast.game = (function() {
 		textures.push({	src: "../sprites/corner.png", width: 128, height: 128 });
 		textures.push({	src: "../sprites/grate.png", width: 128, height: 128, frames: 4, delay: 200, shadow: false });
 		textures.push({	src: "../sprites/ceiling.png", width: 128, height: 128 });
-		textures.push({	src: "../sprites/sky.png", width: 256, height: 200, shadow: false, xShift: 0, delay: 1000, sky: true });
+		textures.push({	src: "../sprites/sky.png", width: 256, height: 200, shadow: false, xShift: 0, delay: 50, sky: true });
 		
 		for (let t = 0; t < textures.length; t++) {
 			let texture = textures[t];		
@@ -200,11 +200,15 @@ $.raycast.game = (function() {
 				tex.time += delay;
 				tex.frame = (tex.frame + Math.floor(tex.time / tex.delay)) % tex.frames;
 				tex.time = tex.time % tex.delay;
-			} else if (typeof tex.xShift !== 'undefined') {
-				tex.time += delay;
-				tex.xShift = (tex.xShift + Math.floor(tex.time / tex.delay)) % tex.width;
-				tex.time = tex.time % tex.delay;
 			}
+			/*
+			else if (typeof tex.xShift !== 'undefined') {
+				tex.time += delay;
+				tex.xShift = (tex.xShift + Math.floor(tex.time / tex.delay)) % 180;
+				tex.time = tex.time % tex.delay;
+				angleSpan.innerHTML = tex.xShift;
+			}
+			*/
 		}
 		ctr.updateSpeed();
 		updatePlayer();
@@ -243,7 +247,7 @@ $.raycast.game = (function() {
 
 	let getLines = function(y, x) {
 		if (y < 0 || y == map.mapRows || x < 0 || x == map.mapCols) return [];
-		return map.lines[y][x];
+		return map.lines[y * map.mapCols + x];
 	};
 	
 	let checkLines = function(lines, q, s, result) {
@@ -305,13 +309,13 @@ $.raycast.game = (function() {
 		while (x != xLimit && dx != 0 || y != yLimit && dy != 0) {
 			x += x == xLimit ? 0 : dx;
 			y += y == yLimit ? 0 : dy;
-			result = checkLines(map.lines[y][x], q, s, result);
+			result = checkLines(map.lines[y * map.mapCols + x], q, s, result);
 			
 			if (dy != 0) {
 				let cx = x;
 				while (cx != xmLimit) {
 					cx -= dx;
-					result = checkLines(map.lines[y][cx], q, s, result);
+					result = checkLines(map.lines[y * map.mapCols + cx], q, s, result);
 				}
 			}
 
@@ -319,7 +323,7 @@ $.raycast.game = (function() {
 				let cy = y;
 				while (cy != ymLimit) {
 					cy -= dy;
-					result = checkLines(map.lines[cy][x], q, s, result);
+					result = checkLines(map.lines[cy * map.mapCols + x], q, s, result);
 				}
 			}
 
@@ -351,9 +355,10 @@ $.raycast.game = (function() {
 	
 	let fvCache = new Float32Array();
 	
-	let drawSky = function(sx, sy) {				
-		let texX = Math.floor((sx * skybox.xRatio + player.rotHorDG + skybox.tex.xShift) * skybox.ratio);
-		let texY = Math.floor(skybox.tex.height + sy * skybox.yRatio);		
+	let drawSky = function(sx, sy) {	
+		//let texX = Math.floor((sx * skybox.sxWidthToDeg + player.rotHorDG + skybox.tex.xShift / 2) * skybox.degToTexWidth);
+		let texX = Math.floor((sx * skybox.sxWidthToDeg + player.rotHorDG) * skybox.degToTexWidth);		
+		let texY = Math.floor(skybox.tex.height + sy * skybox.yRatio);	
 		return skybox.texData32[texY * skybox.tex.width + texX];
 	};
 	
@@ -413,8 +418,7 @@ $.raycast.game = (function() {
 		let texX = Math.floor((xCLd - xCL) * texture.width);
 		let texY = Math.floor((yCLd - yCL) * texture.height);
 		let texData32 = texture.data32[texture.frame][texLight];
-		let texIdx = texY * texture.width + texX;
-		return texData32[texIdx];
+		return texData32[texY * texture.width + texX];
 	};
 
 	let drawScene = function() {

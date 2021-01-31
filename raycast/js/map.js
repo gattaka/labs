@@ -71,16 +71,13 @@ $.raycast.map = (function() {
 			let wallsRow = new Uint8Array(ret.mapCols);
 			let floorsRow = new Uint8Array(ret.mapCols);
 			ret.walls[yClu] = wallsRow;
-			let blueprintRow = blueprint[yClu];
-			let linesRow = ret.lines[yClu];
-			linesRow = [];
-			ret.lines[yClu] = linesRow;
+			let blueprintRow = blueprint[yClu];						 
 			for (let xClu = 0; xClu < ret.mapCols; xClu++) {
 				let value = blueprintRow[xClu];
 				if (typeof value === 'undefined' || value < 0) {
 					ret.floors[yClu * ret.mapCols + xClu] = value < 0 ? value * -1 : defaultFloor;
 					wallsRow[xClu] = 0;
-					linesRow[xClu] = [];
+					ret.lines[yClu * ret.mapCols + xClu] = [];
 					continue;
 				} else {
 					wallsRow[xClu] = value;
@@ -93,7 +90,7 @@ $.raycast.map = (function() {
 				// |	  |
 				// | <--- v		
 				let cellLines = [];
-				linesRow[xClu] = cellLines;
+				ret.lines[yClu * ret.mapCols + xClu] = cellLines;
 				if (xClu > 0 && hasNoWall(xClu - 1, yClu)) {
 					cellLines.push(createLine(xClu * cluToMvu, yClu * cluToMvu, 0, cluToMvu, value)); // left
 					linescount++;
