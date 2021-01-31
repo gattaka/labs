@@ -12,9 +12,9 @@ $.raycast.game = (function() {
 	let canvas;
 	let ctx;
 	let width;
+	let widthHalf;
 	let height;
 	let heightHalf;
-	let widthHalf;
 	
 	let imageData;
 	let buf;
@@ -27,12 +27,16 @@ $.raycast.game = (function() {
 	let lastTime = 0;
 	
 	// Player
-	let player;
+	let player;	
 
 	// focal length
 	let foc = 300;
+	let focfoc = foc * foc;
 	let extrusionHeight = 32;
 	let collisionPadding = 1;
+	
+	let floorRot;
+	let wallsRot;
 
 	let loaded = false;
 	let loadingProgress = 0;
@@ -54,6 +58,9 @@ $.raycast.game = (function() {
 		map = $.raycast.map.init();
 		mth = $.raycast.math;
 		
+		floorRot = mth.rotateVectorFactory(0, 0, 0);
+		wallsRot = floorRot;
+		
 		player = {
 			// pozice a orientace hráče na mapě
 			xMU: map.mapCols / 2 * uts.cluToMvu,
@@ -62,7 +69,8 @@ $.raycast.game = (function() {
 			yCL: -1,
 			rotHorDG: 90,
 			rotHorRD: uts.rad90,
-			rotVerRD: 0,		
+			rotVerRD: 0,	
+			angleChanged: true,
 		};
 		
 		mnp = $.raycast.minimap.init(ui.minimapCanvas, player, map);		
@@ -97,6 +105,8 @@ $.raycast.game = (function() {
 			texture.frame = 0;
 			texture.time = 0;
 			texture.size = texture.width * texture.height;
+			texture.widthHalf = texture.width / 2;
+			texture.heightHalf = texture.height / 2; 
 			textureImg = new Image();
 			(function(tex, textureImg) {
 				textureImg.onload = function() {			
@@ -180,8 +190,11 @@ $.raycast.game = (function() {
 	};
 
 	let updatePlayer = function() {
-		//rotateVector = rotateVectorFactory(-player.rotHorRD, player.xMU, player.yMU);
-		//rotateVector = rotateVectorFactory(-player.rotHorRD, 0, 0);
+		if (player.angleChanged) {
+			player.angleChanged = false;
+			floorRot = mth.rotateVectorFactory(-player.rotHorRD, 0, 0);
+			wallsRot = mth.rotateVectorFactory(player.rotHorRD - uts.rad90, 0, 0);
+		}
 		let dxMU = Math.cos(player.rotHorRD) * ctr.walkSpeedForwardMvu + Math.cos(player.rotHorRD - uts.rad90) * ctr.walkSpeedSideMvu;
 		let dyMU = Math.sin(player.rotHorRD) * ctr.walkSpeedForwardMvu + Math.sin(player.rotHorRD - uts.rad90) * ctr.walkSpeedSideMvu;
 		let draftxCL = Math.floor((player.xMU + dxMU + Math.sign(dxMU) * collisionPadding) / uts.cluToMvu);
@@ -218,7 +231,7 @@ $.raycast.game = (function() {
 
 			// If r × s = 0 and (q − p) × r = 0, then the two lines are collinear
 			// If r × s = 0 and (q − p) × r ≠ 0, then the two lines are parallel and non-intersecting.
-			// If r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t r = q + u s.
+			// If r × s ≠ 0 and 0 ≤ t ≤ 1 and 0 ≤ u ≤ 1, the two line segments meet at the point p + t.r = q + u.s.
 			// Otherwise, the two line segments are not parallel but do not intersect.					
 			// t = (q − p) × s / (r × s)
 			// u = (p − q) × r / (s × r)
@@ -234,8 +247,12 @@ $.raycast.game = (function() {
 						result = {
 							hit: true,
 							value: line.value, // TODO povrch stěny, ne celé kostky
-							distanceMvu: distanceMvu,
+							// bod ve kterém se paprsek setkal se stěnou (počátkem je hráč)
 							point: point,
+							// vzdálenost od hráče k bodu protnutí (délka vektoru hráč-point)
+							distanceMvu: distanceMvu,
+							// vektor linie, na které došlo k protnutí paprsku (počátkem je začátek linie)
+							// je potřeba pro zjištění offsetu textury při zobrazování pruhu stěny
 							p: p,
 						};
 				}
@@ -287,6 +304,7 @@ $.raycast.game = (function() {
 
 		if (typeof result.p !== 'undefined') {
 			// tohle má smysl počítat jen jednou a to až u toho nejbližšího hit záznamu
+			// vzdálenost od počátku stěny k bodu průniku stěny paprskem (bude použito na výpočet offsetu textury stěny)
 			result.lineOriginDistanceMvu = Math.sqrt(Math.pow(result.p.x - result.point.x, 2) + Math.pow(result.p.y - result.point.y, 2));
 		}
 
@@ -294,35 +312,20 @@ $.raycast.game = (function() {
 	};
 
 	let processRay = function(sx) {
-		let rotateVec = rotateVectorFactory(player.rotHorRD - uts.rad90, 0, 0)
+		// vytvoří paprsek od pozice hráče směrem ke stávajímu sloupci plátna
 		let w = -sx;
 		let h = foc;
-		let vec = rotateVec(w, foc);
+		// paprsek je otočen dle natočení hráče
+		let vec = wallsRot(w, foc);
 		return {
 			x: player.xMU,
 			y: player.yMU,
 			w: vec.x * map.mapRadiusMvu,
 			h: vec.y * map.mapRadiusMvu,
 		};
-	};
+	};	
 	
-	// https://codereview.stackexchange.com/questions/47003/optimize-vector-rotation
-	let rotateVectorFactory = function(angle, x0, y0) {
-		let cos = Math.cos(angle);
-		let sin = Math.sin(angle);
-		return function(xp, yp) {
-			let x = xp - x0;
-			let y = yp - y0;
-			return {
-				x: x * cos - y * sin + x0,
-				y: x * sin + y * cos + y0,
-			};
-		}
-	}
-	
-	let rotateVector = rotateVectorFactory(0, 0, 0);
-	
-	let drawFloor = function(x, y, widthImg, heightImg) {
+	let drawFloor = function(sx, sy, fv, texture) {
 			
 		// https://en.wikipedia.org/wiki/3D_projection#Diagram
 		// s screen coord (from screen center)
@@ -331,10 +334,6 @@ $.raycast.game = (function() {
 		// d model distance (distance of model from viewer)
 		// s = m * (f / d)
 		// d = m * (f / s)		
-
-		// pozice na obrazovce (počátek je ve středu)				
-		let sx = x - widthHalf;
-		let sy = y - heightHalf;
 		
 		// střed, horizont, nekonečno
 		if (sy <= 0)
@@ -345,14 +344,12 @@ $.raycast.game = (function() {
 		let fh = foc;
 			
 		// pozice na textuře (počátek je ve středu) -- stojím u prostřed pole s texturou
-		let texStandX = widthImg / 2 + player.yMU;
-		let texStandY = heightImg / 2 + player.xMU;
+		let texStandX = texture.widthHalf + player.yMU;
+		let texStandY = texture.heightHalf + player.xMU;
 		
 		// spočítám dvě projekce -- horizontální a vertikální		
 		
-		// focal length
-		// fv je přepona pro fh a sx
-		let fv = Math.sqrt(fh * fh + sx * sx);
+		// focal length		
 		// dv = my * (fv / sy)
 		let dv = my * fv / sy;
 		// cos(alfa) * fv = sx
@@ -368,8 +365,9 @@ $.raycast.game = (function() {
 				
 		// otočení dle úhlu
 		let zoom = 1;
-		let rotateVec = rotateVectorFactory(-player.rotHorRD, 0, 0)
-		let rotated = rotateVec(mx * zoom, dh * zoom);		
+		let rotated = floorRot(mx * zoom, dh * zoom);		
+		let widthImg = texture.width;
+		let heightImg = texture.height;
 		texX = Math.floor(texStandX + rotated.x % widthImg + widthImg) % widthImg;
 		texY = Math.floor(texStandY + rotated.y % heightImg + heightImg) % heightImg;
 		
@@ -392,21 +390,22 @@ $.raycast.game = (function() {
 		if (!loaded)
 			return;
 
-		let x = 0;
-		let hitResult;
-
 		// pro každý sloupec obrazovky
-		while (x < width) {
-			let sx = x - widthHalf;
+		let ax = 0;
+		let sx = -widthHalf;		
+		let hitResult;
+		let xIndex = 0;
+		while (sx < widthHalf) {
 			let ray = processRay(sx);			
 			hitResult = checkHit(ray);
 			if (hitResult.hit) {
-				let dv = Math.sqrt(Math.pow(player.xMU - hitResult.point.x, 2) + Math.pow(player.yMU - hitResult.point.y, 2));
-				// fh = Math.sqrt(foc * foc + sx * sx)
-				let fh = Math.sqrt(foc * foc + sx * sx);
-				// sy / fh = mv / dv
+				let dv = hitResult.distanceMvu;
+				// fv je přepona pro fh a sx
+				// fv = Math.sqrt(foc * foc + sx * sx)
+				let fv = Math.sqrt(focfoc + sx * sx);
+				// sy / fv = mv / dv
 				let mv = extrusionHeight;
-				let topSy = fh * mv / dv;
+				let topSy = fv * mv / dv;
 								
 				let texture = textures[hitResult.value - 1];
 				
@@ -423,43 +422,49 @@ $.raycast.game = (function() {
 				let sourceHeightImg = texture.height;
 				let sourceXImg = texture.xMvuToImg * hitResult.lineOriginDistanceMvu;
 				let targetHeightScu = 2 * Math.abs(topSy);
-				let targetYScu = Math.floor(height / 2 - targetHeightScu / 2) + player.rotVerRD;	
 				let ratio = sourceHeightImg / targetHeightScu;
+				let targetYScu = Math.floor(heightHalf - targetHeightScu / 2) + player.rotVerRD;	
 				let texX = Math.floor(sourceXImg);				
 				
 				// pro každý řádek sloupce
 				let minTargetYScu = targetYScu;
 				let maxTargetYScu = targetYScu + targetHeightScu;
-				let y = 0;
-				while (y < height) {
-					let sy = y - heightHalf;
-					let index = y * width + x;
+				let ay = 0;
+				let sy = -heightHalf;
+				let yIndex = 0;
+				while (sy < heightHalf) {
+					//let index = sx + widthHalf + (sy + heightHalf) * width;
+					//let index = xIndex + yIndex;
+					let index = ay * width + ax;
 					if (sy < -topSy) {	
 						// strop
-						let val = Math.floor(.2 * 0xFF * (heightHalf - y) / heightHalf);
-						putPixel32(index, 0xFF << 24 | val << 16 | val << 8 | val);
+						putPixel32(index, 0);
 					} else if (sy > topSy) {
 						// podlaha
 						let floorTex = textures[0];			
-						let floorTexCoord = drawFloor(x, y, floorTex.width, floorTex.height);
+						let floorTexCoord = drawFloor(sx, sy, fv, floorTex);
 						let floorTexData32 = floorTex.data32[0][floorTexCoord.texLight];
 						let texIdx = floorTexCoord.texY * floorTex.width + floorTexCoord.texX;						
 						putPixel32(index, floorTexData32[texIdx]);
 					} else {
-						let texY = Math.floor((y - minTargetYScu) * ratio);
+						let texY = Math.floor((sy + heightHalf - minTargetYScu) * ratio);
 						let texIdx = texY * texture.width + texX;						
 						putPixel32(index, texData32[texIdx]);
 					}
-					++y;
+					++sy;
+					++ay;
+					//yIndex += width;
 				}
-			} else {
+			} else {				
 				let y = 0;
-				while (y < height) { 	
-					putPixel32(y * width + x, 0);
+				while (y < height) {					
+					putPixel32(y * width + ax , 0);
 					++y;
 				}
 			}
-			++x;
+			++sx;
+			++ax;
+			//++xIndex;
 		}
 		
 		imageData.data.set(buf8);
