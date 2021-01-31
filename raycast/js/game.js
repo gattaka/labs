@@ -30,9 +30,9 @@ $.raycast.game = (function() {
 	let player;	
 
 	// focal length
-	let foc = 300;
+	let foc = 200;
 	let focfoc = foc * foc;
-	let extrusionHeight = 32;
+	let extrusionHeight = 16;
 	let collisionPadding = 1;
 	
 	let floorRot;
@@ -326,9 +326,8 @@ $.raycast.game = (function() {
 	};	
 	
 	let fvCache = [];
-	let alfaCache = [];
 	
-	let drawFloor = function(sx, sy, fv, texture) {
+	let drawFloor = function(sx, sy, fv) {
 			
 		// https://en.wikipedia.org/wiki/3D_projection#Diagram
 		// s screen coord (from screen center)
@@ -343,49 +342,25 @@ $.raycast.game = (function() {
 			return { textureFill: false };			
 
 		// pozice na textuře (počátek je ve středu) -- stojím u prostřed pole s texturou
-		let texStandX = texture.widthHalf + player.yMU;
-		let texStandY = texture.heightHalf + player.xMU;
+		let texStandX = player.yMU;
+		let texStandY = player.xMU;
 		
 		// spočítám dvě projekce -- horizontální a vertikální		
 		// vertikální 		
 		let my = extrusionHeight;
 		let fh = foc;
-		// dv = my * (fv / sy)
+		// dv / my = fv / sy  ->  dv = my * (fv / sy)
 		let dv = my * fv / sy;
 		
 		// horizontální
-		
-		// zbytečně náročné
-		//let alfa = Math.acos(sx / fv);
-		//let mx = Math.cos(alfa) * dv;
-		//let dh = Math.sin(alfa) * dv;
-		
-		// cos(alfa) * fv = sx
-		// mx = cos(alfa) * dv
-		// let mx = Math.cos(alfa) * dv;			
-		// mx / dv = sx / fv
-		// mx = dv * sx / fv
+		// mx / dv = sx / fv  ->  mx = dv * sx / fv
+		// dh / dv = fh / fv  ->  dh = dv * fh / fv
 		let mx = dv * sx / fv;
-
-		// tan(alfa) = fh / sx
-		// cos(alfa) = sx / fv
-		// fh = sin(alfa) * fv
-		// dh = sin(alfa) * dv		
-		// let dh = Math.sin(alfa) * dv;
-		// dh / dv = fh / fv
-		// dh = dv * fh / fv
 		let dh = dv * fh / fv;
 				
 		// otočení dle úhlu
 		let zoom = 1;
 		let rotated = floorRot(mx * zoom, dh * zoom);		
-		let widthImg = texture.width;
-		let heightImg = texture.height;
-		texX = Math.floor(texStandX + rotated.x % widthImg + widthImg) % widthImg;
-		texY = Math.floor(texStandY + rotated.y % heightImg + heightImg) % heightImg;
-		
-		//texX = Math.floor(texStandX + rotated.x );
-		//texY = Math.floor(texStandY + rotated.y ) ;
 		
 		let lightMult = dv;
 		if (lightMult < darkMinVal) { 
@@ -395,7 +370,24 @@ $.raycast.game = (function() {
 		}
 		let texLight = Math.floor((lightMult - darkMinVal) * darkStepMult);
 
-		return { texX: texX, texY: texY, texLight: texLight };
+		let xMU = texStandX + rotated.x;
+		let yMU = texStandY + rotated.y;
+		
+		let xCL = Math.floor(xMU * uts.mvuToClu);
+		let yCL = Math.floor(yMU * uts.mvuToClu);
+
+		if ((xCL + yCL) % 2 == 0) {							
+			let texture = textures[0];				
+			let widthImg = texture.width;
+			let heightImg = texture.height;				
+			let texX = Math.floor(xMU * texture.xMvuToImg) % widthImg;
+			let texY = Math.floor(yMU * texture.xMvuToImg) % heightImg;
+			let texData32 = texture.data32[0][texLight];
+			let texIdx = texY * widthImg + texX;						
+			return texData32[texIdx]
+		} else {
+			return 0;
+		}			
 	};
 
 	let drawScene = function() {
@@ -455,11 +447,8 @@ $.raycast.game = (function() {
 						putPixel32(index, 0);
 					} else if (sy > topSy) {
 						// podlaha
-						let floorTex = textures[0];			
-						let floorTexCoord = drawFloor(sx, sy, fv, floorTex);
-						let floorTexData32 = floorTex.data32[0][floorTexCoord.texLight];
-						let texIdx = floorTexCoord.texY * floorTex.width + floorTexCoord.texX;						
-						putPixel32(index, floorTexData32[texIdx]);
+						let pixel = drawFloor(sx, sy, fv);		
+						putPixel32(index, pixel);
 					} else {
 						let texY = Math.floor((sy + targetYScu) * texScale);						
 						let texIdx = texY * texture.width + texX;						
