@@ -30,7 +30,7 @@ $.raycast.game = (function() {
 	let player;	
 
 	// focal length
-	let foc = 200;
+	let foc = 300;
 	let focfoc = foc * foc;
 	let extrusionHeight = 16;
 	let collisionPadding = 1;
@@ -94,6 +94,9 @@ $.raycast.game = (function() {
 		textures.push({ src: "../sprites/wall1_torch.jpg", width: 128, height: 128, frames: 4, delay: 200, shadow: false});
 		textures.push({	src: "../sprites/floor.png", width: 128, height: 128 });
 		textures.push({	src: "../sprites/corner.png", width: 128, height: 128 });
+		textures.push({	src: "../sprites/grate.png", width: 128, height: 128, frames: 4, delay: 200, shadow: false });
+		textures.push({	src: "../sprites/ceiling.png", width: 128, height: 128 });
+		textures.push({	src: "../sprites/sky.png", width: 256, height: 200, shadow: false });
 		
 		for (let t = 0; t < textures.length; t++) {
 			let texture = textures[t];		
@@ -325,6 +328,17 @@ $.raycast.game = (function() {
 	
 	let fvCache = new Float32Array();
 	
+	let drawSky = function(sx, sy) {		
+		let texture = textures[8];		
+		let ratio = texture.width / 360;
+		let xRatio = 90 / width;
+		let texX = Math.floor((sx * xRatio + player.rotHorDG) * ratio);
+		let texY = Math.floor(texture.height + sy * texture.height / heightHalf);
+		let texData32 = texture.data32[0][0];
+		let texIdx = texY * texture.width + texX;
+		return texData32[texIdx];
+	};
+	
 	let drawFloor = function(sx, sy, fv) {
 			
 		// https://en.wikipedia.org/wiki/3D_projection#Diagram
@@ -352,17 +366,16 @@ $.raycast.game = (function() {
 		let mx = dv * sx * -1 / fv;
 		let dh = dv * fh / fv;
 				
-		// otočení dle úhlu
-		let zoom = 1;
-		let rotated = rotVec(mx * zoom, dh * zoom);
-		
 		let lightMult = dv;
 		if (lightMult < darkMinVal) { 
 			lightMult = darkMinVal; 
 		} else if (lightMult > darkMaxVal - 1) {
 			lightMult = darkMaxVal - 1;
 		}
-		let texLight = Math.floor((lightMult - darkMinVal) * darkStepMult);
+		
+		// otočení dle úhlu
+		let zoom = 1;
+		let rotated = rotVec(mx * zoom, dh * zoom);
 
 		let xMU = player.xMU + rotated.x;
 		let yMU = player.yMU + rotated.y;
@@ -374,13 +387,16 @@ $.raycast.game = (function() {
 		
 		// čtení z typovaného jednorozměrného pole je asi o 100ms rychlejší než 
 		// když je to dvourozměrné a nepočítá se index, ale rovnou se dá [y][x]
-		let texture = textures[map.floors[yCL * map.mapCols + xCL]];
+		let texture = textures[map.floors[yCL * map.mapCols + xCL]];		
+		//let texLight = texture.shadow ? Math.floor((lightMult - darkMinVal) * darkStepMult) : 0;
+		let texLight = texture.shadow ? Math.floor((lightMult - darkMinVal) * darkStepMult) : 0;
+		
 		//if (typeof texture === 'undefined') return 0;
 		let texX = Math.floor((xCLd - xCL) * texture.width);
 		let texY = Math.floor((yCLd - yCL) * texture.height);
-		let texData32 = texture.data32[0][texLight];
+		let texData32 = texture.data32[texture.frame][texLight];
 		let texIdx = texY * texture.width + texX;
-		return texData32[texIdx]		
+		return texData32[texIdx];
 	};
 
 	let drawScene = function() {
@@ -437,7 +453,8 @@ $.raycast.game = (function() {
 					let index = ay * width + ax;
 					if (sy < -topSy) {	
 						// strop
-						putPixel32(index, 0);
+						let pixel = drawSky(sx, sy, fv);		
+						putPixel32(index, pixel);
 					} else if (sy > topSy) {
 						// podlaha
 						let pixel = drawFloor(sx, sy, fv);		
