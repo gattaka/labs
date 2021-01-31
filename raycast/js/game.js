@@ -29,6 +29,9 @@ $.raycast.game = (function() {
 	// Player
 	let player;	
 
+	// Skybox
+	let skybox;
+
 	// focal length
 	let foc = 300;
 	let focfoc = foc * foc;
@@ -47,6 +50,16 @@ $.raycast.game = (function() {
 	let darkStep = (darkMaxVal - darkMinVal) / darkPrecision;
 	// multiplier forma
 	let darkStepMult = 1 / darkStep;
+
+	let initSkybox = function() {
+		skybox = {
+			tex: textures[8],
+			xRatio: 90 / width,			
+		};
+		skybox.ratio = skybox.tex.width / 180;
+		skybox.yRatio = skybox.tex.height / heightHalf;		
+		skybox.texData32 = skybox.tex.data32[0][0];
+	};
 
 	let innerInit = function() {
 		stats = new Stats();
@@ -92,11 +105,12 @@ $.raycast.game = (function() {
 		textures.push({	src: "../sprites/column.png", width: 128, height: 128 });
 		textures.push({	src: "../sprites/bookcase.png",	width: 128,	height: 128	});		
 		textures.push({ src: "../sprites/wall1_torch.jpg", width: 128, height: 128, frames: 4, delay: 200, shadow: false});
+		//textures.push({	src: "../sprites/floor2.png", width: 64, height: 64 });
 		textures.push({	src: "../sprites/floor.png", width: 128, height: 128 });
 		textures.push({	src: "../sprites/corner.png", width: 128, height: 128 });
 		textures.push({	src: "../sprites/grate.png", width: 128, height: 128, frames: 4, delay: 200, shadow: false });
 		textures.push({	src: "../sprites/ceiling.png", width: 128, height: 128 });
-		textures.push({	src: "../sprites/sky.png", width: 256, height: 200, shadow: false });
+		textures.push({	src: "../sprites/sky.png", width: 256, height: 200, shadow: false, xShift: 0, delay: 1000, sky: true });
 		
 		for (let t = 0; t < textures.length; t++) {
 			let texture = textures[t];		
@@ -161,6 +175,10 @@ $.raycast.game = (function() {
 								break;
 						}
 					}
+					
+					if (texture.sky) 
+						initSkybox();					
+					
 					loadingProgress++;
 					if (loadingProgress == textures.length)
 						loaded = true;
@@ -178,10 +196,15 @@ $.raycast.game = (function() {
 		lastTime = time;
 		for (let i = 0; i < textures.length; i++) {
 			let tex = textures[i];
-			if (tex.frames == 1) continue;
-			tex.time += delay;
-			tex.frame = (tex.frame + Math.floor(tex.time / tex.delay)) % tex.frames;
-			tex.time = tex.time % tex.delay;
+			if (tex.frames > 1) {
+				tex.time += delay;
+				tex.frame = (tex.frame + Math.floor(tex.time / tex.delay)) % tex.frames;
+				tex.time = tex.time % tex.delay;
+			} else if (typeof tex.xShift !== 'undefined') {
+				tex.time += delay;
+				tex.xShift = (tex.xShift + Math.floor(tex.time / tex.delay)) % tex.width;
+				tex.time = tex.time % tex.delay;
+			}
 		}
 		ctr.updateSpeed();
 		updatePlayer();
@@ -328,15 +351,10 @@ $.raycast.game = (function() {
 	
 	let fvCache = new Float32Array();
 	
-	let drawSky = function(sx, sy) {		
-		let texture = textures[8];		
-		let ratio = texture.width / 360;
-		let xRatio = 90 / width;
-		let texX = Math.floor((sx * xRatio + player.rotHorDG) * ratio);
-		let texY = Math.floor(texture.height + sy * texture.height / heightHalf);
-		let texData32 = texture.data32[0][0];
-		let texIdx = texY * texture.width + texX;
-		return texData32[texIdx];
+	let drawSky = function(sx, sy) {				
+		let texX = Math.floor((sx * skybox.xRatio + player.rotHorDG + skybox.tex.xShift) * skybox.ratio);
+		let texY = Math.floor(skybox.tex.height + sy * skybox.yRatio);		
+		return skybox.texData32[texY * skybox.tex.width + texX];
 	};
 	
 	let drawFloor = function(sx, sy, fv) {
