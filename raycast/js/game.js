@@ -325,6 +325,9 @@ $.raycast.game = (function() {
 		};
 	};	
 	
+	let fvCache = [];
+	let alfaCache = [];
+	
 	let drawFloor = function(sx, sy, fv, texture) {
 			
 		// https://en.wikipedia.org/wiki/3D_projection#Diagram
@@ -339,29 +342,39 @@ $.raycast.game = (function() {
 		if (sy <= 0)
 			return { textureFill: false };			
 
-		// Y souřadnice musí být víc, jinak to bude jako kdybych koukal přilepený k podlaze
-		let my = extrusionHeight;
-		let fh = foc;
-			
 		// pozice na textuře (počátek je ve středu) -- stojím u prostřed pole s texturou
 		let texStandX = texture.widthHalf + player.yMU;
 		let texStandY = texture.heightHalf + player.xMU;
 		
 		// spočítám dvě projekce -- horizontální a vertikální		
-		
-		// focal length		
+		// vertikální 		
+		let my = extrusionHeight;
+		let fh = foc;
 		// dv = my * (fv / sy)
 		let dv = my * fv / sy;
+		
+		// horizontální
+		
+		// zbytečně náročné
+		//let alfa = Math.acos(sx / fv);
+		//let mx = Math.cos(alfa) * dv;
+		//let dh = Math.sin(alfa) * dv;
+		
 		// cos(alfa) * fv = sx
-		let alfa = Math.acos(sx / fv);
 		// mx = cos(alfa) * dv
-		let mx = Math.cos(alfa) * dv;
+		// let mx = Math.cos(alfa) * dv;			
+		// mx / dv = sx / fv
+		// mx = dv * sx / fv
+		let mx = dv * sx / fv;
 
 		// tan(alfa) = fh / sx
 		// cos(alfa) = sx / fv
 		// fh = sin(alfa) * fv
 		// dh = sin(alfa) * dv		
-		let dh = Math.sin(alfa) * dv;
+		// let dh = Math.sin(alfa) * dv;
+		// dh / dv = fh / fv
+		// dh = dv * fh / fv
+		let dh = dv * fh / fv;
 				
 		// otočení dle úhlu
 		let zoom = 1;
@@ -402,12 +415,19 @@ $.raycast.game = (function() {
 				let dv = hitResult.distanceMvu;
 				// fv je přepona pro fh a sx
 				// fv = Math.sqrt(foc * foc + sx * sx)
-				let fv = Math.sqrt(focfoc + sx * sx);
+				let fv = fvCache[sx];
+				if (typeof fv == 'undefined') {
+					fv = Math.sqrt(focfoc + sx * sx);
+					fvCache[sx] = fv;
+				}
 				// sy / fv = mv / dv
-				let mv = extrusionHeight;
+				let mv = extrusionHeight;				
+				// protože je raycast symetrický, stačí půl-vzdálenost od středu
+				// obrazovky -- tohle číslo bude tím páde vždy kladné
 				let topSy = fv * mv / dv;
 								
 				let texture = textures[hitResult.value - 1];
+				let texX = Math.floor(texture.xMvuToImg * hitResult.lineOriginDistanceMvu);				
 				
 				let lightMult = dv;
 				if (lightMult < darkMinVal) { 
@@ -419,16 +439,10 @@ $.raycast.game = (function() {
 				let texData32 = texture.data32[texture.frame][texLight];
 								
 				// let sourceWidthImg = texture.xMvuToImg / mvuToScu;
-				let sourceHeightImg = texture.height;
-				let sourceXImg = texture.xMvuToImg * hitResult.lineOriginDistanceMvu;
-				let targetHeightScu = 2 * Math.abs(topSy);
-				let ratio = sourceHeightImg / targetHeightScu;
-				let targetYScu = Math.floor(heightHalf - targetHeightScu / 2) + player.rotVerRD;	
-				let texX = Math.floor(sourceXImg);				
+				let texScale = texture.heightHalf / topSy;	
+				let targetYScu = topSy + player.rotVerRD;	
 				
-				// pro každý řádek sloupce
-				let minTargetYScu = targetYScu;
-				let maxTargetYScu = targetYScu + targetHeightScu;
+				// pro každý řádek sloupce		
 				let ay = 0;
 				let sy = -heightHalf;
 				let yIndex = 0;
@@ -447,7 +461,7 @@ $.raycast.game = (function() {
 						let texIdx = floorTexCoord.texY * floorTex.width + floorTexCoord.texX;						
 						putPixel32(index, floorTexData32[texIdx]);
 					} else {
-						let texY = Math.floor((sy + heightHalf - minTargetYScu) * ratio);
+						let texY = Math.floor((sy + targetYScu) * texScale);						
 						let texIdx = texY * texture.width + texX;						
 						putPixel32(index, texData32[texIdx]);
 					}
