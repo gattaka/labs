@@ -39,7 +39,7 @@ $.raycast.minimap = (function() {
 		let minimapCellSize = uts.cluToMvu * uts.mvuToMmu;
 
 		for (let row = 0; row < map.mapRows; row++) {	
-			let rowData = map.map[row];
+			let rowData = map.walls[row];
 			let y = minimapHalfHeight - (Math.floor(map.mapRows / 2) - row) * minimapCellSize - minimapCellSize / 2;
 			for (let col = 0; col < map.mapCols; col++) {
 				let colData = rowData[col];
