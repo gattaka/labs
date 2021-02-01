@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title></title>
+    <title>GattRaycast</title>
 	<script type="text/javascript" src="../js/stats.min.js"></script>
 	<script type="text/javascript" src="../js/units.js"></script>
 	<script type="text/javascript" src="../js/math.js"></script>
@@ -11,41 +11,46 @@
 	<script type="text/javascript" src="../js/minimap.js"></script>
     <script type="text/javascript" src="../js/game.js"></script>
     <style type="text/css">
+		.container {
+			height: 100%;			
+			cursor: none;
+		}
+		.vertical-center {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			-ms-transform: translateY(-50%) translateX(-50%);
+			transform: translateY(-50%) translateX(-50%);
+		}
 		#perspectiveCanvas {
 			zoom: 2;
+		}
+		body {
+			background: black;			
 		}
     </style>
 </head>
 <body>
-	Ovládání: W - dopředu, S - dozadu, A - úkrok doleva, D - úkrok doprava, Myš - pohled
-	<table>
-		<tbody>
-			<tr>
-				<td>View angle (0-90°)</td>
-				<td>Lens size (5-20)</td>
-				<td>Angle</td>
-			</tr>
-			<tr>
-				<td><input id="viewAngle" 
-					onchange="$.perspective.changeViewAngle(this.value)" style="width: 120px;" value="50"></td>
-				<td><input id="lensSize"
-					onchange="$.perspective.changeLensSize(this.value)" style="width: 120px;" value="15"></td>
-				<td><span id="angleSpan" /></td>
-			</tr>
-		</tbody>
-	</table>
-	<div style="margin: 10px 0; display: inline-block; cursor: none;">
-		<canvas id="perspectiveCanvas" width="450" height="360" style="background: black"></canvas>
-	</div>
-	<div style="margin: 10px 0; display: inline-block;">
-		<canvas id="minimapCanvas" width="700" height="400"></canvas>
+	<div class="container">
+		<div class="vertical-center">
+			<canvas id="perspectiveCanvas" width="450" height="360" style="background: black"></canvas>
+		</div>
 	</div>
 	<script>
+		let canvas = document.getElementById("perspectiveCanvas"); 
 		let ui = {
-			canvas: document.getElementById("perspectiveCanvas"),
-			minimapCanvas: document.getElementById("minimapCanvas"),
-			angleSpan: document.getElementById("angleSpan"),
+			canvas: canvas,
+			ctx: canvas.getContext("2d"),
+			width: canvas.width,
+			height: canvas.height,			
 		};
+		ui.heightHalf = ui.height / 2;
+		ui.widthHalf = ui.width / 2;		
+		ui.imageData = ui.ctx.getImageData(0, 0, ui.width, ui.height);
+		ui.buf = new ArrayBuffer(ui.imageData.data.length);
+		ui.buf8 = new Uint8ClampedArray(ui.buf);
+		ui.data32 = new Uint32Array(ui.buf);
+		
 		$.raycast.game.init(ui);
 	</script>
 </body>

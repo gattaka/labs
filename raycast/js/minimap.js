@@ -9,12 +9,6 @@ $.raycast.minimap = (function() {
 	// minimap cursor
 	let cursorSideMmu = 10;	
 	
-	let minimapCtx;
-	let minimapWidth;
-	let minimapHeight;
-	let minimapHalfWidth;
-	let minimapHalfHeight;
-	
 	let mapColor = function(id, light) {
 		if (id == 0) 		
 			return "black";
@@ -25,29 +19,28 @@ $.raycast.minimap = (function() {
 	};
 	
 	let xMvuToMmu = function(xMvu) {
-		return minimapHalfWidth - (map.mapCols / 2 * uts.cluToMvu - xMvu) * uts.mvuToMmu;
+		return ui.widthHalf - (map.mapCols / 2 * uts.cluToMvu - xMvu) * uts.mvuToMmu;
 	};
 	
 	let yMvuToMmu = function(yMvu) {
-		return minimapHalfHeight - (map.mapRows / 2 * uts.cluToMvu - yMvu) * uts.mvuToMmu;
+		return ui.heightHalf - (map.mapRows / 2 * uts.cluToMvu - yMvu) * uts.mvuToMmu;
 	};
 	
 	let drawMinimap = function() {
-		minimapCtx.fillStyle = "black";
-		minimapCtx.fillRect(0, 0, minimapWidth, minimapHeight);
+		ui.ctx.fillStyle = "black";
+		ui.ctx.fillRect(0, 0, ui.width, ui.height);
 
 		let minimapCellSize = uts.cluToMvu * uts.mvuToMmu;
 
 		for (let row = 0; row < map.mapRows; row++) {	
-			let rowData = map.walls[row];
-			let y = minimapHalfHeight - (Math.floor(map.mapRows / 2) - row) * minimapCellSize - minimapCellSize / 2;
+			let y = ui.heightHalf - (Math.floor(map.mapRows / 2) - row) * minimapCellSize - minimapCellSize / 2;
 			for (let col = 0; col < map.mapCols; col++) {
-				let colData = rowData[col];
-				if (colData == 0)
+				let wall = map.walls[row * map.mapCols + col];
+				if (wall == 0)
 					continue;
-				let x = minimapHalfWidth - (Math.floor(map.mapCols / 2) - col) * minimapCellSize;
-				minimapCtx.fillStyle = mapColor(colData); 
-				minimapCtx.fillRect(x, y, minimapCellSize, minimapCellSize);
+				let x = ui.widthHalf - (Math.floor(map.mapCols / 2) - col) * minimapCellSize;
+				ui.ctx.fillStyle = mapColor(wall); 
+				ui.ctx.fillRect(x, y, minimapCellSize, minimapCellSize);
 			}
 		}
 		
@@ -61,16 +54,16 @@ $.raycast.minimap = (function() {
 		let rayXMmu = xMvuToMmu(rayXMvu);
 		let rayYMmu = yMvuToMmu(rayYMvu);
 		
-		minimapCtx.beginPath();
-		minimapCtx.lineWidth = 2; 
-		minimapCtx.strokeStyle = "white";
-		minimapCtx.moveTo(playerXMmu, playerYMmu);
-		minimapCtx.lineTo(rayXMmu, rayYMmu);
-		minimapCtx.stroke();
+		ui.ctx.beginPath();
+		ui.ctx.lineWidth = 2; 
+		ui.ctx.strokeStyle = "white";
+		ui.ctx.moveTo(playerXMmu, playerYMmu);
+		ui.ctx.lineTo(rayXMmu, rayYMmu);
+		ui.ctx.stroke();
 	};
 	
 	let drawCursor = function(playerXMmu, playerYMmu) {
-		minimapCtx.strokeStyle = "red";						
+		ui.ctx.strokeStyle = "red";						
 		
 		let orientRad = plr.rotHorRD;
 		let midVertX = playerXMmu + Math.cos(orientRad) * cursorSideMmu;
@@ -84,24 +77,19 @@ $.raycast.minimap = (function() {
 		let rightVertX = playerXMmu + Math.cos(rightVertRad) * cursorSideMmu;
 		let rightVertY = playerYMmu + Math.sin(rightVertRad) * cursorSideMmu;
 		
-		minimapCtx.beginPath();
-		minimapCtx.lineWidth = 2; 
-		minimapCtx.strokeStyle = "red"; 
-		minimapCtx.moveTo(leftVertX, leftVertY);
-		minimapCtx.lineTo(midVertX, midVertY);
-		minimapCtx.lineTo(rightVertX, rightVertY);
-		minimapCtx.stroke();		
+		ui.ctx.beginPath();
+		ui.ctx.lineWidth = 2; 
+		ui.ctx.strokeStyle = "red"; 
+		ui.ctx.moveTo(leftVertX, leftVertY);
+		ui.ctx.lineTo(midVertX, midVertY);
+		ui.ctx.lineTo(rightVertX, rightVertY);
+		ui.ctx.stroke();		
 	};
 	
 	let ret = {};	
 	ret.drawMinimap = drawMinimap;
-	ret.init = function(minimapCanvas, player, mapRef) {
-		minimapCtx = minimapCanvas.getContext("2d");
-		minimapWidth = minimapCanvas.width;
-		minimapHeight = minimapCanvas.height;
-		minimapHalfWidth = minimapWidth / 2; 
-		minimapHalfHeight = minimapHeight / 2;	
-
+	ret.init = function(uiRef, player, mapRef) {
+		ui = uiRef;
 		uts = $.raycast.units;
 		plr = player;
 		map = mapRef;
