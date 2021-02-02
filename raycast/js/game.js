@@ -8,21 +8,6 @@ $.raycast.game = (function() {
 	let mnp;	// minimap
 	let ctr;	// controls
 	let mth;	// math
-	let textures = [];
-	
-	let canvas;
-	let ctx;
-	let width;
-	let widthHalf;
-	let height;
-	let heightHalf;
-	
-	let imageData;
-	let buf;
-	let buf8;
-	let data32;
-	
-	let angleSpan;	
 		
 	let stats;		
 	let lastTime = 0;
@@ -43,6 +28,7 @@ $.raycast.game = (function() {
 
 	let loaded = false;
 	let loadingProgress = 0;
+	let textures = [];
 
 	let darkPrecision = 10;
 	let darkMinVal = 0;
@@ -54,10 +40,10 @@ $.raycast.game = (function() {
 	let initSkybox = function() {
 		skybox = {
 			tex: textures[8],
-			sxWidthToDeg: 90 / width,			
+			sxWidthToDeg: 90 / ui.width,			
 		};
 		skybox.degToTexWidth = skybox.tex.width / 180;
-		skybox.yRatio = skybox.tex.height / heightHalf;		
+		skybox.yRatio = skybox.tex.height / ui.heightHalf;		
 		skybox.texData32 = skybox.tex.data32[0][0];
 	};
 
@@ -84,22 +70,11 @@ $.raycast.game = (function() {
 			angleChanged: true,
 		};
 		
-		mnp = $.raycast.minimap.init(ui.minimapCanvas, player, map);		
-		ctr = $.raycast.controls.init(ui, player);
-		
-		ctx = canvas.getContext("2d");
-		width = canvas.width;
-		height = canvas.height;
-		heightHalf = height / 2;
-		widthHalf = width / 2;
-		
-		imageData = ctx.getImageData(0, 0, width, height);
-		buf = new ArrayBuffer(imageData.data.length);
-		buf8 = new Uint8ClampedArray(buf);
-		data32 = new Uint32Array(buf);
+		mnp = $.raycast.minimap.init(ui, player, map);		
+		ctr = $.raycast.controls.init(ui, player);		
 		
 		angleRange = 50 * uts.rad90 / 90;
-		angleIncr = angleRange / width;
+		angleIncr = angleRange / ui.width;
 		
 		for (let t = 0; t < textures.length; t++) {
 			let texture = textures[t];		
@@ -201,8 +176,11 @@ $.raycast.game = (function() {
 		}
 		ctr.updateSpeed();
 		updatePlayer();
-		mnp.drawMinimap();
-		drawScene();
+		if (ctr.showMinimap) {
+			mnp.drawMinimap();
+		} else {
+			drawScene();
+		}
 		stats.end();
 		window.requestAnimationFrame(draw);
 	};
@@ -218,16 +196,16 @@ $.raycast.game = (function() {
 		let draftyCL = Math.floor((player.yMU + dyMU + Math.sign(dyMU) * collisionPadding) / uts.cluToMvu);
 		if (player.xCL == -1) player.xCL = draftxCL;
 		if (player.yCL == -1) player.yCL = draftyCL;
-		if (draftyCL >= 0 && draftyCL < map.mapRows && draftxCL >= 0 && draftxCL <= map.mapCols) {
-			if (map.walls[draftyCL][draftxCL] == 0) {			
+		if (draftyCL >= 0 && draftyCL < map.mapRows && draftxCL >= 0 && draftxCL <= map.mapCols) {			
+			if (map.walls[draftyCL * map.mapCols + draftxCL] == 0) {			
 				player.xMU += dxMU;
 				player.yMU += dyMU;
 				player.xCL = draftxCL;
 				player.yCL = draftyCL;
-			} else if (map.walls[player.yCL][draftxCL] == 0){
+			} else if (map.walls[player.yCL * map.mapCols + draftxCL] == 0){
 				player.xMU += dxMU;
 				player.xCL = draftxCL;
-			} else if (map.walls[draftyCL][player.xCL] == 0){
+			} else if (map.walls[draftyCL * map.mapCols + player.xCL] == 0){
 				player.yMU += dyMU;
 				player.yCL = draftyCL;
 			}
@@ -417,10 +395,10 @@ $.raycast.game = (function() {
 
 		// pro každý sloupec obrazovky
 		let ax = 0;
-		let sx = -widthHalf;		
+		let sx = -ui.widthHalf;		
 		let hitResult;
 		let xIndex = 0;
-		while (sx < widthHalf) {
+		while (sx < ui.widthHalf) {
 			let ray = processRay(-sx);			
 			hitResult = checkHit(ray);
 			if (hitResult.hit) {
@@ -456,12 +434,12 @@ $.raycast.game = (function() {
 				
 				// pro každý řádek sloupce		
 				let ay = 0;
-				let sy = -heightHalf;
+				let sy = -ui.heightHalf;
 				let yIndex = 0;
-				while (sy < heightHalf) {
-					//let index = sx + widthHalf + (sy + heightHalf) * width;
+				while (sy < ui.heightHalf) {
+					//let index = sx + ui.widthHalf + (sy + ui.heightHalf) * ui.width;
 					//let index = xIndex + yIndex;
-					let index = ay * width + ax;
+					let index = ay * ui.width + ax;
 					if (sy < -topSy) {	
 						// strop
 						let pixel = drawSky(sx, sy, fv);		
@@ -477,12 +455,12 @@ $.raycast.game = (function() {
 					}
 					++sy;
 					++ay;
-					//yIndex += width;
+					//yIndex += ui.width;
 				}
 			} else {				
 				let y = 0;
-				while (y < height) {					
-					putPixel32(y * width + ax , 0);
+				while (y < ui.height) {					
+					putPixel32(y * ui.width + ax , 0);
 					++y;
 				}
 			}
@@ -491,47 +469,22 @@ $.raycast.game = (function() {
 			//++xIndex;
 		}
 		
-		imageData.data.set(buf8);
-		ctx.putImageData(imageData, 0, 0);
+		ui.imageData.data.set(ui.buf8);
+		ui.ctx.putImageData(ui.imageData, 0, 0);
 	}
  
 	// https://hacks.mozilla.org/2011/12/faster-canvas-pixel-manipulation-with-typed-arrays/
 	// https://jsperf.com/canvas-pixel-manipulation
 	let putPixel32 = function(index, pixel32) {
-		data32[index] = pixel32;
+		ui.data32[index] = pixel32;
 	};
 
 	return {
 
 		init: function(uiRef, texturesRef) {			
-			ui = uiRef;
-			canvas = ui.canvas;
-			angleSpan = ui.angleSpan;	
-			textures = texturesRef
-			
+			ui = uiRef;			
+			textures = texturesRef;
 			innerInit();
-		},
-
-		changeViewAngle: function(value) {
-			if (isNaN(value))
-				return;
-			let newValue = Number(value);
-			console.log("viewAngle changed from '" + angleRange + "' to '" + newValue + "'");
-			angleRange = toRad(newValue);
-			angleIncr = angleRange / width;
-		},
-
-		changeLensSize: function(value) {
-			if (isNaN(value))
-				return;
-			let newValue = Number(value);
-			console.log("lensSize changed from '" + lensMultiplier + "' to '" + newValue + "'");
-			lensMultiplier = newValue;
-		},
-
-		changeShowLight: function(value) {
-			console.log("showLight changed from '" + showLight + "' to '" + value + "'");
-			showLight = value;
 		},
 	};
 	

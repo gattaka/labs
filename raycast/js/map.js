@@ -43,7 +43,7 @@ $.raycast.map = (function() {
 	ret.mapCols = blueprint[0].length;
 	
 	let defaultFloor = 4;
-	ret.walls = [];
+	ret.walls = new Uint8Array(ret.mapRows * ret.mapCols);
 	ret.floors = new Uint8Array(ret.mapRows * ret.mapCols);
 	
 	ret.lines = [];	
@@ -67,21 +67,19 @@ $.raycast.map = (function() {
 				
 		ret.mapRadiusMvu = Math.sqrt(ret.mapRows * ret.mapRows + ret.mapCols * ret.mapCols) * cluToMvu; 
 		let linescount = 0;
-		for (let yClu = 0; yClu < ret.mapRows; yClu++) {
-			let wallsRow = new Uint8Array(ret.mapCols);
-			let floorsRow = new Uint8Array(ret.mapCols);
-			ret.walls[yClu] = wallsRow;
+		for (let yClu = 0; yClu < ret.mapRows; yClu++) {			
 			let blueprintRow = blueprint[yClu];						 
 			for (let xClu = 0; xClu < ret.mapCols; xClu++) {
 				let value = blueprintRow[xClu];
+				let index = yClu * ret.mapCols + xClu;
 				if (typeof value === 'undefined' || value < 0) {
-					ret.floors[yClu * ret.mapCols + xClu] = value < 0 ? value * -1 : defaultFloor;
-					wallsRow[xClu] = 0;
-					ret.lines[yClu * ret.mapCols + xClu] = [];
+					ret.floors[index] = value < 0 ? value * -1 : defaultFloor;
+					ret.walls[index] = 0;
+					ret.lines[index] = [];
 					continue;
 				} else {
-					wallsRow[xClu] = value;
-					floorsRow[xClu] = 0;
+					ret.walls[index] = value;
+					ret.floors[index] = 0;
 				}
 				// přímky buňky -- je potřeba aby byly zachovány normály, 
 				// které poslouží k odlišení počátku přímky od jejího konce

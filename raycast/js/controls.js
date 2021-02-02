@@ -5,6 +5,7 @@ $.raycast.controls = (function() {
 	let ret = {
 		walkSpeedForwardMvu: 0,
 		walkSpeedSideMvu: 0,
+		showMinimap: false,
 	};
 	
 	let walkSpeedStepMvu = 2;
@@ -63,10 +64,27 @@ $.raycast.controls = (function() {
 	
 	let changeState = function(event, state) {
 		switch (event.keyCode) {
-			case 87: forward = state; break;
-			case 83: back = state; break;
-			case 65: left = state; break;
-			case 68: right = state; break;
+			case 87: 
+				forward = state; 
+				break;
+				event.preventDefault();
+			case 83: 
+				back = state; 
+				event.preventDefault();
+				break;
+			case 65: 
+				left = state; 
+				event.preventDefault();
+				break;
+			case 68: 
+				right = state; 
+				event.preventDefault();
+				break;
+			case 77:
+			case 9: 
+				if (state) ret.showMinimap = !ret.showMinimap; 
+				event.preventDefault();
+				break;
 		}
 	}
 	
