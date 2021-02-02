@@ -8,6 +8,7 @@ $.raycast.game = (function() {
 	let mnp;	// minimap
 	let ctr;	// controls
 	let mth;	// math
+	let textures = [];
 	
 	let canvas;
 	let ctx;
@@ -42,7 +43,6 @@ $.raycast.game = (function() {
 
 	let loaded = false;
 	let loadingProgress = 0;
-	let textures = [];
 
 	let darkPrecision = 10;
 	let darkMinVal = 0;
@@ -100,17 +100,6 @@ $.raycast.game = (function() {
 		
 		angleRange = 50 * uts.rad90 / 90;
 		angleIncr = angleRange / width;
-		
-		textures.push({ src: "../sprites/wall1.jpg", width: 128, height: 128 });
-		textures.push({	src: "../sprites/column.png", width: 128, height: 128 });
-		textures.push({	src: "../sprites/bookcase.png",	width: 128,	height: 128	});		
-		textures.push({ src: "../sprites/wall1_torch.jpg", width: 128, height: 128, frames: 4, delay: 200, shadow: false});
-		//textures.push({	src: "../sprites/floor2.png", width: 64, height: 64 });
-		textures.push({	src: "../sprites/floor.png", width: 128, height: 128 });
-		textures.push({	src: "../sprites/corner.png", width: 128, height: 128 });
-		textures.push({	src: "../sprites/grate.png", width: 128, height: 128, frames: 4, delay: 200, shadow: false });
-		textures.push({	src: "../sprites/ceiling.png", width: 128, height: 128 });
-		textures.push({	src: "../sprites/sky.png", width: 256, height: 200, shadow: false, xShift: 0, delay: 50, sky: true });
 		
 		for (let t = 0; t < textures.length; t++) {
 			let texture = textures[t];		
@@ -514,10 +503,11 @@ $.raycast.game = (function() {
 
 	return {
 
-		init: function(uiRef) {			
+		init: function(uiRef, texturesRef) {			
 			ui = uiRef;
 			canvas = ui.canvas;
-			angleSpan = ui.angleSpan;								
+			angleSpan = ui.angleSpan;	
+			textures = texturesRef
 			
 			innerInit();
 		},
