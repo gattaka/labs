@@ -344,25 +344,25 @@ $.raycast.game = (function() {
 			// pokud je a < 0, pak je protnutí vektorů za zády hráče
 			if (a < 0) {
 				++o; continue;
-			}
-			
+			}		
 
 			// vzdálenost S od středu sprinte P
-			let dp = Math.sqrt(Math.pow(xp - xs, 2) + Math.pow(yp - ys, 2));
+			let dsp = Math.sqrt(Math.pow(xp - xs, 2) + Math.pow(yp - ys, 2));
 			// Je sprite v paprsku?
-			if (dp > object.w / 2) {
+			if (dsp > object.w / 2) {
 				++o; continue;
 			}
 				
 			// vzdálenost bodu S od kamery K
-			let ds = Math.sqrt(Math.pow(xk - xs, 2) + Math.pow(yk - ys, 2));	
+			let dks = Math.sqrt(Math.pow(xk - xs, 2) + Math.pow(yk - ys, 2));	
 			// není objekt krytý stěnou?
-			if (typeof result.p === 'undefined' || ds < result.distanceMvu) {
+			if (typeof result.p === 'undefined' || dks < result.distanceMvu) {
 				result.objects.push({
 					object: object,
 					xs: xs,
 					ys: ys,
-					ds: ds,					
+					dks: dks,		
+					dsp: Math.sign(b) * dsp + object.w / 2
 				});
 			}
 			++o;
@@ -459,6 +459,41 @@ $.raycast.game = (function() {
 		return texData32[texY * texture.width + texX];
 	};
 
+	let drawSprite = function(hitResult, sx, sy, fv, index) {
+		let o = 0, len = hitResult.objects.length;
+		while (o < len) {
+			let objectHit = hitResult.objects[o];			
+			let object = objectHit.object;
+			let dv = objectHit.dks;
+			
+			// sy / fv = mv / dv
+			let mv = object.h;
+			// protože je raycast symetrický, stačí půl-vzdálenost od středu
+			// obrazovky -- tohle číslo bude tím páde vždy kladné
+			let topSy = fv * mv / dv;
+							
+			let texture = textures[object.texture];
+			let texX = Math.floor(texture.xMvuToImg * objectHit.dsp);				
+			
+			let lightMult = dv;
+			if (lightMult < darkMinVal) { 
+				lightMult = darkMinVal; 
+			} else if (lightMult > darkMaxVal - 1) {
+				lightMult = darkMaxVal - 1;
+			}
+			let texLight = texture.shadow ? Math.floor((lightMult - darkMinVal) * darkStepMult) : 0;
+			let texData32 = texture.data32[texture.frame][texLight];
+			let texScale = texture.heightHalf / topSy;	
+					
+			let texY = Math.floor((sy + topSy) * texScale);						
+			let texIdx = texY * texture.width + texX;						
+			putPixel32(index, texData32[texIdx]);
+			return true;
+			++o;							
+		}
+		return false;
+	};
+
 	let drawScene = function() {
 		// musí být nahrané textury
 		if (!loaded)
@@ -509,15 +544,8 @@ $.raycast.game = (function() {
 					//let index = xIndex + yIndex;
 					let index = ay * ui.width + ax;
 					let filled = false;
-					if (hitResult.objects.length > 0) {
-						let o = 0, len = hitResult.objects.length;
-						while (o < len) {
-							let object = hitResult.objects[o];
-							putPixel32(index, (0xFF << 24) | (0 << 16) | (0 << 8) | 0xFF);
-							++o;							
-						}
-						filled = true;
-					}
+					if (hitResult.objects.length > 0) 
+						filled = drawSprite(hitResult, sx, sy, fv, index);
 					if (!filled) {
 						if (sy < -topSy) {	
 							// strop
