@@ -16,6 +16,11 @@ $.raycast.game = (function() {
 	let player;	
 	let objects = [];
 
+	// Cache
+	let fvCache;
+	let skyXCache;
+	let skyYCache;
+
 	// Skybox
 	let skybox;
 
@@ -52,6 +57,10 @@ $.raycast.game = (function() {
 		stats = new Stats();
 		stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
 		document.body.appendChild(stats.dom);
+		
+		fvCache = new Float32Array(ui.width);	
+		skyXCache = new Float32Array(ui.width);
+		skyYCache = new Float32Array(ui.width);
 		
 		uts = $.raycast.units;
 		map = $.raycast.map.init();
@@ -177,14 +186,6 @@ $.raycast.game = (function() {
 				tex.frame = (tex.frame + Math.floor(tex.time / tex.delay)) % tex.frames;
 				tex.time = tex.time % tex.delay;
 			}
-			/*
-			else if (typeof tex.xShift !== 'undefined') {
-				tex.time += delay;
-				tex.xShift = (tex.xShift + Math.floor(tex.time / tex.delay)) % 180;
-				tex.time = tex.time % tex.delay;
-				angleSpan.innerHTML = tex.xShift;
-			}
-			*/
 		}
 		ctr.updateSpeed();
 		updatePlayer();
@@ -395,12 +396,18 @@ $.raycast.game = (function() {
 		};
 	};	
 	
-	let fvCache = new Float32Array();
-	
-	let drawSky = function(sx, sy) {	
-		//let texX = Math.floor((sx * skybox.sxWidthToDeg + player.rotHorDG + skybox.tex.xShift / 2) * skybox.degToTexWidth);
-		let texX = Math.floor((sx * skybox.sxWidthToDeg + player.rotHorDG) * skybox.degToTexWidth);		
-		let texY = Math.floor(skybox.tex.height + sy * skybox.yRatio);	
+	let drawSky = function(ax, ay) {	
+		let skx = skyXCache[ax];
+		if (typeof skx == 'undefined' || skx == 0) {
+			skx = ax * skybox.sxWidthToDeg * skybox.degToTexWidth;
+			skyXCache[ax] = skx;
+		}
+		let texY = skyYCache[ay];
+		if (typeof texY == 'undefined' || texY == 0) {
+			texY = Math.floor(ay * skybox.yRatio);
+			skyYCache[ay] = texY;
+		}
+		let texX = Math.floor(skx + player.rotHorDG * skybox.degToTexWidth);		
 		return skybox.texData32[texY * skybox.tex.width + texX];
 	};
 	
@@ -521,10 +528,10 @@ $.raycast.game = (function() {
 				let dv = hitResult.distanceMvu;
 				// fv je přepona pro fh a sx
 				// fv = Math.sqrt(foc * foc + sx * sx)
-				let fv = fvCache[sx];
-				if (typeof fv == 'undefined') {
+				let fv = fvCache[ax];
+				if (typeof fv == 'undefined' || fv == 0) {
 					fv = Math.sqrt(focfoc + sx * sx);
-					fvCache[sx] = fv;
+					fvCache[ax] = fv;
 				}
 				// sy / fv = mv / dv
 				let mv = extrusionHeight;				
@@ -559,7 +566,7 @@ $.raycast.game = (function() {
 					if (!filled) {
 						if (sy < -topSy) {	
 							// strop
-							let pixel = drawSky(sx, sy, fv);		
+							let pixel = drawSky(ax, ay, fv);		
 							putPixel32(index, pixel);
 						} else if (sy > topSy) {
 							// podlaha
