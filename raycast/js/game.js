@@ -78,10 +78,10 @@ $.raycast.game = (function() {
 		
 		objects.push({
 			texture: 9,
-			x: 7 * uts.cluToMvu, // MU
-			y: 5 * uts.cluToMvu, // MU
-			w: 53,
-			h: 123,
+			x: 7.5 * uts.cluToMvu, // MU
+			y: 5.5 * uts.cluToMvu, // MU
+			w: 1 * uts.cluToMvu,
+			h: 1 * uts.cluToMvu,
 		});
 		
 		for (let t = 0; t < textures.length; t++) {
@@ -131,12 +131,16 @@ $.raycast.game = (function() {
 							if (lightMult < 1 && tex.shadow) {
 								for (let index = 0; index < tex.size; index++) {
 									let color = texData32[index];
-									// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
-									let r = lightMult * (color & 0xFF);
-									let g = lightMult * (color >> 8 & 0xFF);
-									let b = lightMult * (color >> 16 & 0xFF);
-									let a = color >> 24 & 0xFF;
-									texData32[index] = (a << 24) | (b << 16) | (g << 8) | r;
+									if (color == texture.alphaKey) {
+										texData32[index] = color;
+									} else {
+										// https://stackoverflow.com/questions/6615002/given-an-rgb-value-how-do-i-create-a-tint-or-shade/6615053
+										let r = lightMult * (color & 0xFF);
+										let g = lightMult * (color >> 8 & 0xFF);
+										let b = lightMult * (color >> 16 & 0xFF);
+										let a = color >> 24 & 0xFF;
+										texData32[index] = (a << 24) | (b << 16) | (g << 8) | r;
+									}
 								}
 							}
 							
@@ -471,6 +475,8 @@ $.raycast.game = (function() {
 			// protože je raycast symetrický, stačí půl-vzdálenost od středu
 			// obrazovky -- tohle číslo bude tím páde vždy kladné
 			let topSy = fv * mv / dv;
+			if (sy < -topSy || sy > topSy) 
+				return false;
 							
 			let texture = textures[object.texture];
 			let texX = Math.floor(texture.xMvuToImg * objectHit.dsp);				
@@ -484,10 +490,14 @@ $.raycast.game = (function() {
 			let texLight = texture.shadow ? Math.floor((lightMult - darkMinVal) * darkStepMult) : 0;
 			let texData32 = texture.data32[texture.frame][texLight];
 			let texScale = texture.heightHalf / topSy;	
-					
+				
 			let texY = Math.floor((sy + topSy) * texScale);						
 			let texIdx = texY * texture.width + texX;						
-			putPixel32(index, texData32[texIdx]);
+			let pixel = texData32[texIdx];
+			// 00aaff je modrá barva 
+			if (pixel == texture.alphaKey)
+				return false;
+			putPixel32(index, pixel);
 			return true;
 			++o;							
 		}
