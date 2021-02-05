@@ -314,7 +314,7 @@ $.raycast.game = (function() {
 		let xr = ray.w;
 		let yr = ray.h;		
 		let o = 0, len = objects.length;
-		while (o < len) {
+		while (o < len) {			
 			let object = objects[o];
 			// střed sprite objektu P		
 			let xp = object.x;
@@ -327,25 +327,43 @@ $.raycast.game = (function() {
 			let yq = xc;				
 			
 			// bod S, který je průsečíkem vektorů r a q
-			let b = (yr * (xp - xk) + xr * (yk - yp)) / (yq * xr - xq * yr);
+			// S = K + a * r			
+			// S = P + b * q
+			let b = (yr * (xp - xk) + xr * (yk - yp)) / (yq * xr - xq * yr);			
 			let xs = xp + b * xq;
-			let ys = yp + b * yq;	
+			let ys = yp + b * yq;			
+			
+			let a;			
+			if (xr == 0) {
+				a = (ys - yk) / yr;
+			} else if (yr == 0) {
+				a = (xs - xk) / xr;
+			} else {
+				a = (xp + b * xq - xk) / xr;
+			}			
+			// pokud je a < 0, pak je protnutí vektorů za zády hráče
+			if (a < 0) {
+				++o; continue;
+			}
+			
 
 			// vzdálenost S od středu sprinte P
 			let dp = Math.sqrt(Math.pow(xp - xs, 2) + Math.pow(yp - ys, 2));
 			// Je sprite v paprsku?
-			if (dp < object.w / 2) {							
-				// vzdálenost bodu S od kamery K
-				let ds = Math.sqrt(Math.pow(xk - xs, 2) + Math.pow(yk - ys, 2));	
-				// není objekt krytý stěnou?
-				if (typeof result.p === 'undefined' || ds < result.distanceMvu) {
-					result.objects.push({
-						object: object,
-						xs: xs,
-						ys: ys,
-						ds: ds,					
-					});
-				}
+			if (dp > object.w / 2) {
+				++o; continue;
+			}
+				
+			// vzdálenost bodu S od kamery K
+			let ds = Math.sqrt(Math.pow(xk - xs, 2) + Math.pow(yk - ys, 2));	
+			// není objekt krytý stěnou?
+			if (typeof result.p === 'undefined' || ds < result.distanceMvu) {
+				result.objects.push({
+					object: object,
+					xs: xs,
+					ys: ys,
+					ds: ds,					
+				});
 			}
 			++o;
 		}
