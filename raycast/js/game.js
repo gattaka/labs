@@ -97,7 +97,9 @@ $.raycast.game = (function() {
 			angleChanged: true,
 		};
 		
-		objects.push({ texId: 9, x: 7.5, y: 5.5, w: 53 / 123, h: 1 });		
+		objects.push({ texId: 9, x: 7.5, y: 5.5, w: 53 / 123, h: 1 });
+		objects.push({ texId: 10, x: 4.5, y: 7.5, w: 63 / 82, h: 1 });
+		objects.push({ texId: 10, x: 10.5, y: 7.5, w: 63 / 82, h: 1 });
 		
 		mnp = $.raycast.minimap.init(ui, player, map);		
 		ctr = $.raycast.controls.init(ui, player);		
@@ -286,7 +288,7 @@ $.raycast.game = (function() {
 			++i;
 		}
 		return result;
-	};
+	};	
 
 	let checkHit = function(ray) {
 		// https://www.mathsisfun.com/algebra/vectors-cross-product.html
@@ -390,6 +392,9 @@ $.raycast.game = (function() {
 			}
 			++o;
 		}
+		result.objects.sort(function(first, second) {
+			return first.dks > second.dks ? 1 : -1;
+		});
 
 		if (typeof result.p !== 'undefined') {
 			// tohle má smysl počítat jen jednou a to až u toho nejbližšího hit záznamu
@@ -490,6 +495,7 @@ $.raycast.game = (function() {
 
 	let drawSprite = function(hitResult, sx, sy, fv, index) {
 		let o = 0, len = hitResult.objects.length;
+		//let ret = false;
 		while (o < len) {
 			let objectHit = hitResult.objects[o];			
 			let object = objectHit.object;
@@ -500,8 +506,9 @@ $.raycast.game = (function() {
 			// protože je raycast symetrický, stačí půl-vzdálenost od středu
 			// obrazovky -- tohle číslo bude tím páde vždy kladné
 			let topSy = fv * mv / dv;
-			if (sy < -topSy || sy > topSy) 
-				return false;
+			if (sy < -topSy || sy > topSy) {
+				++o; continue;
+			}
 							
 			let texX = Math.floor(object.textureWidthRatio * objectHit.dsp);				
 			
@@ -520,11 +527,12 @@ $.raycast.game = (function() {
 			let texIdx = texY * texture.width + texX;						
 			let pixel = texData32[texIdx];
 
-			if (pixel == texture.alphaKey)
-				return false;
+			if (pixel == texture.alphaKey) {
+				++o; continue;
+			}
 			putPixel32(index, pixel);
 			return true;
-			++o;							
+			++o;		
 		}
 		return false;
 	};
