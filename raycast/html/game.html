@@ -2,10 +2,11 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>GattRaycast</title>
+    <title>Gattraycast</title>
 	<script type="text/javascript" src="../js/stats.min.js"></script>
 	<script type="text/javascript" src="../js/units.js"></script>
 	<script type="text/javascript" src="../js/math.js"></script>
+	<script type="text/javascript" src="../js/sound.js"></script>
 	<script type="text/javascript" src="../js/controls.js"></script>
 	<script type="text/javascript" src="../js/map.js"></script>
 	<script type="text/javascript" src="../js/minimap.js"></script>
@@ -62,7 +63,8 @@
 		textures.push({	src: "../sprites/grate.png", width: 128, height: 128, frames: 4, delay: 200, shadow: false });
 		textures.push({	src: "../sprites/ceiling.png", width: 128, height: 128 });
 		textures.push({	src: "../sprites/sky.png", width: 256, height: 200, shadow: false, xShift: 0, delay: 50, sky: true });
-		textures.push({	src: "../sprites/gargoyle.png", width: 53, height: 123, alphaKey: 0xFFFFAA00});
+		textures.push({	src: "../sprites/gargoyle.png", width: 53, height: 123, alphaKey: 0xFFFFAA00});		
+		
 		$.raycast.game.init(ui, textures);	
 	</script>
 </body>

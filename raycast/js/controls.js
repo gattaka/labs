@@ -6,6 +6,7 @@ $.raycast.controls = (function() {
 		walkSpeedForwardMvu: 0,
 		walkSpeedSideMvu: 0,
 		showMinimap: false,
+		onLockListener: function(){},
 	};
 	
 	let walkSpeedStepMvu = 2;
@@ -16,6 +17,8 @@ $.raycast.controls = (function() {
 	let forward = false;
 	let back = false;
 	
+	let walking = false;
+	
 	let player;
 	let canvas;
 	let angleSpan;
@@ -23,10 +26,9 @@ $.raycast.controls = (function() {
 	let lockChangeAlert = function() {
 		if (document.pointerLockElement === canvas ||
 			document.mozPointerLockElement === canvas) {
-			console.log('The pointer lock status is now locked');
 			document.addEventListener("mousemove", updatePosition, false);
+			ret.onLockListener();
 		} else {
-			console.log('The pointer lock status is now unlocked');
 			document.removeEventListener("mousemove", updatePosition, false);
 		}
 	};
@@ -57,7 +59,16 @@ $.raycast.controls = (function() {
 			ret.walkSpeedSideMvu = -walkSpeedStepMvu;
 		} else {
 			ret.walkSpeedSideMvu = 0;
-		}		
+		}
+		
+		if (walking && ret.walkSpeedSideMvu == 0 && ret.walkSpeedForwardMvu == 0) {
+			$.raycast.sound.stop("walkMusic");
+			walking = false;
+		}
+		if (!walking && (ret.walkSpeedSideMvu != 0 || ret.walkSpeedForwardMvu != 0)) {
+			$.raycast.sound.play("walkMusic");
+			walking = true;
+		}
 	};
 	
 	let changeState = function(event, state) {

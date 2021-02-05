@@ -8,6 +8,7 @@ $.raycast.game = (function() {
 	let mnp;	// minimap
 	let ctr;	// controls
 	let mth;	// math
+	let snd;	// sound
 		
 	let stats;		
 	let lastTime = 0;
@@ -33,6 +34,9 @@ $.raycast.game = (function() {
 
 	let loaded = false;
 	let loadingProgress = 0;
+	
+	let focused = false;
+	
 	let textures = [];
 
 	let darkPrecision = 10;
@@ -78,6 +82,7 @@ $.raycast.game = (function() {
 		uts = $.raycast.units;
 		map = $.raycast.map.init();
 		mth = $.raycast.math;
+		snd = $.raycast.sound.init();		
 		
 		rotVec = mth.rotateVectorFactory(0, 0, 0);
 		
@@ -92,10 +97,15 @@ $.raycast.game = (function() {
 			angleChanged: true,
 		};
 		
-		objects.push({ texId: 9, x: 7.5, y: 5.5, w: 53 / 123, h: 1 });
+		objects.push({ texId: 9, x: 7.5, y: 5.5, w: 53 / 123, h: 1 });		
 		
 		mnp = $.raycast.minimap.init(ui, player, map);		
 		ctr = $.raycast.controls.init(ui, player);		
+		ctr.onLockListener = function() {
+			if (focused) return;			
+			snd.play("bgrMusic");
+			focused	= true;
+		};
 		
 		angleRange = 50 * uts.rad90 / 90;
 		angleIncr = angleRange / ui.width;
