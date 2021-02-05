@@ -14,6 +14,7 @@ $.raycast.game = (function() {
 	
 	// Player
 	let player;	
+	let objects = [];
 
 	// Skybox
 	let skybox;
@@ -66,7 +67,6 @@ $.raycast.game = (function() {
 			yCL: -1,
 			rotHorDG: 270,
 			rotHorRD: uts.rad270,
-			rotVerRD: 0,	
 			angleChanged: true,
 		};
 		
@@ -75,6 +75,14 @@ $.raycast.game = (function() {
 		
 		angleRange = 50 * uts.rad90 / 90;
 		angleIncr = angleRange / ui.width;
+		
+		objects.push({
+			texture: 9,
+			x: 7 * uts.cluToMvu, // MU
+			y: 5 * uts.cluToMvu, // MU
+			w: 53,
+			h: 123,
+		});
 		
 		for (let t = 0; t < textures.length; t++) {
 			let texture = textures[t];		
@@ -263,7 +271,7 @@ $.raycast.game = (function() {
 		let q = mth.vec(ray.x, ray.y);
 		let s = mth.vec(ray.w, ray.h);
 		let result = {
-			hit: false,
+			hit: false,			
 		};
 		let dx = Math.sign(ray.w);
 		let dy = Math.sign(ray.h);
@@ -295,6 +303,51 @@ $.raycast.game = (function() {
 			}
 
 			if (result.hit) break;
+		}
+		
+		result.objects = [];
+		
+		// bod kamery K
+		let xk = ray.x;
+		let yk = ray.y;
+		// vektor hit paprsku r
+		let xr = ray.w;
+		let yr = ray.h;		
+		let o = 0, len = objects.length;
+		while (o < len) {
+			let object = objects[o];
+			// střed sprite objektu P		
+			let xp = object.x;
+			let yp = object.y;
+			// vektor c spojující P a K
+			let xc = xp - xk;
+			let yc = yp - yk;			
+			// vektor q který je kolmí na vektor c
+			let xq = -yc;
+			let yq = xc;				
+			
+			// bod S, který je průsečíkem vektorů r a q
+			let b = (yr * (xp - xk) + xr * (yk - yp)) / (yq * xr - xq * yr);
+			let xs = xp + b * xq;
+			let ys = yp + b * yq;	
+
+			// vzdálenost S od středu sprinte P
+			let dp = Math.sqrt(Math.pow(xp - xs, 2) + Math.pow(yp - ys, 2));
+			// Je sprite v paprsku?
+			if (dp < object.w / 2) {							
+				// vzdálenost bodu S od kamery K
+				let ds = Math.sqrt(Math.pow(xk - xs, 2) + Math.pow(yk - ys, 2));	
+				// není objekt krytý stěnou?
+				if (typeof result.p === 'undefined' || ds < result.distanceMvu) {
+					result.objects.push({
+						object: object,
+						xs: xs,
+						ys: ys,
+						ds: ds,					
+					});
+				}
+			}
+			++o;
 		}
 
 		if (typeof result.p !== 'undefined') {
@@ -427,10 +480,7 @@ $.raycast.game = (function() {
 				}
 				let texLight = texture.shadow ? Math.floor((lightMult - darkMinVal) * darkStepMult) : 0;
 				let texData32 = texture.data32[texture.frame][texLight];
-								
-				// let sourceWidthImg = texture.xMvuToImg / mvuToScu;
 				let texScale = texture.heightHalf / topSy;	
-				//let targetYScu = topSy + player.rotVerRD;	
 				
 				// pro každý řádek sloupce		
 				let ay = 0;
@@ -440,18 +490,30 @@ $.raycast.game = (function() {
 					//let index = sx + ui.widthHalf + (sy + ui.heightHalf) * ui.width;
 					//let index = xIndex + yIndex;
 					let index = ay * ui.width + ax;
-					if (sy < -topSy) {	
-						// strop
-						let pixel = drawSky(sx, sy, fv);		
-						putPixel32(index, pixel);
-					} else if (sy > topSy) {
-						// podlaha
-						let pixel = drawFloor(sx, sy, fv);		
-						putPixel32(index, pixel);
-					} else {
-						let texY = Math.floor((sy + topSy) * texScale);						
-						let texIdx = texY * texture.width + texX;						
-						putPixel32(index, texData32[texIdx]);
+					let filled = false;
+					if (hitResult.objects.length > 0) {
+						let o = 0, len = hitResult.objects.length;
+						while (o < len) {
+							let object = hitResult.objects[o];
+							putPixel32(index, (0xFF << 24) | (0 << 16) | (0 << 8) | 0xFF);
+							++o;							
+						}
+						filled = true;
+					}
+					if (!filled) {
+						if (sy < -topSy) {	
+							// strop
+							let pixel = drawSky(sx, sy, fv);		
+							putPixel32(index, pixel);
+						} else if (sy > topSy) {
+							// podlaha
+							let pixel = drawFloor(sx, sy, fv);		
+							putPixel32(index, pixel);
+						} else {
+							let texY = Math.floor((sy + topSy) * texScale);						
+							let texIdx = texY * texture.width + texX;						
+							putPixel32(index, texData32[texIdx]);
+						}
 					}
 					++sy;
 					++ay;

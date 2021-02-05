@@ -46,7 +46,7 @@ $.raycast.map = (function() {
 	ret.walls = new Uint8Array(ret.mapRows * ret.mapCols);
 	ret.floors = new Uint8Array(ret.mapRows * ret.mapCols);
 	
-	ret.lines = [];	
+	ret.lines = [];
 	
 	let createLine = function(x, y, w, h, value) {
 		return { 

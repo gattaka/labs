@@ -10,7 +10,6 @@ $.raycast.controls = (function() {
 	
 	let walkSpeedStepMvu = 2;
 	let mouseHSensitivity = 0.5;
-	let mouseVSensitivity = 1;
 	
 	let left = false;
 	let right = false;
@@ -41,7 +40,6 @@ $.raycast.controls = (function() {
 		//angleSpan.innerHTML = player.rotHorDG;
 		//console.log(player.rotHorDG);
 		player.rotHorRD = $.raycast.units.toRad(player.rotHorDG);
-		//player.rotVerRD = mouseVSensitivity * (height / 2 - e.clientY);
 	};
 	
 	ret.updateSpeed = function() {

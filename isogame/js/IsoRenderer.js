@@ -142,8 +142,9 @@ $.GIsoGame.IsoRenderer = {
 			return sector;
 		};
 		
-		let innerUpdate = function(delay, viewX, viewY) {
-			ctx.clearRect(0, 0, width, height);
+		let innerUpdate = function(delay, viewX, viewY) {			
+			ctx.fillStyle = "black";
+			ctx.fillRect(0, 0, width, height);
 			
 			for (let sy = 0; sy < rowsOfSectors; sy++) {
 				let myOffset = sy * sectorSize;

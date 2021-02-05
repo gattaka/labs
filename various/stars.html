@@ -2,31 +2,16 @@
 [HTML]<table>
 	<tbody>
 		<tr>
-			<td>MinStarSizeRate <2-50></td>
-			<td>MaxStarSizeRate <2-50></td>
-			<td>MaxStarSize <0.1-50></td>
-			<td>Stars <1-5000></td>
-		</tr>
-		<tr>			
-			<td><input id="minStarSizeRateInput" style="width: 160px;" value="2"></td>			
-			<td><input id="maxStarSizeRateInput" style="width: 160px;" value="20"></td>
-			<td><input id="maxStarSizeInput" style="width: 160px;" value="4"></td>			
-			<td><input id="starsInput" style="width: 80px;" value="2000">	
-		</tr>
-		<tr>
-			<td>MinStarSpeedRate <2-50></td>
-			<td>MaxStarSpeedRate <2-50></td>
 			<td>Speed (ms) <1-50></td>
+			<td>Stars <1-5000></td>
 			<td></td>
 		</tr>
-		<tr>		
-			<td><input id="minStarSpeedRateInput" style="width: 160px;" value="2"></td>			
-			<td><input id="maxStarSpeedRateInput" style="width: 160px;" value="10"></td>	
-			<td><input id="speedInput" style="width: 160px;" value="5"></td>				
+		<tr>			
+			<td><input id="speedInput" style="width: 160px;" value="5"></td>							
+			<td><input id="starsInput" style="width: 80px;" value="1000">	
 			<td><button type="button" onclick="$.stars.start()">Run!</button></td>
 		</tr>
 		<tr>
-			<td><input id="centerRespawnInput" type="checkbox" onclick="$.stars.centerRespawn(this.checked)" checked>Center respawn?</input></td>
 			<td><input id="falconInput" type="checkbox" onclick="$.stars.falcon(this.checked)" >Millennium Falcon?</input></td>
 			<td></td>
 			<td></td>
@@ -35,9 +20,8 @@
 </table>
 <div style="margin: 10px 0;">
 	<canvas id="myCanvas" width="700" height="600" ondblclick="$.stars.fullscreen()"></canvas>
-</div>
-<div id="status"></div>[/HTML]
-<script>let $ = {};
+</div>[/HTML]
+<script>var $ = $ || {};
 $.stars = (function() {	
 	
 	let canvas = document.getElementById("myCanvas");
@@ -46,13 +30,17 @@ $.stars = (function() {
 	let height;
 	let halfWidth;
 	let halfHeight;
-	let radius;
+	
+	let foc = 100;
+	
+	let maxDepth = 100;
+	let maxSpeedX = 1;
+	let maxSpeedY = 1;
+	let maxSpeedZ = 1;
 	
 	let centerRespawn = true;
 	let falcon = false;
-	let falconMaxLineEnlargement = 15;
-	let falconLineEnlargementStep = 0.00005;
-	let falconLineEnlargement;
+	let falconZ = 15;
 
 	let maxStarSize;
 	let minStarSizeRate;
@@ -66,33 +54,14 @@ $.stars = (function() {
 	let innerIntervalCallback;	
 		
 	let createStar = function() {
-		let x = Math.random() * width;
-		let y = Math.random() * height;
-		let xDistance = x - halfWidth;
-		let yDistance = y - halfHeight;
-		let distance = Math.sqrt(xDistance * xDistance + yDistance * yDistance);
-		let speedRate = Math.max(minStarSpeedRate, Math.random() * maxStarSpeedRate);
-		let sizeRate = Math.max(minStarSizeRate, Math.random() * maxStarSizeRate);
-		return {
-			x: x,
-			y: y,
-			size: 0,
-			distance: distance,
-			time: 0,
-			xRate: xDistance / distance,
-			yRate: yDistance / distance,
-			speedRate: speedRate,
-			sizeRate: sizeRate
-		};
+		let st = {
+			x: Math.random() * width - halfWidth,
+			y: Math.random() * height - halfHeight,
+			z: maxDepth,
+		};		
+		st.dz = Math.random() * maxSpeedZ;
+		return st;
 	}
-	
-	let timeToDistanceDelta = function(time, speedRate) {
-		return Math.pow(speedRate, time * 0.01);
-	};
-	
-	let timeToSizeDelta = function(time, sizeRate) {
-		return Math.pow(sizeRate, time * 0.007) * 0.01;
-	};
 	
 	let draw = function() {				
 		ctx.fillStyle = "black";
@@ -102,45 +71,38 @@ $.stars = (function() {
 		ctx.strokeStyle = "white";
 
 		for (let i = 0; i < stars.length; i++) {			
-			let star = stars[i];							
-				
-			star.time++;
-			let sizeDelta = timeToSizeDelta(star.time, star.sizeRate);
-			let distanceDelta = timeToDistanceDelta(star.time, star.speedRate);
+			let st = stars[i];							
 			
-			if (falcon && star.time > 1) {		
-				if (falconLineEnlargement < falconMaxLineEnlargement)
-					falconLineEnlargement += falconLineEnlargementStep;
-				let distance = distanceDelta * falconLineEnlargement;				
-				let pastX = star.x + star.xRate * distance;
-				let pastY = star.y + star.yRate * distance;				
-				//console.log("pastX: " + pastX + " star.x: " + star.x + " pastY: " + pastY + " star.y: " + star.y); 				
-				ctx.lineWidth = star.size;
+			// vykresli aktuální pozici hvězdy
+			let x = foc * st.x / st.z;
+			let fv = Math.sqrt(x * x + foc * foc);
+			let y = fv * st.y / st.dv;
+			
+			x += halfWidth;
+			y += halfHeight;
+			
+			let size = (maxDepth - st.z) * 0.05;
+			if (falcon) {
+				let oz = st.z + falconZ;
+				let ox = foc * st.x / oz;
+				let ofv = Math.sqrt(ox * ox + foc * foc);
+				let odv = Math.sqrt(st.x * st.x + oz * oz);
+				let oy = ofv * st.y / odv;
+				ctx.lineWidth = size;
 				ctx.beginPath();
-				ctx.moveTo(star.x, star.y);
-				ctx.lineTo(pastX, pastY);
-				ctx.stroke();
+				ctx.moveTo(ox + halfWidth, oy + halfHeight);
+				ctx.lineTo(x, y);
+				ctx.stroke();				
 			} else {
-				ctx.fillRect(star.x, star.y, star.size, star.size);	
+				ctx.fillRect(x, y, size, size);
 			}
-						
-			if (star.size + sizeDelta < maxStarSize)
-				star.size += sizeDelta;										
-			star.distance += distanceDelta;
-			star.x += star.xRate * distanceDelta;
-			star.y += star.yRate * distanceDelta;	
-			let overflowOffset = Math.random() * radius;			
-			if (star.distance > radius + overflowOffset) {
-				if (centerRespawn) {
-					star.x = halfWidth;
-					star.y = halfHeight;					
-					star.distance = 0;		
-					star.time = 0;
-					star.size = 0;
-				} else {
-					stars[i] = createStar();			
-				}
-			}
+			
+			st.dv = Math.sqrt(st.x * st.x + st.z * st.z);
+			st.z -= st.dz;
+			
+			if (st.x < -halfWidth || st.x > halfWidth ||
+				st.y < -halfHeight || st.y > halfHeight || st.z < 0)
+				stars[i] = createStar();
 		}
 	};
 
@@ -175,30 +137,11 @@ $.stars = (function() {
 		return value;
 	};
 
-	let init = function() {	
-		
-		let maxStarSizeParam = validate("Invalid maxStarSize", "maxStarSizeInput", 0.1, 50);
-		let minStarSizeRateParam = validate("Invalid minStarSizeRate", 
-			"minStarSizeRateInput", 2, 50);
-		let maxStarSizeRateParam = validate("Invalid maxStarSizeRate", 
-			"maxStarSizeRateInput", 2, 50);
-		let minStarSpeedRateParam = validate("Invalid minStarSpeedRate", 
-			"minStarSpeedRateInput", 2, 50);
-		let maxStarSpeedRateParam = validate("Invalid maxStarSpeedRate", 
-			"maxStarSpeedRateInput", 2, 50);
+	let init = function() {					
 		let speedParam = validate("Invalid speed", "speedInput", 1, 50);	
 		let starsParam = validate("Invalid stars", "starsInput", 1, 5000);	
 
-		if (maxStarSizeParam && minStarSizeRateParam 
-			&& maxStarSizeRateParam && minStarSpeedRateParam && maxStarSpeedRateParam 
-			&& speedParam && starsParam) {	
-			
-			maxStarSize = maxStarSizeParam;
-			minStarSizeRate = minStarSizeRateParam;
-			maxStarSizeRate = maxStarSizeRateParam;
-			minStarSpeedRate = minStarSpeedRateParam;
-			maxStarSpeedRate = maxStarSpeedRateParam;
-
+		if (speedParam && starsParam) {	
 			width = canvas.width;
 			height = canvas.height;
 			halfWidth = width / 2; 
@@ -265,3 +208,4 @@ $.stars = (function() {
 })();
 
 $.stars.start();</script>
+[ALGNCT]Double-click for fullscreen![/ALGNCT]
