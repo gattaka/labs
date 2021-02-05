@@ -13,6 +13,7 @@ $.raycast.units = (function() {
 	let ret = {};
 
 	ret.cluToMvu = 20;
+	ret.cluToMvuHalf = ret.cluToMvu / 2;
 	ret.mvuToClu = 1 / ret.cluToMvu;
 	ret.mvuToMmu = 0.5;	
 	

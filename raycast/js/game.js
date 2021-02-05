@@ -27,7 +27,6 @@ $.raycast.game = (function() {
 	// focal length
 	let foc = 300;
 	let focfoc = foc * foc;
-	let extrusionHeight = 16;
 	let collisionPadding = 1;
 	
 	let rotVec;
@@ -89,8 +88,8 @@ $.raycast.game = (function() {
 			texture: 9,
 			x: 7.5 * uts.cluToMvu, // MU
 			y: 5.5 * uts.cluToMvu, // MU
-			w: 1 * uts.cluToMvu,
-			h: 1 * uts.cluToMvu,
+			w: 53 / 123 * uts.cluToMvu,
+			h: 1 * uts.cluToMvuHalf,
 		});
 		
 		for (let t = 0; t < textures.length; t++) {
@@ -104,6 +103,7 @@ $.raycast.game = (function() {
 			texture.size = texture.width * texture.height;
 			texture.widthHalf = texture.width / 2;
 			texture.heightHalf = texture.height / 2; 
+			texture.ratio =  texture.width / texture.height;
 			textureImg = new Image();
 			(function(tex, textureImg) {
 				textureImg.onload = function() {			
@@ -205,8 +205,8 @@ $.raycast.game = (function() {
 		}
 		let dxMU = Math.cos(player.rotHorRD) * ctr.walkSpeedForwardMvu + Math.cos(player.rotHorRD - uts.rad90) * ctr.walkSpeedSideMvu;
 		let dyMU = Math.sin(player.rotHorRD) * ctr.walkSpeedForwardMvu + Math.sin(player.rotHorRD - uts.rad90) * ctr.walkSpeedSideMvu;
-		let draftxCL = Math.floor((player.xMU + dxMU + Math.sign(dxMU) * collisionPadding) / uts.cluToMvu);
-		let draftyCL = Math.floor((player.yMU + dyMU + Math.sign(dyMU) * collisionPadding) / uts.cluToMvu);
+		let draftxCL = Math.floor((player.xMU + dxMU + Math.sign(dxMU) * collisionPadding) * uts.mvuToClu);
+		let draftyCL = Math.floor((player.yMU + dyMU + Math.sign(dyMU) * collisionPadding) * uts.mvuToClu);
 		if (player.xCL == -1) player.xCL = draftxCL;
 		if (player.yCL == -1) player.yCL = draftyCL;
 		if (draftyCL >= 0 && draftyCL < map.mapRows && draftxCL >= 0 && draftxCL <= map.mapCols) {			
@@ -427,7 +427,7 @@ $.raycast.game = (function() {
 	
 		// spočítám dvě projekce -- horizontální a vertikální		
 		// vertikální 		
-		let my = extrusionHeight;
+		let my = uts.cluToMvuHalf;
 		let fh = foc;
 		// dv / my = fv / sy  ->  dv = my * (fv / sy)
 		let dv = my * fv / sy;
@@ -486,7 +486,7 @@ $.raycast.game = (function() {
 				return false;
 							
 			let texture = textures[object.texture];
-			let texX = Math.floor(texture.xMvuToImg * objectHit.dsp);				
+			let texX = Math.floor(texture.width / object.w * objectHit.dsp);				
 			
 			let lightMult = dv;
 			if (lightMult < darkMinVal) { 
@@ -534,7 +534,7 @@ $.raycast.game = (function() {
 					fvCache[ax] = fv;
 				}
 				// sy / fv = mv / dv
-				let mv = extrusionHeight;				
+				let mv = uts.cluToMvuHalf;				
 				// protože je raycast symetrický, stačí půl-vzdálenost od středu
 				// obrazovky -- tohle číslo bude tím páde vždy kladné
 				let topSy = fv * mv / dv;
