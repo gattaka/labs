@@ -52,6 +52,20 @@ $.raycast.game = (function() {
 		skybox.texData32 = skybox.tex.data32[0][0];
 	};
 
+	let initObjects = function() {
+		for (let o = 0; o < objects.length; o++) {
+			let object = objects[o];
+			object.texture = textures[object.texId];
+			object.xMU = object.x * uts.cluToMvu;
+			object.yMU = object.y * uts.cluToMvu;
+			object.wMU = object.w * uts.cluToMvu;
+			object.wHalfMU = object.wMU / 2;
+			object.hMU = object.h * uts.cluToMvuHalf;	
+			object.hHalfMU = object.hMU / 2;
+			object.textureWidthRatio = object.texture.width / object.wMU;			
+		}
+	};
+
 	let innerInit = function() {
 		stats = new Stats();
 		stats.showPanel(0); // 0: fps, 1: ms, 2: mb, 3+: custom
@@ -78,19 +92,13 @@ $.raycast.game = (function() {
 			angleChanged: true,
 		};
 		
+		objects.push({ texId: 9, x: 7.5, y: 5.5, w: 53 / 123, h: 1 });
+		
 		mnp = $.raycast.minimap.init(ui, player, map);		
 		ctr = $.raycast.controls.init(ui, player);		
 		
 		angleRange = 50 * uts.rad90 / 90;
 		angleIncr = angleRange / ui.width;
-		
-		objects.push({
-			texture: 9,
-			x: 7.5 * uts.cluToMvu, // MU
-			y: 5.5 * uts.cluToMvu, // MU
-			w: 53 / 123 * uts.cluToMvu,
-			h: 1 * uts.cluToMvuHalf,
-		});
 		
 		for (let t = 0; t < textures.length; t++) {
 			let texture = textures[t];		
@@ -160,13 +168,13 @@ $.raycast.game = (function() {
 								break;
 						}
 					}
-					
-					if (texture.sky) 
-						initSkybox();					
-					
+
 					loadingProgress++;
-					if (loadingProgress == textures.length)
-						loaded = true;
+					if (loadingProgress == textures.length) {
+						initSkybox();
+						initObjects();
+						loaded = true;							
+					}
 				}
 			})(texture, textureImg);
 			textureImg.src = texture.src;
@@ -322,8 +330,8 @@ $.raycast.game = (function() {
 		while (o < len) {			
 			let object = objects[o];
 			// střed sprite objektu P		
-			let xp = object.x;
-			let yp = object.y;
+			let xp = object.xMU;
+			let yp = object.yMU;
 			// vektor c spojující P a K
 			let xc = xp - xk;
 			let yc = yp - yk;			
@@ -354,7 +362,7 @@ $.raycast.game = (function() {
 			// vzdálenost S od středu sprinte P
 			let dsp = Math.sqrt(Math.pow(xp - xs, 2) + Math.pow(yp - ys, 2));
 			// Je sprite v paprsku?
-			if (dsp > object.w / 2) {
+			if (dsp > object.wHalfMU) {
 				++o; continue;
 			}
 				
@@ -367,7 +375,7 @@ $.raycast.game = (function() {
 					xs: xs,
 					ys: ys,
 					dks: dks,		
-					dsp: Math.sign(b) * dsp + object.w / 2
+					dsp: Math.sign(b) * dsp + object.wHalfMU
 				});
 			}
 			++o;
@@ -478,15 +486,14 @@ $.raycast.game = (function() {
 			let dv = objectHit.dks;
 			
 			// sy / fv = mv / dv
-			let mv = object.h;
+			let mv = object.hMU;
 			// protože je raycast symetrický, stačí půl-vzdálenost od středu
 			// obrazovky -- tohle číslo bude tím páde vždy kladné
 			let topSy = fv * mv / dv;
 			if (sy < -topSy || sy > topSy) 
 				return false;
 							
-			let texture = textures[object.texture];
-			let texX = Math.floor(texture.width / object.w * objectHit.dsp);				
+			let texX = Math.floor(object.textureWidthRatio * objectHit.dsp);				
 			
 			let lightMult = dv;
 			if (lightMult < darkMinVal) { 
@@ -494,6 +501,7 @@ $.raycast.game = (function() {
 			} else if (lightMult > darkMaxVal - 1) {
 				lightMult = darkMaxVal - 1;
 			}
+			let texture = object.texture;
 			let texLight = texture.shadow ? Math.floor((lightMult - darkMinVal) * darkStepMult) : 0;
 			let texData32 = texture.data32[texture.frame][texLight];
 			let texScale = texture.heightHalf / topSy;	
@@ -501,7 +509,7 @@ $.raycast.game = (function() {
 			let texY = Math.floor((sy + topSy) * texScale);						
 			let texIdx = texY * texture.width + texX;						
 			let pixel = texData32[texIdx];
-			// 00aaff je modrá barva 
+
 			if (pixel == texture.alphaKey)
 				return false;
 			putPixel32(index, pixel);
