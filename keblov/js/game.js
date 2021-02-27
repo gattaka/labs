@@ -15,25 +15,28 @@ let mesh;
 init();
 animate();
 
-function createTerrain() {		
-	const geometry = new THREE.PlaneGeometry( 100, 100 );
-	const planeMaterial = new THREE.MeshPhongMaterial( { color: 0xffb851 } );
-
-	const ground = new THREE.Mesh( geometry, planeMaterial );
-
-	ground.position.set( 0, 0, -2 );
-	ground.rotation.x = - Math.PI / 2;
-	ground.scale.set( 100, 100, 100 );
-
+function createTerrain() {	
+	const texture = new THREE.TextureLoader().load('../textures/grass.jpg');
+	texture.wrapS = THREE.RepeatWrapping;
+	texture.wrapT = THREE.RepeatWrapping;
+	texture.repeat.set(1000, 1000);
+	const geometry = new THREE.PlaneGeometry(100, 100);		
+	const material = new THREE.MeshLambertMaterial({ map: texture });
+	const ground = new THREE.Mesh(geometry, material);
+	ground.position.set(0, 0, 0);
+	ground.rotation.x = -Math.PI / 2;
+	ground.scale.set(100, 100, 100);
 	ground.castShadow = false;
 	ground.receiveShadow = true;
-	scene.add( ground );
+	scene.add(ground);
 }
 
 function createPlayer() {
 	new GLTFLoader().load('../models/Cesium_Man.glb', result => { 
 		let model = result.scene.children[0]; 
 		//model.position.set(0,-5,-25);
+		model.position.set(0,0,0);
+		model.scale.set(5, 5, 5);
 		model.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
 			n.receiveShadow = true;
@@ -43,37 +46,68 @@ function createPlayer() {
 	});			
 }
 
+function createGrid() {
+	const size = 100;
+	const divisions = 100;
+
+	const gridHelper = new THREE.GridHelper(size, divisions);
+	scene.add(gridHelper);
+}
+
 function createBox() {
 	const texture = new THREE.TextureLoader().load('../textures/osetrovna_podokno.gif');
-	const geometry = new THREE.BoxGeometry(200, 200, 200);
-	const material = new THREE.MeshBasicMaterial({map: texture});
+	const geometry = new THREE.BoxGeometry(10, 10, 10);
+	const material = new THREE.MeshLambertMaterial({map: texture});
 	mesh = new THREE.Mesh(geometry, material);
+	mesh.position.set(10, 0, 10);
+	mesh.castShadow = true;
+	mesh.receiveShadow = true;
+	mesh.scale.set(1, 1, 1);
 	scene.add(mesh);
 }
 
-function init() {
-	document.body.appendChild(stats.dom);
-	
-	// atributy:  field of view, aspect ratio, near, far
-	camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
-	camera.position.z = 100;
-	camera.position.y = 10;
-	camera.position.z = 20;
-	
-	scene = new THREE.Scene();		
-	scene.background = new THREE.Color(0xdddddd);			
-	
-	scene.add(new THREE.AxesHelper(500));
-	
-	let hemiLight = new THREE.HemisphereLight(0xffeeb1, 0x080820, 4);
-	scene.add(hemiLight);
+// https://threejs.org/docs/#api/en/lights/shadows/DirectionalLightShadow
+// https://threejs.org/examples/webgl_lights_hemisphere.html
+// https://stackoverflow.com/questions/15478093/realistic-lighting-sunlight-with-three-js
+// https://threejs.org/docs/#api/en/math/Color.setHSL
+function createLight() {
+	const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
+	hemiLight.color = new THREE.Color("hsl(58, 100%, 80%)");
+	hemiLight.groundColor = new THREE.Color("hsl(83, 63%, 10%)");
+	hemiLight.position.set(0, 50, 0);
+	scene.add( hemiLight );
 
-	renderer = new THREE.WebGLRenderer({antialias: true});
-	renderer.setPixelRatio(window.devicePixelRatio);
-	renderer.setSize(window.innerWidth, window.innerHeight);
-	document.body.appendChild(renderer.domElement);
-	window.addEventListener('resize', onWindowResize);			
-	
+	const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 10);
+	scene.add(hemiLightHelper);
+
+	const dirLight = new THREE.DirectionalLight(0xffffff, 1);	
+	dirLight.color = new THREE.Color("hsl(58, 100%, 100%)");
+	dirLight.position.set(-1, 1.75, 1);
+	dirLight.position.multiplyScalar(30);
+	scene.add(dirLight);
+
+	dirLight.castShadow = true;
+
+	dirLight.shadow.mapSize.width = 2048;
+	dirLight.shadow.mapSize.height = 2048;
+
+	const d = 50;
+
+	dirLight.shadow.camera.left = -d;
+	dirLight.shadow.camera.right = d;
+	dirLight.shadow.camera.top = d;
+	dirLight.shadow.camera.bottom = -d;
+
+	dirLight.shadow.camera.far = 3500;
+	dirLight.shadow.bias = - 0.0001;
+
+	const dirLightHelper = new THREE.DirectionalLightHelper( dirLight, 10 );
+	scene.add( dirLightHelper );
+}
+
+// https://threejs.org/docs/#examples/en/controls/PointerLockControls
+// https://sbcode.net/threejs/pointerlock-controls/
+function createControls() {
 	controls = new PointerLockControls(camera, document.body);
 	controls.forwardSpeed = 0;
 	controls.rightSpeed = 0;
@@ -103,15 +137,43 @@ function init() {
 	};
 	document.addEventListener('keydown', onKeyDown, false);
 	document.addEventListener('keyup', onKeyUp, false);
+}
+
+function init() {
+	document.body.appendChild(stats.dom);
 	
+	// atributy:  field of view, aspect ratio, near, far
+	camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
+	camera.position.z = 100;
+	camera.position.y = 10;
+	camera.position.z = 20;
+	
+	scene = new THREE.Scene();		
+	scene.background = new THREE.Color(0xdddddd);			
+	
+	scene.add(new THREE.AxesHelper(500));
+	
+	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer.setPixelRatio(window.devicePixelRatio);
+	renderer.setSize(window.innerWidth, window.innerHeight);
+	renderer.shadowMap.enabled = true;
+	renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
+	document.body.appendChild(renderer.domElement);
+	window.addEventListener('resize', onWindowResize);			
+	
+	createControls();
+	
+	createLight();
 	createTerrain();
+	createBox();
+	createPlayer();
+	//createGrid();
 }
 
 function onWindowResize() {
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();
-	renderer.setSize(window.innerWidth, window.innerHeight);
-	controls.handleResize();
+	renderer.setSize(window.innerWidth, window.innerHeight);	
 }
 
 function animate() {
