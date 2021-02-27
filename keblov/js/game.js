@@ -6,7 +6,7 @@ import * as THREE from './three.module.js';
 const clock = new THREE.Clock();
 const stats = new Stats();
 
-const walkSpeed = 20;
+const walkSpeed = 30;
 
 let camera, scene, renderer, controls;
 let terrain;
@@ -14,6 +14,34 @@ let mesh;
 
 init();
 animate();
+
+// https://redstapler.co/create-3d-world-with-three-js-and-skybox-technique/
+// https://opengameart.org/content/skiingpenguins-skybox-pack
+function createSkybox() {
+	let materialArray = [];
+	let texture_ft = new THREE.TextureLoader().load('../textures/skybox/posx.jpg');
+	let texture_bk = new THREE.TextureLoader().load('../textures/skybox/negx.jpg');
+	let texture_up = new THREE.TextureLoader().load('../textures/skybox/posy.jpg');
+	let texture_dn = new THREE.TextureLoader().load('../textures/skybox/negy.jpg');
+	let texture_rt = new THREE.TextureLoader().load('../textures/skybox/posz.jpg');
+	let texture_lf = new THREE.TextureLoader().load('../textures/skybox/negz.jpg');
+	  
+	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_ft }));
+	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_bk }));
+	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_up }));
+	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_dn }));
+	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_rt }));
+	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_lf }));
+	   
+	for (let i = 0; i < 6; i++)
+	  materialArray[i].side = THREE.BackSide;
+	   
+	let side = 10000;
+	let skyboxGeo = new THREE.BoxGeometry(side, side, side);
+	let skybox = new THREE.Mesh(skyboxGeo, materialArray);
+	skybox.position.set(0, 0, 0);
+	scene.add(skybox);
+}
 
 function createTerrain() {	
 	const texture = new THREE.TextureLoader().load('../textures/grass.jpg');
@@ -31,19 +59,39 @@ function createTerrain() {
 	scene.add(ground);
 }
 
-function createPlayer() {
-	new GLTFLoader().load('../models/Cesium_Man.glb', result => { 
-		let model = result.scene.children[0]; 
-		//model.position.set(0,-5,-25);
-		model.position.set(0,0,0);
-		model.scale.set(5, 5, 5);
+// https://anyconv.com/fbx-to-glb-converter/
+// https://sketchfab.com/3d-models/fur-tree-41fa3210e50944eaa489c148e5e2ccc7
+function createTree() {
+	new GLTFLoader().load('../models/fur_tree/scene.gltf', result => { 
+		let model = result.scene.children[0]; 		
+		model.position.set(-10,0,-20);
+		model.scale.set(.1,.1,.1);
 		model.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
 			n.receiveShadow = true;
 			if (n.material.map) n.material.map.anisotropy = 1; 
 		}});
 		scene.add(model);
-	});			
+	});		
+}
+
+function createTents() {
+	new GLTFLoader().load('../models/stan.glb', gltf => { 
+		// severní řada 9 stanů
+		for (let i = 0; i < 9; i++) {			
+			let model = gltf.scene.children[0].clone();
+			model.scale.set(10,10,10);
+			model.position.set(25 * i,0,-20);
+			model.castShadow = true; 
+			model.receiveShadow = true; 
+			model.traverse(n => { if (n.isMesh) {
+				n.castShadow = true; 
+				n.receiveShadow = true;
+				if (n.material.map) n.material.map.anisotropy = 1; 
+			}});
+			scene.add(model);
+		}
+	});	
 }
 
 function createGrid() {
@@ -143,7 +191,7 @@ function init() {
 	document.body.appendChild(stats.dom);
 	
 	// atributy:  field of view, aspect ratio, near, far
-	camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 1000);
+	camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
 	camera.position.z = 100;
 	camera.position.y = 10;
 	camera.position.z = 20;
@@ -164,9 +212,12 @@ function init() {
 	createControls();
 	
 	createLight();
+	
+	createSkybox();
 	createTerrain();
 	createBox();
-	createPlayer();
+	createTree();
+	createTents();
 	//createGrid();
 }
 
