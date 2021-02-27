@@ -38,15 +38,8 @@ $.stars = (function() {
 	let maxSpeedY = 1;
 	let maxSpeedZ = 1;
 	
-	let centerRespawn = true;
 	let falcon = false;
 	let falconZ = 15;
-
-	let maxStarSize;
-	let minStarSizeRate;
-	let maxStarSizeRate;
-	let minStarSpeedRate;
-	let maxStarSpeedRate;
 
 	let stars;
 	
@@ -159,10 +152,6 @@ $.stars = (function() {
 
 		start: function() {	
 			init();			
-		},
-
-		centerRespawn: function(value) {
-			centerRespawn = value;
 		},
 		
 		falcon: function(value) {

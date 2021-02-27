@@ -98,8 +98,8 @@ $.raycast.game = (function() {
 		};
 		
 		objects.push({ texId: 9, x: 7.5, y: 5.5, w: 53 / 123, h: 1 });
-		objects.push({ texId: 10, x: 4.5, y: 7.5, w: 63 / 82, h: 1 });
-		objects.push({ texId: 10, x: 10.5, y: 7.5, w: 63 / 82, h: 1 });
+		objects.push({ texId: 10, x: 4.5, y: 7.5, w: 63 / 81, h: 1 });
+		objects.push({ texId: 10, x: 10.5, y: 7.5, w: 63 / 81, h: 1 });
 		
 		mnp = $.raycast.minimap.init(ui, player, map);		
 		ctr = $.raycast.controls.init(ui, player);		
