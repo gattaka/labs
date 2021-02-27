@@ -1,19 +1,26 @@
 import { PointerLockControls } from './PointerLockControls.js';
 import { GLTFLoader } from './GLTFLoader.js';
 import { Stats } from './stats.module.js';
+import { Cloth } from './cloth.module.js';
 import * as THREE from './three.module.js';
+
+const infoDiv = document.getElementById("info");
 
 const clock = new THREE.Clock();
 const stats = new Stats();
 
 const walkSpeed = 30;
 
+const infoDelay = .1;
+let infoCooldown = infoDelay;
+
 let camera, scene, renderer, controls;
 let terrain;
 let mesh;
+let flag;
 
 init();
-animate();
+animate(0);
 
 // https://redstapler.co/create-3d-world-with-three-js-and-skybox-technique/
 // https://opengameart.org/content/skiingpenguins-skybox-pack
@@ -64,7 +71,7 @@ function createTerrain() {
 function createTree() {
 	new GLTFLoader().load('../models/fur_tree/scene.gltf', result => { 
 		let model = result.scene.children[0]; 		
-		model.position.set(-10,0,-20);
+		model.position.set(270, 0, 10);
 		model.scale.set(.1,.1,.1);
 		model.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
@@ -73,23 +80,67 @@ function createTree() {
 		}});
 		scene.add(model);
 	});		
+};
+
+function createFlag() {
+	const loader = new THREE.TextureLoader();
+	const clothTexture = loader.load( '../textures/vlajka.png' );
+	clothTexture.anisotropy = 16;
+	const clothMaterial = new THREE.MeshLambertMaterial( {
+		map: clothTexture,
+		side: THREE.DoubleSide,
+		alphaTest: 0.5
+	});
+	flag = new Cloth(clothMaterial);	
+	flag.position.set(109.5, 65, 107);
+	const scale = 0.1;
+	flag.scale.set(scale, scale, scale);
+	scene.add(flag);	
+};
+
+function createStozar() {
+	const texture = new THREE.TextureLoader().load('../textures/stozar.png');
+	const geometry = new THREE.CylinderGeometry( .2, .7, 200, 16 );
+	const material = new THREE.MeshLambertMaterial({map: texture});
+	mesh = new THREE.Mesh(geometry, material);
+	mesh.position.set(97, 0, 107);
+	mesh.castShadow = true;
+	mesh.receiveShadow = true;
+	mesh.scale.set(1, 1, 1);
+	scene.add(mesh);
 }
 
 function createTents() {
 	new GLTFLoader().load('../models/stan.glb', gltf => { 
+		let model = gltf.scene.children[0];
+		model.scale.set(10,10,10);
+		model.castShadow = true; 
+		model.receiveShadow = true; 
+		model.traverse(n => { if (n.isMesh) {
+			n.castShadow = true; 
+			n.receiveShadow = true;
+			if (n.material.map) n.material.map.anisotropy = 1; 
+		}});
 		// severní řada 9 stanů
 		for (let i = 0; i < 9; i++) {			
-			let model = gltf.scene.children[0].clone();
-			model.scale.set(10,10,10);
-			model.position.set(25 * i,0,-20);
-			model.castShadow = true; 
-			model.receiveShadow = true; 
-			model.traverse(n => { if (n.isMesh) {
-				n.castShadow = true; 
-				n.receiveShadow = true;
-				if (n.material.map) n.material.map.anisotropy = 1; 
-			}});
-			scene.add(model);
+			let tent = model.clone();
+			tent.position.set(25 * i, -1, -20);
+			scene.add(tent);
+		}
+		// západní řada 8 stanů
+		for (let i = 0; i < 8; i++) {			
+			if (i == 3) continue;
+			let tent = model.clone();
+			tent.rotateZ(Math.PI/2);
+			tent.position.set(250, -1, 20 + i * 25);
+			scene.add(tent);
+		}
+		// jižní řada 13 stanů
+		for (let i = 0; i < 13; i++) {			
+			let tent = model.clone();
+			tent.rotateZ(Math.PI);
+			tent.position.set(210 - 25 * i, -1, 230);
+			scene.add(tent);
 		}
 	});	
 }
@@ -102,18 +153,6 @@ function createGrid() {
 	scene.add(gridHelper);
 }
 
-function createBox() {
-	const texture = new THREE.TextureLoader().load('../textures/osetrovna_podokno.gif');
-	const geometry = new THREE.BoxGeometry(10, 10, 10);
-	const material = new THREE.MeshLambertMaterial({map: texture});
-	mesh = new THREE.Mesh(geometry, material);
-	mesh.position.set(10, 0, 10);
-	mesh.castShadow = true;
-	mesh.receiveShadow = true;
-	mesh.scale.set(1, 1, 1);
-	scene.add(mesh);
-}
-
 // https://threejs.org/docs/#api/en/lights/shadows/DirectionalLightShadow
 // https://threejs.org/examples/webgl_lights_hemisphere.html
 // https://stackoverflow.com/questions/15478093/realistic-lighting-sunlight-with-three-js
@@ -122,15 +161,15 @@ function createLight() {
 	const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.6);
 	hemiLight.color = new THREE.Color("hsl(58, 100%, 80%)");
 	hemiLight.groundColor = new THREE.Color("hsl(83, 63%, 10%)");
-	hemiLight.position.set(0, 50, 0);
-	scene.add( hemiLight );
+	hemiLight.position.set(0, 20, 0);
+	scene.add(hemiLight);
 
 	const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 10);
 	scene.add(hemiLightHelper);
 
-	const dirLight = new THREE.DirectionalLight(0xffffff, 1);	
+	const dirLight = new THREE.DirectionalLight(0xffffff, .7);	
 	dirLight.color = new THREE.Color("hsl(58, 100%, 100%)");
-	dirLight.position.set(-1, 1.75, 1);
+	dirLight.position.set(5, 10, 1);
 	dirLight.position.multiplyScalar(30);
 	scene.add(dirLight);
 
@@ -139,18 +178,21 @@ function createLight() {
 	dirLight.shadow.mapSize.width = 2048;
 	dirLight.shadow.mapSize.height = 2048;
 
-	const d = 50;
-
+	const d = 300;
 	dirLight.shadow.camera.left = -d;
 	dirLight.shadow.camera.right = d;
 	dirLight.shadow.camera.top = d;
 	dirLight.shadow.camera.bottom = -d;
 
-	dirLight.shadow.camera.far = 3500;
-	dirLight.shadow.bias = - 0.0001;
+	dirLight.shadow.camera.far = 500;
+	dirLight.shadow.bias = - 0.0001;	
 
-	const dirLightHelper = new THREE.DirectionalLightHelper( dirLight, 10 );
-	scene.add( dirLightHelper );
+	const dirLightHelper = new THREE.DirectionalLightHelper(dirLight, 10);
+	scene.add(dirLightHelper);
+	
+	// Create a helper for the shadow camera (optional)
+	const cameraHelper = new THREE.CameraHelper(dirLight.shadow.camera);
+	scene.add(cameraHelper);
 }
 
 // https://threejs.org/docs/#examples/en/controls/PointerLockControls
@@ -192,9 +234,9 @@ function init() {
 	
 	// atributy:  field of view, aspect ratio, near, far
 	camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 1, 10000);
-	camera.position.z = 100;
+	camera.position.x = 95;
 	camera.position.y = 10;
-	camera.position.z = 20;
+	camera.position.z = 160;
 	
 	scene = new THREE.Scene();		
 	scene.background = new THREE.Color(0xdddddd);			
@@ -213,12 +255,14 @@ function init() {
 	
 	createLight();
 	
+	createFlag();
 	createSkybox();
 	createTerrain();
-	createBox();
+	//createBox();
 	createTree();
 	createTents();
 	//createGrid();
+	createStozar();
 }
 
 function onWindowResize() {
@@ -227,17 +271,26 @@ function onWindowResize() {
 	renderer.setSize(window.innerWidth, window.innerHeight);	
 }
 
-function animate() {
+function animate(now) {
 	requestAnimationFrame(animate);
-	render();
+	flag.animate(now);
+	render(now);
 	stats.update();
 }
 
-function render() {
+function updateInfo(delta) {
+	infoCooldown -= delta;
+	if (infoCooldown <= 0) {	
+		infoDiv.innerText = "Camera = pos[x: " + Math.floor(camera.position.x) + " y: " + Math.floor(camera.position.y) + " z: " + Math.floor(camera.position.z) + "]" + " rot[" + Math.floor(camera.rotation.x) + " y: " + Math.floor(camera.rotation.y) + " z: " + Math.floor(camera.rotation.z) + "]" ;
+		infoCooldown = infoDelay;		
+	}
+}
+
+function render(now) {
 	const delta = clock.getDelta();
 	controls.moveForward((controls.forwardSpeed - controls.backSpeed) * delta);
 	controls.moveRight((controls.leftSpeed - controls.rightSpeed) * delta);
 	renderer.clear();
-	renderer.render(scene, camera);
+	renderer.render(scene, camera);	
+	updateInfo(delta);	
 }
-animate();
