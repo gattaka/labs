@@ -149,6 +149,35 @@ function createPineTree2() {
 	});		
 };
 
+function createStaryBarak() {
+	new GLTFLoader().load('../models/keblov_stary.glb', result => { 
+		let model = result.scene.children[0]; 		
+		model.position.set(-300, 1, 0);
+		const sc = 10;
+		model.scale.set(sc,sc,sc);
+		model.rotation.y = 3 * Math.PI/2;
+		model.traverse(n => { if (n.isMesh) {
+			n.castShadow = true; 
+			n.receiveShadow = true;
+			if (n.material.map) n.material.map.anisotropy = 1; 
+		}});
+		scene.add(model);
+	});		
+	new GLTFLoader().load('../models/keblov_stary_zdi.glb', result => { 
+		let model = result.scene.children[0]; 		
+		model.position.set(-300, 0, 0);
+		const sc = 10;
+		model.scale.set(sc,sc,sc);
+		model.rotation.y = 3 * Math.PI/2;
+		model.traverse(n => { if (n.isMesh) {
+			n.castShadow = true; 
+			n.receiveShadow = true;
+			if (n.material.map) n.material.map.anisotropy = 1; 
+		}});
+		scene.add(model);
+	});		
+};
+
 // https://sketchfab.com/3d-models/lowpoly-tree-b562b2e9f029440c804b4b6d36ebe174
 function createLowPolyTree() {
 	new GLTFLoader().load('../models/lowpoly_tree/scene.gltf', result => { 
@@ -201,6 +230,51 @@ function createRealisticTree() {
 		});
 	});		
 };
+
+// https://sketchfab.com/3d-models/low-poly-christmas-tree-bacdf9be9880497cbb2d6d12e30349c0
+function createLowPolyXmasTree() {
+	let config = [[0,0,0,.02,0]];
+	new GLTFLoader().load('../models/low_poly_christmas_tree/scene.gltf', result => { 
+		let tree = result.scene.children[0]; 		
+		config.forEach(e => {
+			let model = tree.clone();
+			model.position.set(e[0], e[1], e[2]);
+			const sz = e[3];
+			model.scale.set(sz,sz,sz);
+			model.rotation.z = e[4];
+			model.traverse(n => { if (n.isMesh) {
+				n.castShadow = true; 
+				n.receiveShadow = true;
+				if (n.material.map) n.material.map.anisotropy = 1;
+			}});
+			scene.add(model);
+		});
+	});		
+};
+
+// https://sketchfab.com/3d-models/tree-c6a65b51988648f689bbd4665e87213e
+function createSmallTree() {
+	let config = [[100,0,0,.5,0]];
+	new GLTFLoader().load('../models/small_tree/scene.gltf', result => { 
+		let tree = result.scene.children[0]; 		
+		config.forEach(e => {
+			let model = tree.clone();
+			model.position.set(e[0], e[1], e[2]);
+			const sz = e[3];
+			model.scale.set(sz,sz,sz);
+			model.rotation.z = e[4];
+			model.traverse(n => { if (n.isMesh) {
+				n.castShadow = true; 
+				n.receiveShadow = true;
+				if (n.material.map) n.material.map.anisotropy = 1;
+			}});
+			scene.add(model);
+		});
+	});		
+};
+
+// https://sketchfab.com/3d-models/tree-low-poly-4cd243eb74c74b3ea2190ebcec0439fb
+// https://sketchfab.com/3d-models/low-poly-tree-70f0e767fc2f449fa6fef9c2308b395f
 
 function createFlag() {
 	const loader = new THREE.TextureLoader();
@@ -400,6 +474,11 @@ function init() {
 	createPineTree2();
 	//createLowPolyTree();
 	createRealisticTree();
+	
+	createLowPolyXmasTree();
+	createSmallTree();
+	
+	createStaryBarak();
 }
 
 function onWindowResize() {
