@@ -2,26 +2,34 @@ import { PointerLockControls } from './PointerLockControls.js';
 import { GLTFLoader } from './GLTFLoader.js';
 import { Stats } from './stats.module.js';
 import { Cloth } from './cloth.module.js';
+import { Physics } from './physics.js';
 import * as THREE from './three.module.js';
 
 const infoDiv = document.getElementById("info");
 
-const clock = new THREE.Clock();
-const stats = new Stats();
-
 const showHelpers = false;
 const walkSpeed = 30;
+
+const infoLines = [];
 
 const infoDelay = .1;
 let infoCooldown = infoDelay;
 
 let camera, scene, renderer, controls;
-let terrain;
-let mesh;
+let ground;
 let flag;
 
-init();
-animate(0);
+const clock = new THREE.Clock();
+const stats = new Stats();
+const physics = new Physics(init);
+
+// Heightfield parameters
+var terrainWidthExtents = 500;
+var terrainDepthExtents = 500;
+var terrainWidth = 128;
+var terrainDepth = 128;
+var terrainMaxHeight = 8;
+var terrainMinHeight = -2;
 
 function setCookie(name,value) {
     var expires = "";    
@@ -66,19 +74,59 @@ function createSkybox() {
 	scene.add(skybox);
 }
 
+function generateHeight( width, depth, minHeight, maxHeight ) {
+	// Generates the height data (a sinus wave)
+	var size = width * depth;
+	var data = new Float32Array(size);
+
+	var hRange = maxHeight - minHeight;
+	var w2 = width / 2;
+	var d2 = depth / 2;
+	var phaseMult = 12;
+
+	var p = 0;
+	for ( var j = 0; j < depth; j ++ ) {
+		for ( var i = 0; i < width; i ++ ) {
+			var radius = Math.sqrt(
+				Math.pow((i - w2) / w2, 2.0) +
+				Math.pow((j - d2) / d2, 2.0));
+			var height = (Math.sin(radius * phaseMult) + 1) * 0.5  * hRange + minHeight;
+			data[p] = height;
+			p++;
+		}
+	}
+
+	return data;
+}
+
 function createTerrain() {	
 	const texture = new THREE.TextureLoader().load('../textures/seamless_grass.jpg');
 	texture.wrapS = THREE.RepeatWrapping;
 	texture.wrapT = THREE.RepeatWrapping;
-	texture.repeat.set(1000, 1000);
-	const geometry = new THREE.PlaneGeometry(100, 100);		
-	const material = new THREE.MeshLambertMaterial({ map: texture });
-	const ground = new THREE.Mesh(geometry, material);
-	ground.position.set(0, 0, 0);
-	ground.rotation.x = -Math.PI / 2;
-	ground.scale.set(100, 100, 100);
+	texture.repeat.set(100, 100);
+	const material = new THREE.MeshLambertMaterial({ map: texture, side: THREE.DoubleSide});
+	
+	const heightMap = generateHeight( terrainWidth, terrainDepth, terrainMinHeight, terrainMaxHeight );	
+	
+	var geometry = new THREE.PlaneBufferGeometry( terrainWidthExtents, terrainDepthExtents, terrainWidth - 1, terrainDepth - 1 );
+	geometry.rotateX( - Math.PI / 2 );
+	const vertices = geometry.attributes.position.array;		
+	for ( var i = 0, j = 0, l = vertices.length; i < l; i ++, j += 3 ) {
+		// j + 1 because it is the y component that we modify
+		vertices[ j + 1 ] = heightMap[ i ];
+	}
+	geometry.computeVertexNormals();
+	
+	ground = new THREE.Mesh(geometry, material);
 	ground.castShadow = false;
 	ground.receiveShadow = true;
+	ground.userData.heightMap = heightMap;
+	ground.userData.terrainWidthExtents = terrainWidthExtents;
+	ground.userData.terrainDepthExtents = terrainDepthExtents;
+	ground.userData.terrainWidth = terrainWidth;
+	ground.userData.terrainDepth = terrainDepth;
+	ground.userData.terrainMaxHeight = terrainMaxHeight;
+	ground.userData.terrainMinHeight = terrainMinHeight;
 	scene.add(ground);
 }
 
@@ -299,7 +347,7 @@ function createStozar() {
 	texture.repeat.set(1, 20);
 	const geometry = new THREE.CylinderGeometry( .2, .7, 200, 16 );
 	const material = new THREE.MeshLambertMaterial({map: texture});
-	mesh = new THREE.Mesh(geometry, material);
+	const mesh = new THREE.Mesh(geometry, material);
 	mesh.position.set(97, 0, 107);
 	mesh.castShadow = true;
 	mesh.receiveShadow = true;
@@ -365,7 +413,7 @@ function createLight() {
 	const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 10);
 	scene.add(hemiLightHelper);
 */	
-	scene.add( new THREE.AmbientLight(0x999999));
+	scene.add(new THREE.AmbientLight(0x999999));
 
 	const dirLight = new THREE.DirectionalLight(0xffffff, .5);	
 	dirLight.color = new THREE.Color("hsl(58, 100%, 100%)");
@@ -425,6 +473,9 @@ function createControls() {
 			case "d":
 				controls.leftSpeed = down ? walkSpeed : 0;
 				break;
+			case "x":
+				generateObject();
+				break;
 		}
 	};
 	document.addEventListener('keydown', onKeyDown, false);
@@ -433,7 +484,6 @@ function createControls() {
 
 function init() {
 	document.body.appendChild(stats.dom);
-	
 	// atributy:  field of view, aspect ratio, near, far
 	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000);
 	camera.position.x = Number(getCookie('camposx')) || 0;
@@ -457,17 +507,17 @@ function init() {
 	document.body.appendChild(renderer.domElement);
 	window.addEventListener('resize', onWindowResize);			
 	
+	createSkybox();
 	createControls();
-	
 	createLight();
 	
 	createFlag();
-	createSkybox();
+	createStozar();
 	createTerrain();
 	//createBox();
 	createTents();
+	/*
 	//createGrid();
-	createStozar();
 	//createTree();
 	//createOakTrees();
 	createPineTree();
@@ -477,8 +527,15 @@ function init() {
 	
 	createLowPolyXmasTree();
 	createSmallTree();
-	
 	createStaryBarak();
+	*/
+	
+	physics.createCharacter(scene);
+	//physics.addBoxObsticle(ground);
+	physics.createKinematicBox(scene);
+	physics.addTerrain(ground);
+
+	animate(0);	
 }
 
 function onWindowResize() {
@@ -503,7 +560,8 @@ function updateInfo(delta) {
 		const rotx = camera.rotation.x;
 		const roty = camera.rotation.y;
 		const rotz = camera.rotation.z;
-		infoDiv.innerText = "Camera = pos[x: " + Math.floor(posx) + " y: " + Math.floor(posy) + " z: " + Math.floor(posz) + "]" + " rot[" + Math.floor(rotx) + " y: " + Math.floor(roty) + " z: " + Math.floor(rotz) + "]" ;
+		infoLines[0] = "Camera = pos[x: " + Math.floor(posx) + " y: " + Math.floor(posy) + " z: " + Math.floor(posz) + "]" + 
+			" rot[" + Math.floor(rotx) + " y: " + Math.floor(roty) + " z: " + Math.floor(rotz) + "]" ;
 		infoCooldown = infoDelay;	
 		setCookie('camposx',posx);
 		setCookie('camposy',posy);
@@ -511,6 +569,11 @@ function updateInfo(delta) {
 		setCookie('camrotx',rotx);
 		setCookie('camroty',roty);
 		setCookie('camrotz',rotz);
+		
+		infoDiv.innerHTML = "";
+		infoLines.forEach(l => {
+			infoDiv.innerHTML += l + "<br/>";
+		});
 	}
 }
 
@@ -518,6 +581,7 @@ function render(now) {
 	const delta = clock.getDelta();
 	controls.moveForward((controls.forwardSpeed - controls.backSpeed) * delta);
 	controls.moveRight((controls.leftSpeed - controls.rightSpeed) * delta);
+	physics.updatePhysics(delta, infoLines);
 	renderer.clear();
 	renderer.render(scene, camera);	
 	updateInfo(delta);	
