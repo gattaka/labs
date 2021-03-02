@@ -10,8 +10,7 @@ let Physics = function (callback) {
 	const infoDiv = document.getElementById("info");
 
 	//variable declaration section
-	let physicsWorld, rigidBodies = [], tmpTrans = null
-	let ballObject = null, moveDirection = { left: 0, right: 0, forward: 0, back: 0, jump: 0 }
+	let physicsWorld, rigidBodies = [], tmpTrans = null	
 	let kObject = null, kMoveDirection = { left: 0, right: 0, forward: 0, back: 0 }, tmpPos = new THREE.Vector3(), tmpQuat = new THREE.Quaternion();
 	let ammoTmpPos = null, ammoTmpQuat = null;
 	let mouseCoords = new THREE.Vector2(), raycaster = new THREE.Raycaster();
@@ -29,7 +28,6 @@ let Physics = function (callback) {
 		ammoTmpPos = new Ammo.btVector3();
 		ammoTmpQuat = new Ammo.btQuaternion();
 		setupPhysicsWorld();		
-		setupEventHandlers();
 		callback();
 	}
 
@@ -45,45 +43,6 @@ let Physics = function (callback) {
 	function setupEventHandlers() {
 		window.addEventListener( 'keydown', handleKeyDown, false);
 		window.addEventListener( 'keyup', handleKeyUp, false);
-	}
-
-	function handleKeyDown(event) {
-		let keyCode = event.keyCode;
-		switch(keyCode){
-			case 32: //-space-: JUMP
-				moveDirection.jump = 1;
-				break;
-			case 38: //↑: FORWARD
-				moveDirection.forward = 1
-				break;                        
-			case 40: //↓: BACK
-				moveDirection.back = 1
-				break;                        
-			case 37: //←: LEFT
-				moveDirection.left = 1
-				break;                       
-			case 39: //→: RIGHT
-				moveDirection.right = 1
-				break;                       
-		}
-	}            
-
-	function handleKeyUp(event) {
-		let keyCode = event.keyCode;
-		switch(keyCode){
-			case 38: //↑: FORWARD
-				moveDirection.forward = 0
-				break;                        
-			case 40: //↓: BACK
-				moveDirection.back = 0
-				break;                        
-			case 37: //←: LEFT
-				moveDirection.left = 0
-				break;                        
-			case 39: //→: RIGHT
-				moveDirection.right = 0
-				break;
-		}
 	}
 
 	ret.addBoxObsticle = function(mesh){		
@@ -185,41 +144,67 @@ let Physics = function (callback) {
 		let groundBody = new Ammo.btRigidBody(new Ammo.btRigidBodyConstructionInfo(groundMass, groundMotionState, heightFieldShape, groundLocalInertia));		physicsWorld.addRigidBody(groundBody);
 	}
 	
-	ret.createCharacter = function(scene) {               
-		let pos = {x: 0, y: 20, z: 0};
-		let radius = 1;
+	ret.createCharacter = function(scene, transformationCallback) {               
+		let pos = {x: 0, y: 10, z: 0};
+		let radius = 4;
+		let size = {x: 2, y: 2, z: 2};
 		let quat = {x: 0, y: 0, z: 0, w: 1};
 		let mass = 1;
-		let stepHeight = 1;
+		let stepHeight = 2;				
 		
 		//threeJS Section
-		ballObject = new THREE.Mesh(new THREE.SphereBufferGeometry(radius), new THREE.MeshPhongMaterial({color: 0xff0505}));
-		ballObject.position.set(pos.x, pos.y, pos.z);	
-		ballObject.castShadow = true;
-		ballObject.receiveShadow = true;
-		scene.add(ballObject);
+		//let mesh = new THREE.Mesh(new THREE.BoxGeometry(size.x, size.y, size.z), new THREE.MeshPhongMaterial({color: 0xff0505}));
+		let mesh = new THREE.Mesh(new THREE.SphereBufferGeometry(radius), new THREE.MeshPhongMaterial({color: 0xff0505}));
+		mesh.position.set(pos.x, pos.y, pos.z);
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		scene.add(mesh);
 
 		//Ammojs Section
 		let transform = new Ammo.btTransform();
 		transform.setIdentity();
 		transform.setOrigin( new Ammo.btVector3( pos.x, pos.y, pos.z ) );
-		transform.setRotation( new Ammo.btQuaternion( quat.x, quat.y, quat.z, quat.w ) );
-		let motionState = new Ammo.btDefaultMotionState( transform );
+		transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
+		let motionState = new Ammo.btDefaultMotionState(transform);
 
+		//let colShape = new Ammo.btBoxShape(new Ammo.btVector3(size.x * 0.5, size.y * 0.5, size.z * 0.5));
 		let colShape = new Ammo.btSphereShape( radius );
-		colShape.setMargin( 0.05 );
+		colShape.setMargin(0.05);
 
-		let localInertia = new Ammo.btVector3( 0, 0, 0 );
+		let localInertia = new Ammo.btVector3(0, 0, 0);
 		colShape.calculateLocalInertia( mass, localInertia );
 
-		let rbInfo = new Ammo.btRigidBodyConstructionInfo( mass, motionState, colShape, localInertia );
-		let body = new Ammo.btRigidBody( rbInfo );
+		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
+		let body = new Ammo.btRigidBody(rbInfo);
 		body.setFriction(2);
 		body.setRollingFriction(5);
-		body.setActivationState( STATE.DISABLE_DEACTIVATION )
-		physicsWorld.addRigidBody( body );              
-		ballObject.userData.physicsBody = body;
-		rigidBodies.push(ballObject);
+		body.setActivationState(STATE.DISABLE_DEACTIVATION)
+		physicsWorld.addRigidBody(body);
+		mesh.userData.physicsBody = body;
+		mesh.userData.moveDirection = {left: 0, right: 0, forward: 0, back: 0, jump: 0};
+		mesh.userData.transformationCallback = transformationCallback;
+		mesh.userData.physicsUpdate = function(infoLines) {
+			let scalingFactor = 20;
+			let moveX = mesh.userData.moveX;
+			let moveY = mesh.userData.moveY;
+			let moveZ = mesh.userData.moveZ;
+			mesh.userData.moveY = 0;
+			
+			let resultantImpulse = new Ammo.btVector3( moveX, moveY, moveZ )
+			resultantImpulse.op_mul(scalingFactor);
+
+			let physicsBody = mesh.userData.physicsBody;
+			let vel = physicsBody.getLinearVelocity();				
+			vel.setX(moveX * scalingFactor);
+			vel.setZ(moveZ * scalingFactor);
+			if (moveY == 1)
+				if (vel.y() < 0.001)
+					vel.setY(moveY * scalingFactor);
+			physicsBody.setLinearVelocity(vel);								
+			infoLines[1] = "X: " + Math.floor(vel.x()) + " Y:" + Math.floor(vel.y()) + " Z:" + Math.floor(vel.z());
+		};
+		rigidBodies.push(mesh);
+		return mesh;
 	}
 	
 	ret.addRigidBody = function(threeObject) {
@@ -270,29 +255,6 @@ let Physics = function (callback) {
 		kObject.userData.physicsBody = body;
 	}
 
-	function moveBall(){
-		let scalingFactor = 20;
-
-		let moveX =  moveDirection.right - moveDirection.left;
-		let moveZ =  moveDirection.back - moveDirection.forward;
-		let moveY =  moveDirection.jump; 
-		moveDirection.jump = 0;
-
-		//if( moveX == 0 && moveY == 0 && moveZ == 0) return;
-
-		let resultantImpulse = new Ammo.btVector3( moveX, moveY, moveZ )
-		resultantImpulse.op_mul(scalingFactor);
-
-		let physicsBody = ballObject.userData.physicsBody;
-		let vel = physicsBody.getLinearVelocity();				
-		vel.setX(moveX * scalingFactor);
-		vel.setZ(moveZ * scalingFactor);
-		if (moveY == 1)
-			if (vel.y() < 0.001)
-				vel.setY(moveY * scalingFactor);
-		physicsBody.setLinearVelocity( vel );
-	}
-
 	function moveKinematic(){
 		let scalingFactor = 0.3;
 		let moveX =  kMoveDirection.right - kMoveDirection.left;
@@ -322,28 +284,27 @@ let Physics = function (callback) {
 		}
 	}
 
-	ret.updatePhysics = function(deltaTime, infoLines) {	
-		moveBall();
+	ret.updatePhysics = function(deltaTime, infoLines) {			
 		moveKinematic();
 		
 		// Step world
 		physicsWorld.stepSimulation( deltaTime, 10 );
-
-		let physicsBody = ballObject.userData.physicsBody;
-		let vel = physicsBody.getLinearVelocity();				
-		infoLines[1] = "X: "+Math.floor(vel.x())+ " Y:"+Math.floor(vel.y())+" Z:"+Math.floor(vel.z());
-
+		
 		// Update rigid bodies
-		for ( let i = 0; i < rigidBodies.length; i++ ) {
+		for (let i = 0; i < rigidBodies.length; i++) {
 			let objThree = rigidBodies[ i ];
 			let objAmmo = objThree.userData.physicsBody;
+			if (objThree.userData.physicsUpdate !== undefined) 
+				objThree.userData.physicsUpdate(infoLines);
 			let ms = objAmmo.getMotionState();
-			if ( ms ) {
-				ms.getWorldTransform( tmpTrans );
+			if (ms) {
+				ms.getWorldTransform(tmpTrans);
 				let p = tmpTrans.getOrigin();
 				let q = tmpTrans.getRotation();
-				objThree.position.set( p.x(), p.y(), p.z() );
-				objThree.quaternion.set( q.x(), q.y(), q.z(), q.w() );
+				objThree.position.set(p.x(), p.y(), p.z());
+				objThree.quaternion.set(q.x(), q.y(), q.z(), q.w());
+				if (objThree.userData.transformationCallback !== undefined) 
+					objThree.userData.transformationCallback(objThree);
 			}
 		}
 	}
