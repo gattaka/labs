@@ -1,31 +1,25 @@
-import { Cookies } from './cookies.js';
-import { Stats } from './stats.module.js';
+import { CookieUtils } from './CookieUtils.js';
+import { Stats } from './Stats.js';
+import { Info } from './Info.js';
 import { PointerLockControls } from './PointerLockControls.js';
 import { GLTFLoader } from './GLTFLoader.js';
-import { Cloth } from './cloth.module.js';
-import { Physics } from './physics.js';
-import { Terrain } from './terrain.js';
+import { Cloth } from './Cloth.js';
+import { Physics } from './Physics.js';
+import { Terrain } from './Terrain.js';
+import { Player } from './Player.js';
 import * as THREE from './three.module.js';
 
-const infoDiv = document.getElementById("info");
-
-const keys = {forward: 0, back: 0, left: 0, right: 0, jump: 0};
-
 const showHelpers = false;
-const walkSpeed = 1.5;
-
-const infoLines = [];
-
-const infoDelay = .1;
-let infoCooldown = infoDelay;
 
 let camera, scene, renderer, controls;
 let flag;
 let player;
 
+const info = new Info();
 const clock = new THREE.Clock();
 const stats = new Stats();
-const physics = new Physics(init);
+const physics = new Physics.processor(init);
+const cookieUtils = new CookieUtils();
 
 // https://redstapler.co/create-3d-world-with-three-js-and-skybox-technique/
 // https://opengameart.org/content/skiingpenguins-skybox-pack
@@ -392,19 +386,19 @@ function createControls() {
 	const onKeyChange = function (event, down) {
 		switch (event.key) {
 			case "w":
-				keys.forward = down ? 1 : 0;
+				player.keys.forward = down ? 1 : 0;
 				break;
 			case "a":
-				keys.right = down ? 1 : 0;
+				player.keys.right = down ? 1 : 0;
 				break;
 			case "s":
-				keys.back = down ? 1 : 0;
+				player.keys.back = down ? 1 : 0;
 				break;
 			case "d":
-				keys.left = down ? 1 : 0;
+				player.keys.left = down ? 1 : 0;
 				break;
 			case " ":
-				keys.jump = down ? 1 : 0;				
+				player.keys.jump = down ? 1 : 0;				
 				break;
 		}
 	};
@@ -415,13 +409,7 @@ function createControls() {
 function init() {
 	document.body.appendChild(stats.dom);
 	// atributy:  field of view, aspect ratio, near, far
-	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000);
-	camera.position.x = Number(Cookies.getCookie('camposx')) || 0;
-	camera.position.y = Number(Cookies.getCookie('camposy')) || 10;
-	camera.position.z = Number(Cookies.getCookie('camposz')) || 0;
-	camera.rotation.x = Number(Cookies.getCookie('camrotx')) || 0;
-	camera.rotation.y = Number(Cookies.getCookie('camroty')) || 0;
-	camera.rotation.z = Number(Cookies.getCookie('camrotz')) || 0;
+	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000);	
 	
 	scene = new THREE.Scene();		
 	scene.background = new THREE.Color(0xdddddd);			
@@ -436,6 +424,17 @@ function init() {
 	renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
 	document.body.appendChild(renderer.domElement);
 	window.addEventListener('resize', onWindowResize);			
+	
+	info.addInfoSource(function() {
+		const cp = camera.position, px = cp.x, py = cp.y, pz = cp.z;
+		const cr = camera.rotation, rx = cr.x, ry = cr.y, rz = cr.z;
+		let flr = Math.floor;
+		// TODO tohle intervalové ukládání by nemělo být svázáno s intervalem info výpisů
+		cookieUtils.setCookie('camposx', px).setCookie('camposy', py).setCookie('camposz', pz);
+		cookieUtils.setCookie('camrotx', rx).setCookie('camroty', ry).setCookie('camrotz', rz);
+		return "Camera = pos[x: " + flr(px) + " y: " + flr(py) + " z: " + flr(pz) + "]" + 
+			" rot[" + flr(rx) + " y: " + flr(ry) + " z: " + flr(rz) + "]" ;		
+	});
 	
 	createSkybox();
 	createControls();
@@ -459,15 +458,19 @@ function init() {
 	createStaryBarak();
 	*/
 	
-	let terrain = new Terrain();
-	scene.add(terrain);
-	physics.addTerrain(terrain);
+	let terrain = new Terrain(physics);
+	scene.add(terrain);	
 	
-	player = physics.createCharacter(scene, function(objThree) {
-		camera.position.x = objThree.position.x;
-		camera.position.y = objThree.position.y + 8;
-		camera.position.z = objThree.position.z;
-	});	
+	let lastPos = new THREE.Vector3();
+	lastPos.x = cookieUtils.getCookieNumber('camposx') || 0;
+	lastPos.y = cookieUtils.getCookieNumber('camposy') || 10;
+	lastPos.z = cookieUtils.getCookieNumber('camposz') || 0;
+	let lastRot = new THREE.Vector3();
+	camera.rotation.x = cookieUtils.getCookieNumber('camrotx') || 0;
+	camera.rotation.y = cookieUtils.getCookieNumber('camroty') || 0;
+	camera.rotation.z = cookieUtils.getCookieNumber('camrotz') || 0;
+	player = new Player(info, camera, physics, lastPos);	
+	scene.add(player.mesh);
 
 	animate(0);	
 }
@@ -481,57 +484,15 @@ function onWindowResize() {
 function animate(now) {
 	requestAnimationFrame(animate);
 	flag.animate(now);
-	render(now);
+	render();
 	stats.update();
 }
 
-function updateInfo(delta) {
-	infoCooldown -= delta;
-	if (infoCooldown <= 0) {	
-		const posx = camera.position.x;
-		const posy = camera.position.y;
-		const posz = camera.position.z;
-		const rotx = camera.rotation.x;
-		const roty = camera.rotation.y;
-		const rotz = camera.rotation.z;
-		infoLines[0] = "Camera = pos[x: " + Math.floor(posx) + " y: " + Math.floor(posy) + " z: " + Math.floor(posz) + "]" + 
-			" rot[" + Math.floor(rotx) + " y: " + Math.floor(roty) + " z: " + Math.floor(rotz) + "]" ;
-		infoCooldown = infoDelay;	
-		Cookies.setCookie('camposx',posx);
-		Cookies.setCookie('camposy',posy);
-		Cookies.setCookie('camposz',posz);
-		Cookies.setCookie('camrotx',rotx);
-		Cookies.setCookie('camroty',roty);
-		Cookies.setCookie('camrotz',rotz);
-		
-		infoDiv.innerHTML = "";
-		infoLines.forEach(l => {
-			infoDiv.innerHTML += l + "<br/>";
-		});
-	}
-}
-
-function render(now) {
-	const delta = clock.getDelta();
-		
-	//controls.moveForward((controls.forwardSpeed - controls.backSpeed) * delta);
-	//controls.moveRight((controls.leftSpeed - controls.rightSpeed) * delta);
-	
-	var vec = new THREE.Vector3();
-	vec.setFromMatrixColumn(camera.matrix, 0);
-	vec.crossVectors(camera.up, vec);
-	vec.multiplyScalar(keys.forward - keys.back);
-	var vec2 = new THREE.Vector3();
-	vec2.setFromMatrixColumn(camera.matrix, 0);
-	vec2.multiplyScalar(keys.left - keys.right);
-	vec.add(vec2);
-	
-	player.userData.moveX = vec.x * walkSpeed;
-	player.userData.moveY = vec.y + keys.jump;
-	player.userData.moveZ = vec.z * walkSpeed;
-	
-	physics.updatePhysics(delta, infoLines);
+function render() {
+	const delta = clock.getDelta();	
+	player.movePlayer(delta);
+	physics.updatePhysics(delta);
 	renderer.clear();
 	renderer.render(scene, camera);	
-	updateInfo(delta);	
-}
+	info.update(delta);	
+};

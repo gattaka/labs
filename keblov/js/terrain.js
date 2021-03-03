@@ -1,9 +1,9 @@
 import * as THREE from '../js/three.module.js';			
 
-let Terrain = function () {
+let Terrain = function (physics) {
 
-	var terrainWidthExtents = 500;
-	var terrainDepthExtents = 500;
+	var terrainWidthExtents = 600;
+	var terrainDepthExtents = 600;
 	var terrainWidth = 128;
 	var terrainDepth = 128;
 	var terrainMaxHeight = 8;
@@ -62,6 +62,8 @@ let Terrain = function () {
 		ground.userData.terrainDepth = terrainDepth;
 		ground.userData.terrainMaxHeight = terrainMaxHeight;
 		ground.userData.terrainMinHeight = terrainMinHeight;
+		
+		physics.addTerrain(ground);
 		return ground;
 	}
 

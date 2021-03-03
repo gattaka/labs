@@ -1,11 +1,13 @@
-let Cookies = {
-
-	setCookie: function(name,value) {
+let CookieUtils = function() {
+	
+	let ret = {};
+	ret.setCookie = function(name,value) {
 		var expires = "";    
 		document.cookie = name + "=" + (value || "")  + expires + "; path=/";
-	},
+		return ret;
+	};
 	
-	getCookie: function(name) {
+	ret.getCookie = function(name) {
 		var nameEQ = name + "=";
 		var ca = document.cookie.split(';');
 		for(var i=0;i < ca.length;i++) {
@@ -14,7 +16,13 @@ let Cookies = {
 			if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length,c.length);
 		}
 		return null;
-	},
+	};
+	
+	ret.getCookieNumber = function(name) {
+		return Number(ret.getCookie(name));
+	};
+	
+	return ret;
 };
 
-export { Cookies };
+export { CookieUtils };

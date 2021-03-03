@@ -1,22 +1,23 @@
 import * as THREE from '../js/three.module.js';			
 
-let Physics = function (callback) {
+let Physics = {};
+Physics.STATE = { DISABLE_DEACTIVATION : 4 };
+Physics.FLAGS = { CF_KINEMATIC_OBJECT: 2 };
+Physics.processor = function (callback) {
 
 	let clock;
-
 	let character, ghostObject;
 	let tempVecBt1, tempQuatBt1, transformAux1;
+	let cbContactResult;
 
 	const infoDiv = document.getElementById("info");
 
 	//variable declaration section
-	let physicsWorld, rigidBodies = [], tmpTrans = null	
-	let kObject = null, kMoveDirection = { left: 0, right: 0, forward: 0, back: 0 }, tmpPos = new THREE.Vector3(), tmpQuat = new THREE.Quaternion();
+	let physicsWorld, dynamicObjects = [], tmpTrans = null	
+	let tmpPos = new THREE.Vector3(), tmpQuat = new THREE.Quaternion();
 	let ammoTmpPos = null, ammoTmpQuat = null;
 	let mouseCoords = new THREE.Vector2(), raycaster = new THREE.Raycaster();
 
-	const STATE = { DISABLE_DEACTIVATION : 4 }
-	const FLAGS = { CF_KINEMATIC_OBJECT: 2 }
 	// body.setActivationState(STATE.DISABLE_DEACTIVATION);
 	// body.setCollisionFlags(FLAGS.CF_KINEMATIC_OBJECT);
 
@@ -38,7 +39,8 @@ let Physics = function (callback) {
 			overlappingPairCache    = new Ammo.btDbvtBroadphase(),
 			solver                  = new Ammo.btSequentialImpulseConstraintSolver();
 		physicsWorld           = new Ammo.btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
-		physicsWorld.setGravity(new Ammo.btVector3(0, -50, 0));			
+		physicsWorld.setGravity(new Ammo.btVector3(0, -50, 0));
+		setupContactResultCallback();
 	};
 
 	function setupEventHandlers() {
@@ -118,7 +120,7 @@ let Physics = function (callback) {
 		mesh.userData.physicsBody = body;
 
 		physicsWorld.addRigidBody(body);
-		rigidBodies.push(mesh);
+		dynamicObjects.push(mesh);
 	}
 	
 	// http://kripken.github.io/ammo.js/examples/webgl_demo_terrain/index.html
@@ -191,73 +193,15 @@ let Physics = function (callback) {
 		let groundMotionState = new Ammo.btDefaultMotionState(groundTransform);
 		let groundBody = new Ammo.btRigidBody(new Ammo.btRigidBodyConstructionInfo(groundMass, groundMotionState, heightFieldShape, groundLocalInertia));		physicsWorld.addRigidBody(groundBody);
 	}
-	
-	ret.createCharacter = function(scene, transformationCallback) {               
-		let pos = {x: 0, y: 10, z: 0};
-		let radius = 2;
-		let size = {x: 2, y: 2, z: 2};
-		let quat = {x: 0, y: 0, z: 0, w: 1};
-		let mass = 1;
-		let stepHeight = 2;				
 		
-		let mesh = new THREE.Mesh(new THREE.SphereBufferGeometry(radius), new THREE.MeshBasicMaterial({wireframe: true}));
-		mesh.position.set(pos.x, pos.y, pos.z);
-		mesh.castShadow = true;
-		mesh.receiveShadow = true;
-		scene.add(mesh);
-
-		//Ammojs Section
-		let transform = new Ammo.btTransform();
-		transform.setIdentity();
-		transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
-		transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
-		let motionState = new Ammo.btDefaultMotionState(transform);
-
-		//let colShape = new Ammo.btBoxShape(new Ammo.btVector3(size.x * 0.5, size.y * 0.5, size.z * 0.5));
-		let colShape = new Ammo.btSphereShape(radius);
-		colShape.setMargin(0.05);
-
-		let localInertia = new Ammo.btVector3(0, 0, 0);
-		colShape.calculateLocalInertia(mass, localInertia);
-
-		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
-		let body = new Ammo.btRigidBody(rbInfo);
-		body.setFriction(2);
-		body.setRollingFriction(5);
-		body.setActivationState(STATE.DISABLE_DEACTIVATION)
-		physicsWorld.addRigidBody(body);
-		
-		mesh.userData.physicsBody = body;
-		mesh.userData.moveDirection = {left: 0, right: 0, forward: 0, back: 0, jump: 0};
-		mesh.userData.transformationCallback = transformationCallback;
-		mesh.userData.physicsUpdate = function(infoLines) {
-			let scalingFactor = 20;
-			let moveX = mesh.userData.moveX;
-			let moveY = mesh.userData.moveY;
-			let moveZ = mesh.userData.moveZ;
-			mesh.userData.moveY = 0;
-			
-			let resultantImpulse = new Ammo.btVector3(moveX, moveY, moveZ)
-			resultantImpulse.op_mul(scalingFactor);
-
-			let physicsBody = mesh.userData.physicsBody;
-			let vel = physicsBody.getLinearVelocity();				
-			vel.setX(moveX * scalingFactor);
-			vel.setZ(moveZ * scalingFactor);
-			// FIXME
-			if (moveY != 0 && Math.abs(vel.y()) < 3)
-				vel.setY(moveY * scalingFactor);
-			physicsBody.setLinearVelocity(vel);								
-			infoLines[1] = "X: " + Math.floor(vel.x()) + " Y:" + Math.floor(vel.y()) + " Z:" + Math.floor(vel.z());
-		};
-		rigidBodies.push(mesh);
-		return mesh;
-	}
-	
-	ret.addRigidBody = function(threeObject) {
-		rigidBodies.push(threeObject);
-		physicsWorld.addRigidBody(threeObject.userData.physicsBody);     
+	ret.addRigidBody = function(physicsBody) {
+		physicsWorld.addRigidBody(physicsBody);     
 	};		
+	
+	ret.addDynamicObject = function(objThree) {
+		dynamicObjects.push(objThree);  
+		ret.addRigidBody(objThree.userData.physicsBody);     		
+	};	
 
 	function updateMeshMotionState(ms, objThree) {
 		ms.getWorldTransform(tmpTrans);
@@ -270,17 +214,33 @@ let Physics = function (callback) {
 		if (objThree.userData.transformationCallback !== undefined) 
 			objThree.userData.transformationCallback(objThree);
 	};
+	
+	function setupContactResultCallback() {
+		cbContactResult = new Ammo.ConcreteContactResultCallback();               
+		cbContactResult.addSingleResult = function(cp, colObj0Wrap, partId0, index0, colObj1Wrap, partId1, index1){                    
+			let contactPoint = Ammo.wrapPointer(cp, Ammo.btManifoldPoint);
+			const distance = contactPoint.getDistance();
+			if (distance > 0) return;
+			this.hasContact = true;	
+		}
+	};
+	
+	ret.checkContact = function (body) {
+		cbContactResult.hasContact = false;
+		physicsWorld.contactTest(body, cbContactResult);		
+		return cbContactResult.hasContact;
+	};
 
-	ret.updatePhysics = function(deltaTime, infoLines) {			
+	ret.updatePhysics = function(deltaTime) {			
 		// Step world
 		physicsWorld.stepSimulation(deltaTime, 10);
 		
 		// Update rigid bodies
-		for (let i = 0; i < rigidBodies.length; i++) {
-			let objThree = rigidBodies[ i ];
+		for (let i = 0; i < dynamicObjects.length; i++) {
+			let objThree = dynamicObjects[ i ];
 			let objAmmo = objThree.userData.physicsBody;
 			if (objThree.userData.physicsUpdate !== undefined) 
-				objThree.userData.physicsUpdate(infoLines);
+				objThree.userData.physicsUpdate();
 			let ms = objAmmo.getMotionState();
 			if (ms) {
 				updateMeshMotionState(ms, objThree);
