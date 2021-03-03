@@ -6,8 +6,8 @@ let Terrain = function (physics) {
 	var terrainDepthExtents = 600;
 	var terrainWidth = 128;
 	var terrainDepth = 128;
-	var terrainMaxHeight = 8;
-	var terrainMinHeight = -2;
+	var terrainMaxHeight = 5;
+	var terrainMinHeight = 0;
 
 	function generateHeight( width, depth, minHeight, maxHeight ) {
 		// Generates the height data (a sinus wave)

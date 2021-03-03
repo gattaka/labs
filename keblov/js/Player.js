@@ -12,6 +12,8 @@ let Player = function (info, camera, physics, pos) {
 	const keys = {forward: 0, back: 0, left: 0, right: 0, jump: 0};
 	const walkSpeed = 1.5;
 	
+	const meshType = 1;
+	
 	let moveX, moveY, moveZ;
 	
 	let ret = {};
@@ -24,10 +26,14 @@ let Player = function (info, camera, physics, pos) {
 		transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 		let motionState = new Ammo.btDefaultMotionState(transform);
 		
-		let mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: 0x30ab78}));
-		let colShape = new Ammo.btBoxShape(new Ammo.btVector3(size.x * 0.5, size.y * 0.5, size.z * 0.5));			
-		/*let mesh = new THREE.Mesh(new THREE.SphereBufferGeometry(radius), new THREE.MeshBasicMaterial({wireframe: true}));
-		let colShape = new Ammo.btSphereShape(radius);*/
+		let mesh, colShape;
+		if (meshType == 0) {
+			mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: 0x30ab78}));
+			colShape = new Ammo.btBoxShape(new Ammo.btVector3(size.x * 0.5, size.y * 0.5, size.z * 0.5));			
+		} else {
+			mesh = new THREE.Mesh(new THREE.SphereBufferGeometry(radius), new THREE.MeshBasicMaterial({wireframe: true}));
+			colShape = new Ammo.btSphereShape(radius);
+		}
 		
 		ret.mesh = mesh;
 		

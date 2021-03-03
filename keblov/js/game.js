@@ -455,8 +455,8 @@ function init() {
 	
 	createLowPolyXmasTree();
 	createSmallTree();
-	createStaryBarak();
 	*/
+	createStaryBarak();
 	
 	let terrain = new Terrain(physics);
 	scene.add(terrain);	
