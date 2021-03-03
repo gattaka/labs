@@ -12,7 +12,7 @@ const infoDiv = document.getElementById("info");
 const keys = {forward: 0, back: 0, left: 0, right: 0, jump: 0};
 
 const showHelpers = false;
-const walkSpeed = 30;
+const walkSpeed = 1.5;
 
 const infoLines = [];
 
@@ -251,9 +251,9 @@ function createSmallTree() {
 
 function createFlag() {
 	const loader = new THREE.TextureLoader();
-	const clothTexture = loader.load( '../textures/vlajka.png' );
+	const clothTexture = loader.load('../textures/vlajka.png');
 	clothTexture.anisotropy = 16;
-	const clothMaterial = new THREE.MeshLambertMaterial( {
+	const clothMaterial = new THREE.MeshLambertMaterial({
 		map: clothTexture,
 		side: THREE.DoubleSide,
 		alphaTest: 0.5
@@ -270,7 +270,7 @@ function createStozar() {
 	texture.wrapS = THREE.RepeatWrapping;
 	texture.wrapT = THREE.RepeatWrapping;
 	texture.repeat.set(1, 20);
-	const geometry = new THREE.CylinderGeometry( .2, .7, 200, 16 );
+	const geometry = new THREE.CylinderGeometry(.2, .7, 200, 16);
 	const material = new THREE.MeshLambertMaterial({map: texture});
 	const mesh = new THREE.Mesh(geometry, material);
 	mesh.position.set(97, 0, 107);
@@ -278,9 +278,12 @@ function createStozar() {
 	mesh.receiveShadow = true;
 	mesh.scale.set(1, 1, 1);
 	scene.add(mesh);
+	physics.addCylinderObsticle(mesh);
 }
 
 function createTents() {
+	// modely musí mít počátek uprostřed své výšky a obsahu, 
+	// jinak boundingbox přepočet na Ammo kolizní box bude dělat problémy
 	new GLTFLoader().load('../models/stan.glb', gltf => { 
 		let model = gltf.scene.children[0];
 		model.scale.set(10,10,10);
@@ -291,26 +294,32 @@ function createTents() {
 			n.receiveShadow = true;
 			if (n.material.map) n.material.map.anisotropy = 1; 
 		}});
+		let bbmax = model.geometry.boundingBox.max;
+		let bbmin = model.geometry.boundingBox.min;		
+		let startY = 20;
 		// severní řada 9 stanů
 		for (let i = 0; i < 9; i++) {			
 			let tent = model.clone();
-			tent.position.set(25 * i, -1, -20);
+			tent.position.set(25 * i, startY, -20);
 			scene.add(tent);
+			physics.addBoxObsticle(tent, scene);
 		}
 		// západní řada 8 stanů
 		for (let i = 0; i < 8; i++) {			
 			if (i == 3) continue;
 			let tent = model.clone();
 			tent.rotateZ(Math.PI/2);
-			tent.position.set(250, -1, 20 + i * 25);
+			tent.position.set(250, startY, 20 + i * 25);
 			scene.add(tent);
+			physics.addBoxObsticle(tent, scene);
 		}
 		// jižní řada 13 stanů
 		for (let i = 0; i < 13; i++) {			
 			let tent = model.clone();
 			tent.rotateZ(Math.PI);
-			tent.position.set(210 - 25 * i, -1, 230);
+			tent.position.set(210 - 25 * i, startY, 230);
 			scene.add(tent);
+			physics.addBoxObsticle(tent, scene);
 		}
 	});	
 }
@@ -374,10 +383,6 @@ function createLight() {
 // https://sbcode.net/threejs/pointerlock-controls/
 function createControls() {
 	controls = new PointerLockControls(camera, document.body);	
-	controls.forwardSpeed = 0;
-	controls.rightSpeed = 0;
-	controls.backSpeed = 0;
-	controls.leftSpeed = 0;
 	document.body.addEventListener('click', function () {
 		controls.lock();
 	}, false);
@@ -460,10 +465,9 @@ function init() {
 	
 	player = physics.createCharacter(scene, function(objThree) {
 		camera.position.x = objThree.position.x;
-		camera.position.y = objThree.position.y;
+		camera.position.y = objThree.position.y + 8;
 		camera.position.z = objThree.position.z;
-	});
-	physics.createKinematicBox(scene);	
+	});	
 
 	animate(0);	
 }
@@ -514,17 +518,17 @@ function render(now) {
 	//controls.moveRight((controls.leftSpeed - controls.rightSpeed) * delta);
 	
 	var vec = new THREE.Vector3();
-	vec.setFromMatrixColumn( camera.matrix, 0 );
+	vec.setFromMatrixColumn(camera.matrix, 0);
 	vec.crossVectors(camera.up, vec);
 	vec.multiplyScalar(keys.forward - keys.back);
 	var vec2 = new THREE.Vector3();
-	vec2.setFromMatrixColumn( camera.matrix, 0 );
+	vec2.setFromMatrixColumn(camera.matrix, 0);
 	vec2.multiplyScalar(keys.left - keys.right);
 	vec.add(vec2);
 	
-	player.userData.moveX = vec.x;
-	player.userData.moveY = vec.y;
-	player.userData.moveZ = vec.z;
+	player.userData.moveX = vec.x * walkSpeed;
+	player.userData.moveY = vec.y + keys.jump;
+	player.userData.moveZ = vec.z * walkSpeed;
 	
 	physics.updatePhysics(delta, infoLines);
 	renderer.clear();
