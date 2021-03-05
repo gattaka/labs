@@ -9,7 +9,7 @@ import { Terrain } from './Terrain.js';
 import { Player } from './Player.js';
 import * as THREE from './three.module.js';
 
-const showHelpers = false;
+const showHelpers = true;
 
 let camera, scene, renderer, controls;
 let flag;
@@ -116,18 +116,27 @@ function createPineTree2() {
 	});		
 };
 
-function createStaryBarak() {
+function createStaryBarak() {	
 	new GLTFLoader().load('../models/keblov_stary.glb', result => { 
 		let model = result.scene.children[0]; 		
-		model.position.set(-300, 1, 0);
+		model.position.set(-300, 5, 0);
 		const sc = 10;
 		model.scale.set(sc,sc,sc);
-		model.rotation.y = 3 * Math.PI/2;
+		model.rotation.y = 3 * Math.PI/2;		
+		const bboxMax = new THREE.Vector3();
+		const bboxMin = new THREE.Vector3();
 		model.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
 			n.receiveShadow = true;
-			if (n.material.map) n.material.map.anisotropy = 1; 
+			if (n.material.map) n.material.map.anisotropy = 1;
+			bboxMax.x = Math.max(n.geometry.boundingBox.max.x, bboxMax.x);
+			bboxMax.y = Math.max(n.geometry.boundingBox.max.y, bboxMax.y);
+			bboxMax.z = Math.max(n.geometry.boundingBox.max.z, bboxMax.z);
+			bboxMin.x = Math.min(n.geometry.boundingBox.min.x, bboxMin.x);
+			bboxMin.y = Math.min(n.geometry.boundingBox.min.y, bboxMin.y);
+			bboxMin.z = Math.min(n.geometry.boundingBox.min.z, bboxMin.z);
 		}});
+		physics.addBoxObsticle(model, scene, true, bboxMax, bboxMin);
 		scene.add(model);
 	});		
 	new GLTFLoader().load('../models/keblov_stary_zdi.glb', result => { 
@@ -142,7 +151,7 @@ function createStaryBarak() {
 			if (n.material.map) n.material.map.anisotropy = 1; 
 		}});
 		scene.add(model);
-	});		
+	});
 };
 
 // https://sketchfab.com/3d-models/lowpoly-tree-b562b2e9f029440c804b4b6d36ebe174
@@ -441,8 +450,7 @@ function init() {
 	createLight();
 	
 	createFlag();
-	createStozar();
-	//createBox();
+	createStozar();	
 	createTents();
 	/*
 	//createGrid();

@@ -5,6 +5,8 @@ Physics.STATE = { DISABLE_DEACTIVATION : 4 };
 Physics.FLAGS = { CF_KINEMATIC_OBJECT: 2 };
 Physics.processor = function (callback) {
 
+	const showHelpers = true;
+
 	let clock;
 	let character, ghostObject;
 	let tempVecBt1, tempQuatBt1, transformAux1;
@@ -18,8 +20,8 @@ Physics.processor = function (callback) {
 	let ammoTmpPos = null, ammoTmpQuat = null;
 	let mouseCoords = new THREE.Vector2(), raycaster = new THREE.Raycaster();
 
-	// body.setActivationState(STATE.DISABLE_DEACTIVATION);
-	// body.setCollisionFlags(FLAGS.CF_KINEMATIC_OBJECT);
+	// body.setActivationState(Physics.STATE.DISABLE_DEACTIVATION);
+	// body.setCollisionFlags(Physics.FLAGS.CF_KINEMATIC_OBJECT);
 
 	Ammo().then(start);
 
@@ -79,26 +81,37 @@ Physics.processor = function (callback) {
 		physicsWorld.addRigidBody(body);
 	}
 
-	ret.addBoxObsticle = function(mesh, scene) {	
-		let quat = mesh.quaternion;
+	ret.addBoxObsticle = function(mesh, scene, kinematic, bbmax, bbmin) {		
+		let quat = mesh.quaternion.clone();
 		let mass = 1000;
 		let pos = mesh.position.clone();
-		let bbmax = mesh.geometry.boundingBox.max;
-		let bbmin = mesh.geometry.boundingBox.min;
-		let scale = {x: bbmax.x - bbmin.x, y: bbmax.y - bbmin.y, z: bbmax.z - bbmin.z};		
+									
+		if (bbmax === undefined)
+			bbmax = mesh.geometry.boundingBox.max;
+		if (bbmin === undefined)
+			bbmin = mesh.geometry.boundingBox.min;
+		const offset = new THREE.Vector3();
+		const boundingBox = new THREE.Box3(bbmin, bbmax);
+		boundingBox.getCenter(offset);		
+		offset.multiply(mesh.scale);		
+		let scale = new THREE.Vector3(bbmax.x - bbmin.x, bbmax.y - bbmin.y, bbmax.z - bbmin.z);	
 		scale.x *= mesh.scale.x;
 		scale.y *= mesh.scale.y;
 		scale.z *= mesh.scale.z;
 		
-		/*let helper = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: 0x30ab78}));
-		helper.position.set(pos.x, pos.y, pos.z);
-		helper.scale.set(scale.x, scale.y, scale.z);
-		helper.rotation.setFromQuaternion(quat);
-		helper.castShadow = true;
-		helper.receiveShadow = true;
-		scene.add(helper);
-		mesh.userData.helperMesh = helper;*/
-
+		if (showHelpers) {
+			var color = Math.floor(Math.random() * (1 << 24));
+			let helper = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: color}));
+			helper.position.set(pos.x, pos.y, pos.z);
+			helper.geometry.scale(scale.x, scale.y, scale.z);
+			helper.rotation.setFromQuaternion(quat);
+			helper.geometry.translate(offset.x, offset.y, offset.z);
+			helper.castShadow = true;
+			helper.receiveShadow = true;
+			scene.add(helper);
+			mesh.userData.helperMesh = helper;
+		}
+		
 		//Ammojs Section
 		let transform = new Ammo.btTransform();
 		transform.setIdentity();
@@ -115,12 +128,16 @@ Physics.processor = function (callback) {
 		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
 		let body = new Ammo.btRigidBody(rbInfo);
 
+		if (kinematic)
+			body.setCollisionFlags(Physics.FLAGS.CF_KINEMATIC_OBJECT);
+
 		body.setFriction(4);
 		body.setRollingFriction(10);
 		mesh.userData.physicsBody = body;
 
 		physicsWorld.addRigidBody(body);
-		dynamicObjects.push(mesh);
+		if (!kinematic)
+			dynamicObjects.push(mesh);
 	}
 	
 	// http://kripken.github.io/ammo.js/examples/webgl_demo_terrain/index.html
