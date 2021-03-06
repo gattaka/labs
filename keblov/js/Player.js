@@ -3,8 +3,8 @@ import * as THREE from '../js/three.module.js';
 
 let Player = function (info, camera, physics, pos) {
 
-	const eyeHeight = 8;
-	const radius = 2;
+	const eyeHeight = 12;
+	const radius = 1;
 	const size = {x: 2, y: 2, z: 2};
 	const quat = {x: 0, y: 0, z: 0, w: 1};
 	const mass = 5;
@@ -27,11 +27,12 @@ let Player = function (info, camera, physics, pos) {
 		let motionState = new Ammo.btDefaultMotionState(transform);
 		
 		let mesh, colShape;
+		const material = new THREE.MeshBasicMaterial({wireframe: true});
 		if (meshType == 0) {
-			mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: 0x30ab78}));
+			mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(), material);
 			colShape = new Ammo.btBoxShape(new Ammo.btVector3(size.x * 0.5, size.y * 0.5, size.z * 0.5));			
 		} else {
-			mesh = new THREE.Mesh(new THREE.SphereBufferGeometry(radius), new THREE.MeshBasicMaterial({wireframe: true}));
+			mesh = new THREE.Mesh(new THREE.SphereBufferGeometry(radius), material);
 			colShape = new Ammo.btSphereShape(radius);
 		}
 		

@@ -5,7 +5,7 @@ Physics.STATE = { DISABLE_DEACTIVATION : 4 };
 Physics.FLAGS = { CF_KINEMATIC_OBJECT: 2 };
 Physics.processor = function (callback) {
 
-	const showHelpers = true;
+	const showHelpers = false;
 
 	let clock;
 	let character, ghostObject;
@@ -81,23 +81,18 @@ Physics.processor = function (callback) {
 		physicsWorld.addRigidBody(body);
 	}
 
-	ret.addBoxObsticle = function(mesh, scene, kinematic, bbmax, bbmin) {		
+	ret.addBoxObsticle = function(mesh, scene, kinematic, bbmin, bbmax) {		
 		let quat = mesh.quaternion.clone();
-		let mass = 1000;
+		let mass = kinematic ? 0 : 10000;
 		let pos = mesh.position.clone();
 									
 		if (bbmax === undefined)
 			bbmax = mesh.geometry.boundingBox.max;
 		if (bbmin === undefined)
-			bbmin = mesh.geometry.boundingBox.min;
-		const offset = new THREE.Vector3();
-		const boundingBox = new THREE.Box3(bbmin, bbmax);
-		boundingBox.getCenter(offset);		
-		offset.multiply(mesh.scale);		
-		let scale = new THREE.Vector3(bbmax.x - bbmin.x, bbmax.y - bbmin.y, bbmax.z - bbmin.z);	
-		scale.x *= mesh.scale.x;
-		scale.y *= mesh.scale.y;
-		scale.z *= mesh.scale.z;
+			bbmin = mesh.geometry.boundingBox.min;		
+		const boundingBox = new THREE.Box3(bbmin, bbmax);						
+		let scale = new THREE.Vector3(bbmax.x - bbmin.x, bbmax.y - bbmin.y, bbmax.z - bbmin.z);
+		scale.multiply(mesh.scale);
 		
 		if (showHelpers) {
 			var color = Math.floor(Math.random() * (1 << 24));
@@ -105,7 +100,6 @@ Physics.processor = function (callback) {
 			helper.position.set(pos.x, pos.y, pos.z);
 			helper.geometry.scale(scale.x, scale.y, scale.z);
 			helper.rotation.setFromQuaternion(quat);
-			helper.geometry.translate(offset.x, offset.y, offset.z);
 			helper.castShadow = true;
 			helper.receiveShadow = true;
 			scene.add(helper);
@@ -131,8 +125,8 @@ Physics.processor = function (callback) {
 		if (kinematic)
 			body.setCollisionFlags(Physics.FLAGS.CF_KINEMATIC_OBJECT);
 
-		body.setFriction(4);
-		body.setRollingFriction(10);
+		//body.setFriction(4);
+		//body.setRollingFriction(10);
 		mesh.userData.physicsBody = body;
 
 		physicsWorld.addRigidBody(body);

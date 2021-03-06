@@ -9,7 +9,7 @@ import { Terrain } from './Terrain.js';
 import { Player } from './Player.js';
 import * as THREE from './three.module.js';
 
-const showHelpers = true;
+const showHelpers = false;
 
 let camera, scene, renderer, controls;
 let flag;
@@ -116,42 +116,59 @@ function createPineTree2() {
 	});		
 };
 
-function createStaryBarak() {	
-	new GLTFLoader().load('../models/keblov_stary.glb', result => { 
-		let model = result.scene.children[0]; 		
-		model.position.set(-300, 5, 0);
-		const sc = 10;
-		model.scale.set(sc,sc,sc);
-		model.rotation.y = 3 * Math.PI/2;		
-		const bboxMax = new THREE.Vector3();
-		const bboxMin = new THREE.Vector3();
-		model.traverse(n => { if (n.isMesh) {
-			n.castShadow = true; 
-			n.receiveShadow = true;
-			if (n.material.map) n.material.map.anisotropy = 1;
-			bboxMax.x = Math.max(n.geometry.boundingBox.max.x, bboxMax.x);
-			bboxMax.y = Math.max(n.geometry.boundingBox.max.y, bboxMax.y);
-			bboxMax.z = Math.max(n.geometry.boundingBox.max.z, bboxMax.z);
-			bboxMin.x = Math.min(n.geometry.boundingBox.min.x, bboxMin.x);
-			bboxMin.y = Math.min(n.geometry.boundingBox.min.y, bboxMin.y);
-			bboxMin.z = Math.min(n.geometry.boundingBox.min.z, bboxMin.z);
-		}});
-		physics.addBoxObsticle(model, scene, true, bboxMax, bboxMin);
-		scene.add(model);
-	});		
-	new GLTFLoader().load('../models/keblov_stary_zdi.glb', result => { 
-		let model = result.scene.children[0]; 		
-		model.position.set(-300, 0, 0);
-		const sc = 10;
-		model.scale.set(sc,sc,sc);
-		model.rotation.y = 3 * Math.PI/2;
+function processBoundingBox(model) {
+	const bboxMax = new THREE.Vector3();
+	const bboxMin = new THREE.Vector3();
+	model.traverse(n => { if (n.isMesh) {
+		bboxMax.x = Math.max(n.geometry.boundingBox.max.x, bboxMax.x);
+		bboxMax.y = Math.max(n.geometry.boundingBox.max.y, bboxMax.y);
+		bboxMax.z = Math.max(n.geometry.boundingBox.max.z, bboxMax.z);
+		bboxMin.x = Math.min(n.geometry.boundingBox.min.x, bboxMin.x);
+		bboxMin.y = Math.min(n.geometry.boundingBox.min.y, bboxMin.y);
+		bboxMin.z = Math.min(n.geometry.boundingBox.min.z, bboxMin.z);
+	}});
+	return {min: bboxMin, max: bboxMax};
+};
+
+function loadModel(scene, name, sc, bx, by, bz, variants, asPhysicsBody) {
+	new GLTFLoader().load('../models/' + name, gltf => { 
+		let model = gltf.scene.children[0];
+		model.scale.set(sc, sc, sc);
 		model.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
 			n.receiveShadow = true;
 			if (n.material.map) n.material.map.anisotropy = 1; 
 		}});
-		scene.add(model);
-	});
+		const box = processBoundingBox(model);
+		variants.forEach(v => {
+			let bed01 = model.clone();
+			bed01.position.set(bx + v.x * sc, by + v.y * sc, bz + v.z * sc);				
+			bed01.rotation.y = v.r;
+			scene.add(bed01);
+			if (asPhysicsBody)
+				physics.addBoxObsticle(bed01, scene, true, box.min, box.max);	
+		});
+	});		
+};
+
+function createStaryBarak() {	
+	const sc = 10;
+	let bx = -150;
+	let by = 1;
+	let bz = 0;
+	loadModel(scene, 'keblov_stary.glb', sc, bx, by, bz, [{x: 0, y: 0, z: 0, r: 3 * Math.PI/2}], true);	
+	by += 5;	
+	loadModel(scene, 'keblov_stary_zdi.glb', sc, bx, by, bz, [{x: 0, y: 0, z: 0, r: 3 * Math.PI/2}], false);	
+	const variants = [
+		{x: -9.62, y: 0.33, z: -0.37, r: 0},
+		{x: -11.33, y: 0.33, z: -0.37, r: 0},
+		{x: -10.82, y: 0.33, z: 1.68, r: Math.PI / 2},
+		{x: -10.82, y: 0.33, z: 2.59, r: Math.PI / 2},
+	];
+	loadModel(scene, 'postel.glb', sc, bx, by, bz, variants, true);			
+	loadModel(scene, 'kamna.glb', sc, bx, by, bz, [{x: -9.11, y: 0.74, z: 0.93, r: -Math.PI/2}], true);	
+	loadModel(scene, 'stul_polovodice.glb', sc, bx, by, bz, [{x: -8.63, y: 0.41, z: 1.88, r: -Math.PI/2}], true);
+	loadModel(scene, 'dilna_police.glb', sc, bx, by, bz, [{x: -10.75, y: 0.94, z: -3.2, r: -Math.PI/2}], true);	
 };
 
 // https://sketchfab.com/3d-models/lowpoly-tree-b562b2e9f029440c804b4b6d36ebe174
@@ -297,8 +314,6 @@ function createTents() {
 			n.receiveShadow = true;
 			if (n.material.map) n.material.map.anisotropy = 1; 
 		}});
-		let bbmax = model.geometry.boundingBox.max;
-		let bbmin = model.geometry.boundingBox.min;		
 		let startY = 20;
 		// severní řada 9 stanů
 		for (let i = 0; i < 9; i++) {			
