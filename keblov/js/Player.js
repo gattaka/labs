@@ -4,11 +4,11 @@ import * as THREE from '../js/three.module.js';
 let Player = function (info, camera, physics, pos) {
 
 	const eyeHeight = 12;
-	const radius = 1;
+	const radius = 1.4;
 	const size = {x: 2, y: 2, z: 2};
 	const quat = {x: 0, y: 0, z: 0, w: 1};
 	const mass = 5;
-	const stepHeight = 2;				
+	const stepHeight = 5;				
 	const keys = {forward: 0, back: 0, left: 0, right: 0, jump: 0};
 	const walkSpeed = 1.5;
 	

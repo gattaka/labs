@@ -130,7 +130,7 @@ function processBoundingBox(model) {
 	return {min: bboxMin, max: bboxMax};
 };
 
-function loadModel(scene, name, sc, bx, by, bz, variants, asPhysicsBody) {
+function loadModel(scene, name, sc, bx, by, bz, variants, asPhysicsBody, onCreateCallback) {
 	new GLTFLoader().load('../models/' + name, gltf => { 
 		let model = gltf.scene.children[0];
 		model.scale.set(sc, sc, sc);
@@ -141,12 +141,14 @@ function loadModel(scene, name, sc, bx, by, bz, variants, asPhysicsBody) {
 		}});
 		const box = processBoundingBox(model);
 		variants.forEach(v => {
-			let bed01 = model.clone();
-			bed01.position.set(bx + v.x * sc, by + v.y * sc, bz + v.z * sc);				
-			bed01.rotation.y = v.r;
-			scene.add(bed01);
+			let instance = model.clone();
+			instance.position.set(bx + v.x * sc, by + v.y * sc, bz + v.z * sc);				
+			instance.rotation.y = v.r;
+			scene.add(instance);
 			if (asPhysicsBody)
-				physics.addBoxObsticle(bed01, scene, true, box.min, box.max);	
+				physics.addMeshObsticle(instance, scene, true, box.min, box.max);	
+			if (onCreateCallback !== undefined)
+				onCreateCallback(instance);
 		});
 	});		
 };
@@ -162,13 +164,25 @@ function createStaryBarak() {
 	const variants = [
 		{x: -9.62, y: 0.33, z: -0.37, r: 0},
 		{x: -11.33, y: 0.33, z: -0.37, r: 0},
-		{x: -10.82, y: 0.33, z: 1.68, r: Math.PI / 2},
-		{x: -10.82, y: 0.33, z: 2.59, r: Math.PI / 2},
+		{x: -10.82, y: 0.33, z: 1.68, r: Math.PI/2},
+		{x: -10.82, y: 0.33, z: 2.59, r: Math.PI/2},
 	];
 	loadModel(scene, 'postel.glb', sc, bx, by, bz, variants, true);			
 	loadModel(scene, 'kamna.glb', sc, bx, by, bz, [{x: -9.11, y: 0.74, z: 0.93, r: -Math.PI/2}], true);	
 	loadModel(scene, 'stul_polovodice.glb', sc, bx, by, bz, [{x: -8.63, y: 0.41, z: 1.88, r: -Math.PI/2}], true);
-	loadModel(scene, 'dilna_police.glb', sc, bx, by, bz, [{x: -10.75, y: 0.94, z: -3.2, r: -Math.PI/2}], true);	
+	loadModel(scene, 'dilna_police1.glb', sc, bx, by, bz, [{x: -10.75, y: 0.9, z: -3.16, r: -Math.PI/2}], true);	
+	loadModel(scene, 'dilna_junk.glb', sc, bx, by, bz, [{x: -9.38, y: 0.5, z: -3.4, r: -Math.PI/2}], true);	
+	loadModel(scene, 'dilna_police2.glb', sc, bx, by, bz, [{x: -8.09, y: 0.87, z: -3.16, r: -Math.PI/2}], true);	
+	loadModel(scene, 'dilna_police3.glb', sc, bx, by, bz, [{x: -10.62, y: 0.66, z: -1.8, r: -Math.PI/2}], true);	
+	const schodyVariants = {x: -8.62, y: 1.06, z: -0.51, r: -Math.PI/2};
+	loadModel(scene, 'schody.glb', sc, bx, by, bz, [schodyVariants], false);
+	const schodVariants = [];
+	const zStep = 0.185314;
+	const yStep = 0.227054;
+	for (let i = 0; i < 10; i++)
+		schodVariants.push({x: schodyVariants.x, y: schodyVariants.y - 1.02 + yStep * i, z: schodyVariants.z + 0.82 - zStep * i, r: schodyVariants.r});
+	loadModel(scene, 'schod.glb', sc, bx, by, bz, schodVariants, true);
+	
 };
 
 // https://sketchfab.com/3d-models/lowpoly-tree-b562b2e9f029440c804b4b6d36ebe174
@@ -320,7 +334,7 @@ function createTents() {
 			let tent = model.clone();
 			tent.position.set(25 * i, startY, -20);
 			scene.add(tent);
-			physics.addBoxObsticle(tent, scene);
+			physics.addMeshObsticle(tent, scene);
 		}
 		// západní řada 8 stanů
 		for (let i = 0; i < 8; i++) {			
@@ -329,7 +343,7 @@ function createTents() {
 			tent.rotateZ(Math.PI/2);
 			tent.position.set(250, startY, 20 + i * 25);
 			scene.add(tent);
-			physics.addBoxObsticle(tent, scene);
+			physics.addMeshObsticle(tent, scene);
 		}
 		// jižní řada 13 stanů
 		for (let i = 0; i < 13; i++) {			
@@ -337,7 +351,7 @@ function createTents() {
 			tent.rotateZ(Math.PI);
 			tent.position.set(210 - 25 * i, startY, 230);
 			scene.add(tent);
-			physics.addBoxObsticle(tent, scene);
+			physics.addMeshObsticle(tent, scene);
 		}
 	});	
 }

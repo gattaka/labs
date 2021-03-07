@@ -49,6 +49,54 @@ Physics.processor = function (callback) {
 		window.addEventListener('keydown', handleKeyDown, false);
 		window.addEventListener('keyup', handleKeyUp, false);
 	}
+	
+	function createBoxHelper(pos, quat, scale) {
+		var color = Math.floor(Math.random() * (1 << 24));
+		let helper = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: color}));
+		helper.position.set(pos.x, pos.y, pos.z);
+		helper.geometry.scale(scale.x, scale.y, scale.z);
+		helper.rotation.setFromQuaternion(quat);
+		helper.castShadow = true;
+		helper.receiveShadow = true;		
+		return helper;
+	};
+	
+	ret.addBoxObsticle = function(scene, pos, quat, scale, kinematic, mesh) {		
+		let mass = kinematic ? 0 : 10000;				
+		if (showHelpers) {
+			let helper = createBoxHelper(pos, quat, scale);
+			scene.add(helper);			
+			if (mesh !== undefined)
+				mesh.userData.helperMesh = helper;
+		}
+		
+		//Ammojs Section
+		let transform = new Ammo.btTransform();
+		transform.setIdentity();
+		transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+		transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
+		let motionState = new Ammo.btDefaultMotionState(transform);
+
+		let colShape = new Ammo.btBoxShape(new Ammo.btVector3(scale.x * 0.5, scale.y * 0.5, scale.z * 0.5));
+		colShape.setMargin(0.05);
+
+		let localInertia = new Ammo.btVector3(0, 0, 0);
+		colShape.calculateLocalInertia(mass, localInertia);
+
+		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
+		let body = new Ammo.btRigidBody(rbInfo);
+
+		if (kinematic)
+			body.setCollisionFlags(Physics.FLAGS.CF_KINEMATIC_OBJECT);
+
+		physicsWorld.addRigidBody(body);
+		
+		if (mesh !== undefined) {
+			mesh.userData.physicsBody = body;
+			if (!kinematic)
+				dynamicObjects.push(mesh);
+		}
+	}
 
 	ret.addCylinderObsticle = function(mesh) {		
 		let quat = {x: 0, y: 0, z: 0, w: 1};
@@ -81,9 +129,8 @@ Physics.processor = function (callback) {
 		physicsWorld.addRigidBody(body);
 	}
 
-	ret.addBoxObsticle = function(mesh, scene, kinematic, bbmin, bbmax) {		
+	ret.addMeshObsticle = function(mesh, scene, kinematic, bbmin, bbmax) {		
 		let quat = mesh.quaternion.clone();
-		let mass = kinematic ? 0 : 10000;
 		let pos = mesh.position.clone();
 									
 		if (bbmax === undefined)
@@ -93,45 +140,7 @@ Physics.processor = function (callback) {
 		const boundingBox = new THREE.Box3(bbmin, bbmax);						
 		let scale = new THREE.Vector3(bbmax.x - bbmin.x, bbmax.y - bbmin.y, bbmax.z - bbmin.z);
 		scale.multiply(mesh.scale);
-		
-		if (showHelpers) {
-			var color = Math.floor(Math.random() * (1 << 24));
-			let helper = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: color}));
-			helper.position.set(pos.x, pos.y, pos.z);
-			helper.geometry.scale(scale.x, scale.y, scale.z);
-			helper.rotation.setFromQuaternion(quat);
-			helper.castShadow = true;
-			helper.receiveShadow = true;
-			scene.add(helper);
-			mesh.userData.helperMesh = helper;
-		}
-		
-		//Ammojs Section
-		let transform = new Ammo.btTransform();
-		transform.setIdentity();
-		transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
-		transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
-		let motionState = new Ammo.btDefaultMotionState(transform);
-
-		let colShape = new Ammo.btBoxShape(new Ammo.btVector3(scale.x * 0.5, scale.y * 0.5, scale.z * 0.5));
-		colShape.setMargin(0.05);
-
-		let localInertia = new Ammo.btVector3(0, 0, 0);
-		colShape.calculateLocalInertia(mass, localInertia);
-
-		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
-		let body = new Ammo.btRigidBody(rbInfo);
-
-		if (kinematic)
-			body.setCollisionFlags(Physics.FLAGS.CF_KINEMATIC_OBJECT);
-
-		//body.setFriction(4);
-		//body.setRollingFriction(10);
-		mesh.userData.physicsBody = body;
-
-		physicsWorld.addRigidBody(body);
-		if (!kinematic)
-			dynamicObjects.push(mesh);
+		ret.addBoxObsticle(scene, pos, quat, scale, kinematic, mesh);		
 	}
 	
 	// http://kripken.github.io/ammo.js/examples/webgl_demo_terrain/index.html
