@@ -169,7 +169,11 @@ function createStaryBarak() {
 	];
 	loadModel(scene, 'postel.glb', sc, bx, by, bz, variants, true);			
 	loadModel(scene, 'kamna.glb', sc, bx, by, bz, [{x: -9.11, y: 0.74, z: 0.93, r: -Math.PI/2}], true);	
-	loadModel(scene, 'stul_polovodice.glb', sc, bx, by, bz, [{x: -8.63, y: 0.41, z: 1.88, r: -Math.PI/2}], true);
+	const stulPolovodiceVariants = [
+		{x: -8.63, y: 0.41, z: 1.88, r: -Math.PI/2},
+		{x: -4.83, y: 0.41, z: -2.69, r: -Math.PI/2}
+	];
+	loadModel(scene, 'stul_polovodice.glb', sc, bx, by, bz, stulPolovodiceVariants, true);
 	loadModel(scene, 'dilna_police1.glb', sc, bx, by, bz, [{x: -10.75, y: 0.9, z: -3.16, r: -Math.PI/2}], true);	
 	loadModel(scene, 'dilna_junk.glb', sc, bx, by, bz, [{x: -9.38, y: 0.5, z: -3.4, r: -Math.PI/2}], true);	
 	loadModel(scene, 'dilna_police2.glb', sc, bx, by, bz, [{x: -8.09, y: 0.87, z: -3.16, r: -Math.PI/2}], true);	
@@ -182,7 +186,40 @@ function createStaryBarak() {
 	for (let i = 0; i < 10; i++)
 		schodVariants.push({x: schodyVariants.x, y: schodyVariants.y - 1.02 + yStep * i, z: schodyVariants.z + 0.82 - zStep * i, r: schodyVariants.r});
 	loadModel(scene, 'schod.glb', sc, bx, by, bz, schodVariants, true);
-	
+	loadModel(scene, 'sportak_skrin1.glb', sc, bx, by, bz, [{x: -6.52, y: 0.79, z: -0.27, r: -Math.PI/2}], true);
+	const sportakSkrin2Variants = [
+		{x: -5.39, y: 0.79, z: -0.27, r: -Math.PI/2},
+		{x: -6.75, y: 0.79, z: -3.00, r: Math.PI},
+	];
+	loadModel(scene, 'sportak_skrin2.glb', sc, bx, by, bz, sportakSkrin2Variants, true);
+	loadModel(scene, 'sportak_skrin3.glb', sc, bx, by, bz, [{x: -4.57, y: 0.61, z: -0.27, r: -Math.PI/2}], true);
+	const lavickaLakovanaVariants = [	
+		{x: -3.6, y: 0.25, z: -1.77, r: Math.PI/2},
+		{x: -2.3, y: 0.25, z: -1.1, r: Math.PI/2},
+		{x: -1.0, y: 0.25, z: -1.97, r: 0},
+		{x: 0.3, y: 0.25, z: -1.36, r: Math.PI/2},
+	];
+	loadModel(scene, 'lavicka_lakovana.glb', sc, bx, by, bz, lavickaLakovanaVariants, true);			
+	const stulJidelnaVariants = [
+		{x: -2.991, y: 0.410, z: -0.993, r: 0},
+		{x: -2.991, y: 0.410, z: -1.811, r: 0},
+		{x: -2.991, y: 0.410, z: -2.635, r: 0},
+		{x: -2.172, y: 0.410, z: -2.635, r: 0},
+		{x: -1.352, y: 0.410, z: -2.635, r: 0},
+		{x: -0.530, y: 0.410, z: -2.635, r: 0},
+		{x: 0.289, y: 0.410, z: -2.635, r: 0},
+		{x: 1.113, y: 0.410, z: -2.635, r: 0},
+		{x: 1.113, y: 0.410, z: -1.813, r: 0},
+		{x: 1.113, y: 0.410, z: -0.991, r: 0},
+		{x: 1.113, y: 0.410, z: -0.172, r: 0},
+		{x: 1.113, y: 0.410, z: 0.644, r: 0},
+	];
+	loadModel(scene, 'stul_jidelna.glb', sc, bx, by, bz, stulJidelnaVariants, true);	
+
+	// JS - Blender
+	// x = y
+	// y = z
+	// z = x	
 };
 
 // https://sketchfab.com/3d-models/lowpoly-tree-b562b2e9f029440c804b4b6d36ebe174
@@ -455,7 +492,11 @@ function init() {
 	if (showHelpers) 
 		scene.add(new THREE.AxesHelper(500));
 	
-	renderer = new THREE.WebGLRenderer({antialias: true});
+	renderer = new THREE.WebGLRenderer({
+		antialias: true,
+		powerPreference: "high-performance",
+		preserveDrawingBuffer: false,
+	});
 	renderer.setPixelRatio(window.devicePixelRatio);
 	renderer.setSize(window.innerWidth, window.innerHeight);
 	renderer.shadowMap.enabled = true;
