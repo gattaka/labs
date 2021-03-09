@@ -160,7 +160,7 @@ function createStaryBarak() {
 	let bz = 0;
 	loadModel(scene, 'keblov_stary.glb', sc, bx, by, bz, [{x: 0, y: 0, z: 0, r: 3 * Math.PI/2}], true);	
 	by += 5;	
-	loadModel(scene, 'keblov_stary_zdi.glb', sc, bx, by, bz, [{x: 0, y: 0, z: 0, r: 3 * Math.PI/2}], false);	
+	loadModel(scene, 'keblov_stary_zdi.glb', sc, bx, by, bz, [{x: 0, y: 1.036, z: 0, r: 3 * Math.PI/2}], false);	
 	const variants = [
 		{x: -9.62, y: 0.33, z: -0.37, r: 0},
 		{x: -11.33, y: 0.33, z: -0.37, r: 0},
@@ -168,7 +168,7 @@ function createStaryBarak() {
 		{x: -10.82, y: 0.33, z: 2.59, r: Math.PI/2},
 	];
 	loadModel(scene, 'postel.glb', sc, bx, by, bz, variants, true);			
-	loadModel(scene, 'kamna.glb', sc, bx, by, bz, [{x: -9.11, y: 0.74, z: 0.93, r: -Math.PI/2}], true);	
+	loadModel(scene, 'kamna.glb', sc, bx, by, bz, [{x: -9.285, y: 0.809, z: 0.938, r: -Math.PI/2}], true);	
 	const stulPolovodiceVariants = [
 		{x: -8.63, y: 0.41, z: 1.88, r: -Math.PI/2},
 		{x: -4.83, y: 0.41, z: -2.69, r: -Math.PI/2}
@@ -192,7 +192,11 @@ function createStaryBarak() {
 		{x: -6.75, y: 0.79, z: -3.00, r: Math.PI},
 	];
 	loadModel(scene, 'sportak_skrin2.glb', sc, bx, by, bz, sportakSkrin2Variants, true);
-	loadModel(scene, 'sportak_skrin3.glb', sc, bx, by, bz, [{x: -4.57, y: 0.61, z: -0.27, r: -Math.PI/2}], true);
+	const sportakSkrin3Variants = [
+		{x: -4.57, y: 0.61, z: -0.27, r: -Math.PI/2},
+		{x: -4.056, y: 0.61, z: 3.342, r: -Math.PI/2},
+	];
+	loadModel(scene, 'sportak_skrin3.glb', sc, bx, by, bz, sportakSkrin3Variants, true);
 	const lavickaLakovanaVariants = [	
 		{x: -3.6, y: 0.25, z: -1.77, r: Math.PI/2},
 		{x: -2.3, y: 0.25, z: -1.1, r: Math.PI/2},
@@ -213,8 +217,19 @@ function createStaryBarak() {
 		{x: 1.113, y: 0.410, z: -0.991, r: 0},
 		{x: 1.113, y: 0.410, z: -0.172, r: 0},
 		{x: 1.113, y: 0.410, z: 0.644, r: 0},
+		{x: -1.767, y: 0.410, z: 3.184, r: 0},
+		{x: -0.935, y: 0.410, z: 3.184, r: 0},
 	];
-	loadModel(scene, 'stul_jidelna.glb', sc, bx, by, bz, stulJidelnaVariants, true);	
+	loadModel(scene, 'stul_jidelna.glb', sc, bx, by, bz, stulJidelnaVariants, true);
+	loadModel(scene, 'stul_jidelna_varnice.glb', sc, bx, by, bz, [{x: 2.822, y: 0.342, z: 3.176, r: -Math.PI}], true);	
+	loadModel(scene, 'jidelna_skrine_ruzne.glb', sc, bx, by, bz, [{x: 2.936, y: 1.045, z: -2.494, r: -Math.PI}], true);	
+	loadModel(scene, 'posta.glb', sc, bx, by, bz, [{x: -4.179, y: 1.070, z: 1.707, r: -Math.PI/2}], true);	
+	loadModel(scene, 'stul_kancl.glb', sc, bx, by, bz, [{x: -2.990, y: 0.364, z: 3.278, r: -Math.PI/2}], true);	
+	loadModel(scene, 'kamna_osetrovna.glb', sc, bx, by, bz, [{x: -6.3, y: 0.402, z: 0.382, r: -Math.PI/2}], true);
+	loadModel(scene, 'postel_csd.glb', sc, bx, by, bz, [{x: -6.661, y: 0.219, z: 2.581, r: -Math.PI/2}], true);
+	loadModel(scene, 'skrinka_osetrovna.glb', sc, bx, by, bz, [{x: -6.792, y: 0.502, z: 1.125, r: -Math.PI/2}], true);
+	loadModel(scene, 'palanda_osetrovna.glb', sc, bx, by, bz, [{x: -4.857, y: 0.74, z: 1.00, r: -Math.PI/2}], true);
+	loadModel(scene, 'jidelna_vydejni_okno.glb', sc, bx, by, bz, [{x: 3.306, y: 1.690, z: 2.153, r: -Math.PI/2}], true);
 
 	// JS - Blender
 	// x = y
