@@ -24,6 +24,10 @@ let Info = function () {
 		infoLines.push(callback)
 	};
 	
+	ret.displayNow = function(content) {
+		infoDiv.innerHTML = content;
+	};
+	
 	return ret;
 };
 

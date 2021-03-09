@@ -4,7 +4,7 @@ import {
 	Vector3
 } from './three.module.js';
 
-var PointerLockControls = function (camera, domElement) {
+var Controls = function (camera, domElement) {
 
 	if (domElement === undefined) {
 		console.warn('THREE.PointerLockControls: The second parameter "domElement" is now mandatory.');
@@ -62,7 +62,7 @@ var PointerLockControls = function (camera, domElement) {
 	}
 
 	function onPointerlockError() {
-		console.error('THREE.PointerLockControls: Unable to use Pointer Lock API');
+		console.error('THREE.Controls: Unable to use Pointer Lock API');
 	}
 
 	this.connect = function () {
@@ -103,7 +103,7 @@ var PointerLockControls = function (camera, domElement) {
 	this.connect();
 };
 
-PointerLockControls.prototype = Object.create(EventDispatcher.prototype);
-PointerLockControls.prototype.constructor = PointerLockControls;
+Controls.prototype = Object.create(EventDispatcher.prototype);
+Controls.prototype.constructor = Controls;
 
-export { PointerLockControls };
+export { Controls };

@@ -1,21 +1,24 @@
+import { Config } from './Config.js';
 import { CookieUtils } from './CookieUtils.js';
 import { Stats } from './Stats.js';
 import { Info } from './Info.js';
-import { PointerLockControls } from './PointerLockControls.js';
-import { GLTFLoader } from './GLTFLoader.js';
+import { Controls } from './Controls.js';
 import { Cloth } from './Cloth.js';
 import { Physics } from './Physics.js';
 import { Terrain } from './Terrain.js';
 import { Player } from './Player.js';
+import { Loader } from './Loader.js';
 import * as THREE from './three.module.js';
 
-const showHelpers = false;
+const phMargin = Config.phMargin;
+const showHelpers = Config.showScHelpers;
 
 let camera, scene, renderer, controls;
 let flag;
 let player;
 
 const info = new Info();
+const loader = new Loader(info);
 const clock = new THREE.Clock();
 const stats = new Stats();
 const physics = new Physics.processor(init);
@@ -23,30 +26,24 @@ const cookieUtils = new CookieUtils();
 
 // https://redstapler.co/create-3d-world-with-three-js-and-skybox-technique/
 // https://opengameart.org/content/skiingpenguins-skybox-pack
-function createSkybox() {
-	let materialArray = [];
-	let texture_ft = new THREE.TextureLoader().load('../textures/skybox/posx.jpg');
-	let texture_bk = new THREE.TextureLoader().load('../textures/skybox/negx.jpg');
-	let texture_up = new THREE.TextureLoader().load('../textures/skybox/posy.jpg');
-	let texture_dn = new THREE.TextureLoader().load('../textures/skybox/negy.jpg');
-	let texture_rt = new THREE.TextureLoader().load('../textures/skybox/posz.jpg');
-	let texture_lf = new THREE.TextureLoader().load('../textures/skybox/negz.jpg');
-	  
-	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_ft }));
-	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_bk }));
-	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_up }));
-	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_dn }));
-	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_rt }));
-	materialArray.push(new THREE.MeshBasicMaterial({ map: texture_lf }));
-	   
-	for (let i = 0; i < 6; i++)
-	  materialArray[i].side = THREE.BackSide;
-	   
-	let side = 10000;
-	let skyboxGeo = new THREE.BoxGeometry(side, side, side);
-	let skybox = new THREE.Mesh(skyboxGeo, materialArray);
-	skybox.position.set(0, 0, 0);
-	scene.add(skybox);
+function createSkybox() {		
+	let callback = function(textures) {
+		let materialArray = [];
+		textures.forEach(t => {
+			let m = new THREE.MeshBasicMaterial({ map: t });
+			m.side = THREE.BackSide;
+			materialArray.push(m);
+			let side = 10000;
+			let skyboxGeo = new THREE.BoxGeometry(side, side, side);
+			let skybox = new THREE.Mesh(skyboxGeo, materialArray);
+			skybox.position.set(0, 0, 0);
+			scene.add(skybox);
+		});
+	};	
+	loader.loadTexturesByRequest({
+		linkPrefix: '../textures/skybox/', 
+		links: ['posx.jpg', 'negx.jpg', 'posy.jpg', 'negy.jpg', 'posz.jpg', 'negz.jpg'], 
+		callback: callback});	  
 }
 
 // https://anyconv.com/fbx-to-glb-converter/
@@ -131,13 +128,13 @@ function processBoundingBox(model) {
 };
 
 function loadModel(scene, name, sc, bx, by, bz, variants, asPhysicsBody, onCreateCallback) {
-	new GLTFLoader().load('../models/' + name, gltf => { 
+	loader.loadModel('../models/' + name, gltf => { 
 		let model = gltf.scene.children[0];
 		model.scale.set(sc, sc, sc);
 		model.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
 			n.receiveShadow = true;
-			if (n.material.map) n.material.map.anisotropy = 1; 
+			//if (n.material.map) n.material.map.anisotropy = 1; 
 		}});
 		const box = processBoundingBox(model);
 		variants.forEach(v => {
@@ -150,17 +147,17 @@ function loadModel(scene, name, sc, bx, by, bz, variants, asPhysicsBody, onCreat
 			if (onCreateCallback !== undefined)
 				onCreateCallback(instance);
 		});
-	});		
+	});
 };
 
 function createStaryBarak() {	
-	const sc = 10;
-	let bx = -150;
-	let by = 1;
+	const sc = 5;
+	let bx = -15;
+	let by = 5;
 	let bz = 0;
-	loadModel(scene, 'keblov_stary.glb', sc, bx, by, bz, [{x: 0, y: 0, z: 0, r: 3 * Math.PI/2}], true);	
-	by += 5;	
-	loadModel(scene, 'keblov_stary_zdi.glb', sc, bx, by, bz, [{x: 0, y: 1.036, z: 0, r: 3 * Math.PI/2}], false);	
+	loadModel(scene, 'keblov_stary.glb', sc, bx, by, bz, [{x: 0, y: -0.5, z: 0, r: 3 * Math.PI/2}], true);		
+	loadModel(scene, 'keblov_stary_zdi.glb', sc, bx, by, bz, [{x: 0, y: 1.036, z: 0, r: 3 * Math.PI/2}], false);
+	loadModel(scene, 'keblov_stary_strop.glb', sc, bx, by, bz, [{x: 0, y: 2.24, z: 0, r: 3 * Math.PI/2}], true);		
 	const variants = [
 		{x: -9.62, y: 0.33, z: -0.37, r: 0},
 		{x: -11.33, y: 0.33, z: -0.37, r: 0},
@@ -217,8 +214,6 @@ function createStaryBarak() {
 		{x: 1.113, y: 0.410, z: -0.991, r: 0},
 		{x: 1.113, y: 0.410, z: -0.172, r: 0},
 		{x: 1.113, y: 0.410, z: 0.644, r: 0},
-		{x: -1.767, y: 0.410, z: 3.184, r: 0},
-		{x: -0.935, y: 0.410, z: 3.184, r: 0},
 	];
 	loadModel(scene, 'stul_jidelna.glb', sc, bx, by, bz, stulJidelnaVariants, true);
 	loadModel(scene, 'stul_jidelna_varnice.glb', sc, bx, by, bz, [{x: 2.822, y: 0.342, z: 3.176, r: -Math.PI}], true);	
@@ -230,6 +225,10 @@ function createStaryBarak() {
 	loadModel(scene, 'skrinka_osetrovna.glb', sc, bx, by, bz, [{x: -6.792, y: 0.502, z: 1.125, r: -Math.PI/2}], true);
 	loadModel(scene, 'palanda_osetrovna.glb', sc, bx, by, bz, [{x: -4.857, y: 0.74, z: 1.00, r: -Math.PI/2}], true);
 	loadModel(scene, 'jidelna_vydejni_okno.glb', sc, bx, by, bz, [{x: 3.306, y: 1.690, z: 2.153, r: -Math.PI/2}], true);
+	loadModel(scene, 'stul_hrnky.glb', sc, bx, by, bz, [{x: -1.236, y: 0.410, z: 3.184, r: -Math.PI/2}], true);
+	loadModel(scene, 'lekarna.glb', sc, bx, by, bz, [{x: 7.097, y: 1.729, z: -1.54, r: -Math.PI/2}], true);		
+	loadModel(scene, 'kuchyne_police1.glb', sc, bx, by, bz, [{x: 8.072, y: 1.758, z: -1.404, r: -Math.PI/2}], true);		
+	loadModel(scene, 'kuchyne_mycak.glb', sc, bx, by, bz, [{x: 7.853, y: 0.416, z: -1.284, r: -Math.PI/2}], true);		
 
 	// JS - Blender
 	// x = y
@@ -242,7 +241,7 @@ function createLowPolyTree() {
 	new GLTFLoader().load('../models/lowpoly_tree/scene.gltf', result => { 
 		let model = result.scene.children[0]; 		
 		model.position.set(-20, 0, -40);
-		const sc = 30;
+		const sc = 3;
 		model.scale.set(sc,sc,sc);
 		model.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
@@ -258,7 +257,7 @@ function createOakTrees() {
 	new GLTFLoader().load('../models/oak_trees/scene.gltf', result => { 
 		let model = result.scene.children[0]; 		
 		model.position.set(50, 0, -150);
-		const sc = 30;
+		const sc = 3;
 		model.scale.set(sc,sc,sc);
 		model.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
@@ -336,43 +335,46 @@ function createSmallTree() {
 // https://sketchfab.com/3d-models/low-poly-tree-70f0e767fc2f449fa6fef9c2308b395f
 
 function createFlag() {
-	const loader = new THREE.TextureLoader();
-	const clothTexture = loader.load('../textures/vlajka.png');
-	clothTexture.anisotropy = 16;
-	const clothMaterial = new THREE.MeshLambertMaterial({
-		map: clothTexture,
-		side: THREE.DoubleSide,
-		alphaTest: 0.5
+	loader.loadTexture('../textures/vlajka.png', textures => {
+		const clothTexture = textures[0];
+		clothTexture.anisotropy = 16;
+		const clothMaterial = new THREE.MeshLambertMaterial({
+			map: clothTexture,
+			side: THREE.DoubleSide,
+			alphaTest: 0.5
+		});
+		flag = new Cloth(clothMaterial);	
+		flag.position.set(103.5, 80, 107);
+		const scale = 0.05;
+		flag.scale.set(scale, scale, scale);
+		scene.add(flag);	
 	});
-	flag = new Cloth(clothMaterial);	
-	flag.position.set(103.5, 80, 107);
-	const scale = 0.05;
-	flag.scale.set(scale, scale, scale);
-	scene.add(flag);	
 };
 
 function createStozar() {
-	const texture = new THREE.TextureLoader().load('../textures/stozar.jpg');
-	texture.wrapS = THREE.RepeatWrapping;
-	texture.wrapT = THREE.RepeatWrapping;
-	texture.repeat.set(1, 20);
-	const geometry = new THREE.CylinderGeometry(.2, .7, 200, 16);
-	const material = new THREE.MeshLambertMaterial({map: texture});
-	const mesh = new THREE.Mesh(geometry, material);
-	mesh.position.set(97, 0, 107);
-	mesh.castShadow = true;
-	mesh.receiveShadow = true;
-	mesh.scale.set(1, 1, 1);
-	scene.add(mesh);
-	physics.addCylinderObsticle(mesh);
+	loader.loadTexture('../textures/stozar.jpg', texture => {	
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.repeat.set(1, 20);
+		const geometry = new THREE.CylinderGeometry(.2, .7, 200, 16);
+		const material = new THREE.MeshLambertMaterial({map: texture});
+		const mesh = new THREE.Mesh(geometry, material);
+		mesh.position.set(97, 0, 107);
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		mesh.scale.set(1, 1, 1);
+		scene.add(mesh);
+		physics.addCylinderObsticle(mesh);
+	});
 }
 
 function createTents() {
 	// modely musí mít počátek uprostřed své výšky a obsahu, 
 	// jinak boundingbox přepočet na Ammo kolizní box bude dělat problémy
-	new GLTFLoader().load('../models/stan.glb', gltf => { 
+	loader.loadModel('../models/stan.glb' + name, gltf => { 
 		let model = gltf.scene.children[0];
-		model.scale.set(10,10,10);
+		let sc = 1;
+		model.scale.set(sc, sc, sc);
 		model.castShadow = true; 
 		model.receiveShadow = true; 
 		model.traverse(n => { if (n.isMesh) {
@@ -441,17 +443,17 @@ function createLight() {
 
 	dirLight.castShadow = true;
 
-	dirLight.shadow.mapSize.width = 2048;
-	dirLight.shadow.mapSize.height = 2048;
+	dirLight.shadow.mapSize.width = 256;
+	dirLight.shadow.mapSize.height = 256;
 
-	const d = 300;
+	const d = 30;
 	dirLight.shadow.camera.left = -d;
 	dirLight.shadow.camera.right = d;
 	dirLight.shadow.camera.top = d;
 	dirLight.shadow.camera.bottom = -d;
 
-	dirLight.shadow.camera.far = 500;
-	dirLight.shadow.bias = - 0.0001;	
+	dirLight.shadow.camera.far = 50;
+	dirLight.shadow.bias = - 0.001;	
 
 	if (showHelpers) {
 		const dirLightHelper = new THREE.DirectionalLightHelper(dirLight, 10);
@@ -466,7 +468,7 @@ function createLight() {
 // https://threejs.org/docs/#examples/en/controls/PointerLockControls
 // https://sbcode.net/threejs/pointerlock-controls/
 function createControls() {
-	controls = new PointerLockControls(camera, document.body);	
+	controls = new Controls(camera, document.body);	
 	document.body.addEventListener('click', function () {
 		controls.lock();
 	}, false);
@@ -496,10 +498,31 @@ function createControls() {
 	document.addEventListener('keyup', onKeyUp, false);
 }
 
+function createTerrain() {
+	new Terrain(loader, terrain => {
+		physics.addTerrain(terrain);
+		scene.add(terrain);	
+	});	
+};
+
+function createPlayer() {
+	let lastPos = new THREE.Vector3();
+	lastPos.x = cookieUtils.getCookieNumber('camposx') || 0;
+	lastPos.y = cookieUtils.getCookieNumber('camposy') || 10;
+	lastPos.z = cookieUtils.getCookieNumber('camposz') || 0;
+	let lastRot = new THREE.Vector3();
+	camera.rotation.x = cookieUtils.getCookieNumber('camrotx') || 0;
+	camera.rotation.y = cookieUtils.getCookieNumber('camroty') || 0;
+	camera.rotation.z = cookieUtils.getCookieNumber('camrotz') || 0;
+	lastPos = new THREE.Vector3(0,10,0);
+	player = new Player(info, camera, physics, lastPos);	
+	scene.add(player.mesh);
+};
+
 function init() {
 	document.body.appendChild(stats.dom);
 	// atributy:  field of view, aspect ratio, near, far
-	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 10000);	
+	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);		
 	
 	scene = new THREE.Scene();		
 	scene.background = new THREE.Color(0xdddddd);			
@@ -530,13 +553,16 @@ function init() {
 			" rot[" + flr(rx) + " y: " + flr(ry) + " z: " + flr(rz) + "]" ;		
 	});
 	
-	createSkybox();
 	createControls();
 	createLight();
 	
+	createTerrain();
+	createSkybox();
+	createStaryBarak();	
 	createFlag();
-	createStozar();	
-	createTents();
+	
+	//createStozar();	
+	//createTents();
 	/*
 	//createGrid();
 	//createTree();
@@ -549,23 +575,12 @@ function init() {
 	createLowPolyXmasTree();
 	createSmallTree();
 	*/
-	createStaryBarak();
 	
-	let terrain = new Terrain(physics);
-	scene.add(terrain);	
+	loader.performLoad(() => {
+		createPlayer();
+		animate(0);	
+	});
 	
-	let lastPos = new THREE.Vector3();
-	lastPos.x = cookieUtils.getCookieNumber('camposx') || 0;
-	lastPos.y = cookieUtils.getCookieNumber('camposy') || 10;
-	lastPos.z = cookieUtils.getCookieNumber('camposz') || 0;
-	let lastRot = new THREE.Vector3();
-	camera.rotation.x = cookieUtils.getCookieNumber('camrotx') || 0;
-	camera.rotation.y = cookieUtils.getCookieNumber('camroty') || 0;
-	camera.rotation.z = cookieUtils.getCookieNumber('camrotz') || 0;
-	player = new Player(info, camera, physics, lastPos);	
-	scene.add(player.mesh);
-
-	animate(0);	
 }
 
 function onWindowResize() {

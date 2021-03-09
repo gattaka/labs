@@ -1,3 +1,4 @@
+import { Config } from './Config.js';
 import * as THREE from '../js/three.module.js';			
 
 let Physics = {};
@@ -5,7 +6,8 @@ Physics.STATE = { DISABLE_DEACTIVATION : 4 };
 Physics.FLAGS = { CF_KINEMATIC_OBJECT: 2 };
 Physics.processor = function (callback) {
 
-	const showHelpers = false;
+	const showHelpers = Config.showPhHelpers;
+	const phMargin = Config.phMargin;
 
 	let clock;
 	let character, ghostObject;
@@ -78,7 +80,7 @@ Physics.processor = function (callback) {
 		let motionState = new Ammo.btDefaultMotionState(transform);
 
 		let colShape = new Ammo.btBoxShape(new Ammo.btVector3(scale.x * 0.5, scale.y * 0.5, scale.z * 0.5));
-		colShape.setMargin(0.05);
+		colShape.setMargin(phMargin);
 
 		let localInertia = new Ammo.btVector3(0, 0, 0);
 		colShape.calculateLocalInertia(mass, localInertia);
@@ -115,7 +117,7 @@ Physics.processor = function (callback) {
 		let motionState = new Ammo.btDefaultMotionState(transform);
 
 		let colShape = new Ammo.btCylinderShape(new Ammo.btVector3(radiusBottom, height * 0.5, radiusTop));
-		colShape.setMargin(0.05);
+		colShape.setMargin(phMargin);
 
 		let localInertia = new Ammo.btVector3(0, 0, 0);
 		colShape.calculateLocalInertia(mass, localInertia);
@@ -202,7 +204,7 @@ Physics.processor = function (callback) {
 		let scaleZ = terrainDepthExtents / (terrainDepth - 1);
 		heightFieldShape.setLocalScaling(new Ammo.btVector3(scaleX, 1, scaleZ));
 
-		heightFieldShape.setMargin(0.05);
+		heightFieldShape.setMargin(phMargin);
 
 		let groundTransform = new Ammo.btTransform();
 		groundTransform.setIdentity();
