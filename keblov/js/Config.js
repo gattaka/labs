@@ -1,7 +1,7 @@
 let Config = {
-	glScale: 5,
+	glScale: 1,
 	phMargin: 0.001,
 	showPhHelpers: false,
-	showScHelpers: false,
+	showScHelpers: true,
 };
 export { Config };
