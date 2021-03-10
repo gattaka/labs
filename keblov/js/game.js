@@ -144,7 +144,7 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback) {
 			// x = x
 			// y = z
 			// z = y
-			instance.position.set(v.x, v.z, -v.y);
+			instance.position.set(v.x * sc, v.z * sc, -v.y * sc);
 			instance.rotation.y = v.r;
 			scene.add(instance);
 			if (asPhysicsBody)
@@ -164,7 +164,7 @@ function createStaryBarak() {
 	let br = toRad(16.0526);
 	loadModel(scene, 'keblov_stary.glb', sc, [{x: -7.316, y: -4.273, z: 0.64, r: br}], true);		
 	loadModel(scene, 'keblov_stary_zdi.glb', sc, [{x: -7.316, y: -4.273, z: 2.177, r: br}], false);
-	//loadModel(scene, 'keblov_stary_strop.glb', sc, [{x: -7.316, y: -4.273, z: 3.364, r: br}], true);		
+	loadModel(scene, 'keblov_stary_strop.glb', sc, [{x: -7.316, y: -4.273, z: 3.364, r: br}], true);		
 	const variants = [
 		{x: -1.827, y: -13.966, z: 1.477, r: br},
 		{x: -2.697, y: -14.216, z: 1.477, r: br},
@@ -193,54 +193,51 @@ function createStaryBarak() {
 	for (let i = 0; i < 10; i++)
 		schodVariants.push({x: schod1.x + i * xStep, y: schod1.y + i * yStep, z: schod1.z + i * zStep, r: schodyVariants.r});
 	loadModel(scene, 'schod.glb', sc, schodVariants, true);
-	/*
-	loadModel(scene, 'sportak_skrin1.glb', sc, bx, by, bz, br, [{x: -6.52, y: 0.79, z: -0.27, r: -Math.PI/2}], true);
+	loadModel(scene, 'sportak_skrin1.glb', sc, [{x: -5.778, y: -10.621, z: 1.931, r: br}], true);
 	const sportakSkrin2Variants = [
-		{x: -5.39, y: 0.79, z: -0.27, r: -Math.PI/2},
-		{x: -6.75, y: 0.79, z: -3.00, r: Math.PI},
+		{x: -6.089, y: -9.538, z: 1.931, r: br},
+		{x: -8.337, y: -11.598, z: 1.931, r: toRad(106)},
 	];
-	loadModel(scene, 'sportak_skrin2.glb', sc, bx, by, bz, br, sportakSkrin2Variants, true);
+	loadModel(scene, 'sportak_skrin2.glb', sc, sportakSkrin2Variants, true);
 	const sportakSkrin3Variants = [
-		{x: -4.57, y: 0.61, z: -0.27, r: -Math.PI/2},
-		{x: -4.056, y: 0.61, z: 3.342, r: -Math.PI/2},
+		{x: -6.317, y: -8.745, z: 1.754, r: br},
+		{x: -2.982, y: -7.247, z: 1.754, r: br},
 	];
-	loadModel(scene, 'sportak_skrin3.glb', sc, bx, by, bz, br, sportakSkrin3Variants, true);
+	loadModel(scene, 'sportak_skrin3.glb', sc, sportakSkrin3Variants, true);
 	const lavickaLakovanaVariants = [	
-		{x: -3.6, y: 0.25, z: -1.77, r: Math.PI/2},
-		{x: -2.3, y: 0.25, z: -1.1, r: Math.PI/2},
-		{x: -1.0, y: 0.25, z: -1.97, r: 0},
-		{x: 0.3, y: 0.25, z: -1.36, r: Math.PI/2},
+		{x: -8.025, y: -8.227, z: 1.396, r: br},
+		{x: -7.732, y: -6.817, z: 1.396, r: br},,
+		{x: -8.712, y: -4.354, z: 1.396, r: br},
+		{x: -8.925, y: -5.817, z: 1.396, r: toRad(106)},
 	];
-	loadModel(scene, 'lavicka_lakovana.glb', sc, bx, by, bz, br, lavickaLakovanaVariants, true);			
+	loadModel(scene, 'lavicka_lakovana.glb', sc, lavickaLakovanaVariants, true);			
 	const stulJidelnaVariants = [
-		{x: -2.991, y: 0.410, z: -0.993, r: 0},
-		{x: -2.991, y: 0.410, z: -1.811, r: 0},
-		{x: -2.991, y: 0.410, z: -2.635, r: 0},
-		{x: -2.172, y: 0.410, z: -2.635, r: 0},
-		{x: -1.352, y: 0.410, z: -2.635, r: 0},
-		{x: -0.530, y: 0.410, z: -2.635, r: 0},
-		{x: 0.289, y: 0.410, z: -2.635, r: 0},
-		{x: 1.113, y: 0.410, z: -2.635, r: 0},
-		{x: 1.113, y: 0.410, z: -1.813, r: 0},
-		{x: 1.113, y: 0.410, z: -0.991, r: 0},
-		{x: 1.113, y: 0.410, z: -0.172, r: 0},
-		{x: 1.113, y: 0.410, z: 0.644, r: 0},
+		{x: -7.4435, y: -7.423, z: 1.551, r: br},
+		{x: -8.230, y: -7.649, z: 1.551, r: br},
+		{x: -9.021, y: -7.877, z: 1.551, r: br},
+		{x: -9.248, y: -7.09, z: 1.551, r: br},
+		{x: -9.474, y: -6.302, z: 1.551, r: br},
+		{x: -9.702, y: -5.512, z: 1.551, r: br},
+		{x: -9.929, y: -4.724, z: 1.551, r: br},
+		{x: -10.157, y: -3.932, z: 1.551, r: br},
+		{x: -9.367, y: -3.705, z: 1.551, r: br},
+		{x: -8.577, y: -3.478, z: 1.551, r: br},
+		{x: -7.789, y: -3.251, z: 1.551, r: br},
 	];
-	loadModel(scene, 'stul_jidelna.glb', sc, bx, by, bz, br, stulJidelnaVariants, true);
-	loadModel(scene, 'stul_jidelna_varnice.glb', sc, bx, by, bz, br, [{x: 2.822, y: 0.342, z: 3.176, r: -Math.PI}], true);	
-	loadModel(scene, 'jidelna_skrine_ruzne.glb', sc, bx, by, bz, br, [{x: 2.936, y: 1.045, z: -2.494, r: -Math.PI}], true);	
-	loadModel(scene, 'posta.glb', sc, bx, by, bz, br, [{x: -4.179, y: 1.070, z: 1.707, r: -Math.PI/2}], true);	
-	loadModel(scene, 'stul_kancl.glb', sc, bx, by, bz, br, [{x: -2.990, y: 0.364, z: 3.278, r: -Math.PI/2}], true);	
-	loadModel(scene, 'kamna_osetrovna.glb', sc, bx, by, bz, br, [{x: -6.3, y: 0.402, z: 0.382, r: -Math.PI/2}], true);
-	loadModel(scene, 'postel_csd.glb', sc, bx, by, bz, br, [{x: -6.661, y: 0.219, z: 2.581, r: -Math.PI/2}], true);
-	loadModel(scene, 'skrinka_osetrovna.glb', sc, bx, by, bz, br, [{x: -6.792, y: 0.502, z: 1.125, r: -Math.PI/2}], true);
-	loadModel(scene, 'palanda_osetrovna.glb', sc, bx, by, bz, br, [{x: -4.857, y: 0.74, z: 1.00, r: -Math.PI/2}], true);
-	loadModel(scene, 'jidelna_vydejni_okno.glb', sc, bx, by, bz, br, [{x: 3.306, y: 1.690, z: 2.153, r: -Math.PI/2}], true);
-	loadModel(scene, 'stul_hrnky.glb', sc, bx, by, bz, br, [{x: -1.236, y: 0.410, z: 3.184, r: -Math.PI/2}], true);
-	loadModel(scene, 'lekarna.glb', sc, bx, by, bz, br, [{x: 7.097, y: 1.729, z: -1.54, r: -Math.PI/2}], true);		
-	loadModel(scene, 'kuchyne_police1.glb', sc, bx, by, bz, br, [{x: 8.072, y: 1.758, z: -1.404, r: -Math.PI/2}], true);		
-	loadModel(scene, 'kuchyne_mycak.glb', sc, bx, by, bz, br, [{x: 7.853, y: 0.416, z: -1.284, r: -Math.PI/2}], true);		
-*/
+	loadModel(scene, 'stul_jidelna.glb', sc, stulJidelnaVariants, true);
+	loadModel(scene, 'stul_jidelna_varnice.glb', sc, [{x: -5.044, y: -0.683, z: 1.482, r: br}], true);	
+	loadModel(scene, 'jidelna_skrine_ruzne.glb', sc, [{x: -10.526, y: -2.141, z: 2.185, r: toRad(-73.9)}], true);	
+	loadModel(scene, 'posta.glb', sc, [{x: -4.520, y: -7.817, z: 2.210, r: br}], true);	
+	loadModel(scene, 'stul_kancl.glb', sc, [{x: -3.339, y: -6.241, z: 1.504, r: br}], true);	
+	loadModel(scene, 'stul_hrnky.glb', sc, [{x: -3.914, y: -4.581, z: 1.551, r: br}], true);	
+	loadModel(scene, 'kamna_osetrovna.glb', sc, [{x: -5.204, y: -10.222, z: 1.542, r: br}], true);
+	loadModel(scene, 'postel_csd.glb', sc, [{x: -2.993, y: -9.961, z: 1.359, r: br}], true);
+	loadModel(scene, 'skrinka_osetrovna.glb', sc, [{x: -4.355, y: -10.491, z: 1.642, r: br}], true);
+	loadModel(scene, 'palanda_osetrovna.glb', sc, [{x: -5.004, y: -8.663, z: 1.881, r: br}], true);
+	loadModel(scene, 'jidelna_vydejni_okno.glb', sc, [{x: -6.160, y: -0.501, z: 2.831, r: br}], true);	
+	loadModel(scene, 'lekarna.glb', sc, [{x: -10.759, y: 2.124, z: 2.869, r: br}], true);		
+	loadModel(scene, 'kuchyne_police1.glb', sc, [{x: -10.898, y: 3.095, z: 2.898, r: br}], true);		
+	loadModel(scene, 'kuchyne_mycak.glb', sc, [{x: -10.722, y: 2.917, z: 1.556, r: br}], true);		
 };
 
 // https://sketchfab.com/3d-models/lowpoly-tree-b562b2e9f029440c804b4b6d36ebe174
@@ -341,7 +338,26 @@ function createSmallTree() {
 // https://sketchfab.com/3d-models/tree-low-poly-4cd243eb74c74b3ea2190ebcec0439fb
 // https://sketchfab.com/3d-models/low-poly-tree-70f0e767fc2f449fa6fef9c2308b395f
 
-function createFlag() {
+function createStozar() {
+	const height = 12 * glScale; 
+	const x = -4.857 * glScale;
+	const y = height / 2; 
+	const z = -29.148 * glScale;
+	loader.loadTexture('../textures/stozar.jpg', textures => {	
+		let texture = textures[0];
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.repeat.set(1, 20);
+		const geometry = new THREE.CylinderGeometry(.02 * glScale, .04 * glScale, height, 16);
+		const material = new THREE.MeshLambertMaterial({map: texture});
+		const mesh = new THREE.Mesh(geometry, material);
+		mesh.position.set(x, y, z);
+		mesh.castShadow = true;
+		mesh.receiveShadow = true;
+		mesh.scale.set(glScale, glScale, glScale);
+		scene.add(mesh);
+		physics.addCylinderObsticle(mesh);
+	});
 	loader.loadTexture('../textures/vlajka.png', textures => {
 		const clothTexture = textures[0];
 		clothTexture.anisotropy = 16;
@@ -351,72 +367,56 @@ function createFlag() {
 			alphaTest: 0.5
 		});
 		flag = new Cloth(clothMaterial);	
-		flag.position.set(103.5, 80, 107);
-		const scale = 0.05;
+		const dx = 1.2;
+		const dy = 8.4;
+		const dz = 0;
+		flag.position.set(x + dx * glScale, y + dy * glScale, z + dz * glScale);
+		const scale = 0.01 * glScale;
 		flag.scale.set(scale, scale, scale);
 		scene.add(flag);	
-	});
-};
-
-function createStozar() {
-	loader.loadTexture('../textures/stozar.jpg', textures => {	
-		let texture = textures[0];
-		texture.wrapS = THREE.RepeatWrapping;
-		texture.wrapT = THREE.RepeatWrapping;
-		texture.repeat.set(1, 20);
-		const height = 10;
-		const geometry = new THREE.CylinderGeometry(.01, .1, height, 16);
-		const material = new THREE.MeshLambertMaterial({map: texture});
-		const mesh = new THREE.Mesh(geometry, material);
-		mesh.position.set(-4.857 * glScale, height / 2, -29.148 * glScale);
-		mesh.castShadow = true;
-		mesh.receiveShadow = true;
-		mesh.scale.set(glScale, glScale, glScale);
-		scene.add(mesh);
-		physics.addCylinderObsticle(mesh);
 	});
 }
 
 function createTents() {
-	// modely musí mít počátek uprostřed své výšky a obsahu, 
-	// jinak boundingbox přepočet na Ammo kolizní box bude dělat problémy
-	loader.loadModel('../models/stan.glb' + name, gltf => { 
-		let model = gltf.scene.children[0];
-		let sc = 1;
-		model.scale.set(sc, sc, sc);
-		model.castShadow = true; 
-		model.receiveShadow = true; 
-		model.traverse(n => { if (n.isMesh) {
-			n.castShadow = true; 
-			n.receiveShadow = true;
-			if (n.material.map) n.material.map.anisotropy = 1; 
-		}});
-		let startY = 20;
+	const sc = glScale;
+	const stanVariants = [
 		// severní řada 9 stanů
-		for (let i = 0; i < 9; i++) {			
-			let tent = model.clone();
-			tent.position.set(25 * i, startY, -20);
-			scene.add(tent);
-			physics.addMeshObsticle(tent, scene);
-		}
-		// východní řada 8 stanů
-		for (let i = 0; i < 8; i++) {			
-			if (i == 3) continue;
-			let tent = model.clone();
-			tent.rotateZ(Math.PI/2);
-			tent.position.set(250, startY, 20 + i * 25);
-			scene.add(tent);
-			physics.addMeshObsticle(tent, scene);
-		}
+		{x: -12.193, y: 17.296, z: 1.139, r: toRad(106)},
+		{x: -12.908, y: 19.783, z: 1.140, r: toRad(106)},
+		{x: -13.627, y: 22.28, z: 1.140, r: toRad(106)},
+		{x: -14.327, y: 24.713, z: 1.140, r: toRad(106)},
+		{x: -15.052, y: 27.234, z: 1.140, r: toRad(106)},
+		{x: -15.775, y: 29.745, z: 1.140, r: toRad(106)},
+		{x: -16.479, y: 32.129, z: 1.140, r: toRad(106)},
+		{x: -17.214, y: 34.49, z: 1.140, r: toRad(106)},
+		{x: -17.924, y: 36.789, z: 1.140, r: toRad(106)},
+		
+		// východní řada 8 stanů (4. je vynechaný kvůli kořenu)
+		{x: -15.414, y: 40.769, z: 1.140, r: toRad(16.5)},
+		{x: -13.09, y: 41.383, z: 1.140, r: toRad(16.5)},
+		{x: -10.663, y: 42.104, z: 1.140, r: toRad(16.5)},
+		{x: -6.914, y: 43.23, z: 1.140, r: toRad(16.5)},
+		{x: -4.624, y: 43.912, z: 1.140, r: toRad(16.5)},
+		{x: -2.211, y: 44.63, z: 1.140, r: toRad(16.5)},
+		{x: 0.263, y: 45.365, z: 1.140, r: toRad(16.5)},
+		
 		// jižní řada 13 stanů
-		for (let i = 0; i < 13; i++) {			
-			let tent = model.clone();
-			tent.rotateZ(Math.PI);
-			tent.position.set(210 - 25 * i, startY, 230);
-			scene.add(tent);
-			physics.addMeshObsticle(tent, scene);
-		}
-	});	
+		{x: 3.100, y: 40.442, z: 1.140, r: toRad(281)},
+		{x: 3.547, y: 38.192, z: 1.140, r: toRad(283)},
+		{x: 4.123, y: 35.832, z: 1.140, r: toRad(283)},
+		{x: 4.753, y: 33.511, z: 1.140, r: toRad(286)},
+		{x: 5.425, y: 31.314, z: 1.140, r: toRad(286)},
+		{x: 6.039, y: 29.077, z: 1.140, r: toRad(286)},
+		{x: 6.725, y: 26.796, z: 1.140, r: toRad(286)},
+		{x: 7.504, y: 24.39, z: 1.140, r: toRad(286)},
+		{x: 8.186, y: 21.916, z: 1.140, r: toRad(286)},
+		{x: 8.847, y: 19.577, z: 1.140, r: toRad(286)},
+		{x: 9.533, y: 17.214, z: 1.140, r: toRad(286)},
+		{x: 10.219, y: 14.765, z: 1.140, r: toRad(286)},
+		{x: 10.92, y: 12.329, z: 1.140, r: toRad(286)},
+		
+	];
+	loadModel(scene, 'stan.glb', sc, stanVariants, true);
 }
 
 function createGrid() {
@@ -432,6 +432,42 @@ function createGrid() {
 // https://stackoverflow.com/questions/15478093/realistic-lighting-sunlight-with-three-js
 // https://threejs.org/docs/#api/en/math/Color.setHSL
 function createLight() {
+	
+	const hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.6 );
+	hemiLight.color.setHSL( 0.15, 1, 0.8 );
+	//hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
+	hemiLight.position.set( 0, 50, 0 );
+	scene.add( hemiLight );
+
+	if (showHelpers) {
+		const hemiLightHelper = new THREE.HemisphereLightHelper( hemiLight, 10 );
+		scene.add( hemiLightHelper );
+	}
+
+	const dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
+	dirLight.color.setHSL( 0.1, 1, 0.95 );
+	dirLight.position.set( -1, 1.75, 1 );
+	dirLight.position.multiplyScalar( 30 );
+	dirLight.castShadow = true;
+	dirLight.shadow.mapSize.width = 2048;
+	dirLight.shadow.mapSize.height = 2048;
+	scene.add( dirLight );
+
+	const d = 50;
+
+	dirLight.shadow.camera.left = - d;
+	dirLight.shadow.camera.right = d;
+	dirLight.shadow.camera.top = d;
+	dirLight.shadow.camera.bottom = - d;
+
+	dirLight.shadow.camera.far = 3500;
+	dirLight.shadow.bias = - 0.0001;
+
+	if (showHelpers) {
+		const dirLightHelper = new THREE.DirectionalLightHelper( dirLight, 10 );
+		scene.add( dirLightHelper );
+	}
+	
 /*	
 	const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.9);
 	hemiLight.color = new THREE.Color("hsl(58, 70%, 80%)");
@@ -441,13 +477,13 @@ function createLight() {
 
 	const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 10);
 	scene.add(hemiLightHelper);
-*/	
+
 	scene.add(new THREE.AmbientLight(0x999999));
 
 	const dirLight = new THREE.DirectionalLight(0xffffff, .5);	
 	dirLight.color = new THREE.Color("hsl(58, 100%, 100%)");
-	dirLight.position.set(5, 10, 1);
-	dirLight.position.multiplyScalar(30);
+	dirLight.position.set(1, 3, 1);
+	dirLight.position.multiplyScalar(10);
 	scene.add(dirLight);
 
 	dirLight.castShadow = true;
@@ -455,14 +491,14 @@ function createLight() {
 	dirLight.shadow.mapSize.width = 256;
 	dirLight.shadow.mapSize.height = 256;
 
-	const d = 30;
+	const d = 50;
 	dirLight.shadow.camera.left = -d;
 	dirLight.shadow.camera.right = d;
 	dirLight.shadow.camera.top = d;
 	dirLight.shadow.camera.bottom = -d;
 
 	dirLight.shadow.camera.far = 50;
-	dirLight.shadow.bias = - 0.001;	
+	dirLight.shadow.bias = -0.00001;	
 
 	if (showHelpers) {
 		const dirLightHelper = new THREE.DirectionalLightHelper(dirLight, 10);
@@ -472,6 +508,7 @@ function createLight() {
 		const cameraHelper = new THREE.CameraHelper(dirLight.shadow.camera);
 		scene.add(cameraHelper);
 	}
+	*/
 }
 
 // https://threejs.org/docs/#examples/en/controls/PointerLockControls
@@ -633,7 +670,7 @@ function createPlayer() {
 function init() {
 	document.body.appendChild(stats.dom);
 	// atributy:  field of view, aspect ratio, near, far
-	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);		
+	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);		
 	
 	scene = new THREE.Scene();		
 	scene.background = new THREE.Color(0xdddddd);			
@@ -672,10 +709,8 @@ function init() {
 	createSkybox();
 	*/
 	createStaryBarak();	
-	createFlag();
-	
 	createStozar();	
-	//createTents();
+	createTents();
 	/*
 	//createGrid();
 	//createTree();
