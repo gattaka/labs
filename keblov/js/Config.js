@@ -1,5 +1,5 @@
 let Config = {
-	mscale: 1,
+	glScale: 1,
 	phMargin: 0.001,
 	showPhHelpers: false,
 	showScHelpers: false,

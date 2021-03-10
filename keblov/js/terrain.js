@@ -44,7 +44,7 @@ let Terrain = function(loader, onLoad) {
 			
 			let geometry = new THREE.PlaneBufferGeometry( terrainWidthExtents, terrainDepthExtents, terrainWidth - 1, terrainDepth - 1 );
 			geometry.rotateX( - Math.PI / 2 );
-			const vertices = geometry.attributes.position.array;		
+			const vertices = geometry.attributes.position.array;
 			for ( let i = 0, j = 0, l = vertices.length; i < l; i ++, j += 3 ) {
 				// j + 1 because it is the y component that we modify
 				vertices[ j + 1 ] = heightMap[ i ];
