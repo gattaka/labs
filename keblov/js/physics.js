@@ -1,11 +1,13 @@
 import { Config } from './Config.js';
 import * as THREE from '../js/three.module.js';			
 
+
 let Physics = {};
 Physics.STATE = { DISABLE_DEACTIVATION : 4 };
 Physics.FLAGS = { CF_KINEMATIC_OBJECT: 2 };
 Physics.processor = function (callback) {
 
+	const glScale = Config.glScale;
 	const showHelpers = Config.showPhHelpers;
 	const phMargin = Config.phMargin;
 
@@ -150,8 +152,8 @@ Physics.processor = function (callback) {
 		let heightMap = plane.userData.heightMap;
 		let terrainWidthExtents = plane.userData.terrainWidthExtents;
 		let terrainDepthExtents = plane.userData.terrainDepthExtents;
-		let terrainWidth = plane.userData.terrainWidth
-		let terrainDepth = plane.userData.terrainDepth;
+		let terrainWidth = plane.userData.terrainWidth + 1;
+		let terrainDepth = plane.userData.terrainDepth + 1;
 		let terrainMaxHeight = plane.userData.terrainMaxHeight;
 		let terrainMinHeight = plane.userData.terrainMinHeight;
 				
@@ -200,9 +202,9 @@ Physics.processor = function (callback) {
 		);
 
 		// Set horizontal scale
-		let scaleX = terrainWidthExtents / (terrainWidth - 1);
-		let scaleZ = terrainDepthExtents / (terrainDepth - 1);
-		heightFieldShape.setLocalScaling(new Ammo.btVector3(scaleX, 1, scaleZ));
+		let scaleX = terrainWidthExtents / (terrainWidth - 1) * glScale;
+		let scaleZ = terrainDepthExtents / (terrainDepth - 1) * glScale;
+		heightFieldShape.setLocalScaling(new Ammo.btVector3(scaleX, glScale, scaleZ));
 
 		heightFieldShape.setMargin(phMargin);
 
@@ -211,7 +213,7 @@ Physics.processor = function (callback) {
 		let quat = plane.quaternion.clone();
 		groundTransform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 		// Shifts the terrain, since bullet re-centers it on its bounding box.
-		groundTransform.setOrigin(new Ammo.btVector3(0, (terrainMaxHeight + terrainMinHeight) / 2, 0));
+		groundTransform.setOrigin(new Ammo.btVector3(0, glScale * (terrainMaxHeight + terrainMinHeight) / 2, 0));
 		let groundMass = 0;
 		let groundLocalInertia = new Ammo.btVector3(0, 0, 0);
 		let groundMotionState = new Ammo.btDefaultMotionState(groundTransform);

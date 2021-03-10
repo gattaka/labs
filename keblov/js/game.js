@@ -152,7 +152,7 @@ function loadModel(scene, name, sc, bx, by, bz, variants, asPhysicsBody, onCreat
 };
 
 function createStaryBarak() {	
-	const sc = 5;
+	const sc = glScale;
 	let bx = -15;
 	let by = 5;
 	let bz = 0;
@@ -512,9 +512,9 @@ function createTerrainHelper(mesh) {
 		*/
 		const data = mesh.userData;
 		
-		let geometry = new THREE.PlaneBufferGeometry(data.terrainWidthExtents, data.terrainDepthExtents, data.terrainWidth - 1, data.terrainDepth - 1);
-		geometry.rotateX( - Math.PI / 2 );
-		//geometry.rotateY(Math.PI);
+		let geometry = new THREE.PlaneBufferGeometry(data.terrainWidthExtents, data.terrainDepthExtents, data.terrainWidth, data.terrainDepth);
+		geometry.rotateX(-Math.PI/2);
+		geometry.rotateY(-Math.PI/2);
 		const vertices = geometry.attributes.position.array;
 		for (let i = 0, j = 0, l = vertices.length; i < l; i++, j += 3)			
 			vertices[j + 1] = data.heightMap[i];	
@@ -538,8 +538,7 @@ function createTerrainHelper(mesh) {
 		ground.userData.terrainMaxHeight = data.terrainMaxHeight;		
 		ground.userData.heightMap = data.heightMap;
 				
-		scene.add(ground);
-		physics.addTerrain(ground);	
+		scene.add(ground);		
 	});	
 };
 
@@ -553,14 +552,12 @@ function createTerrain() {
 	
 	loader.loadModel('../models/teren.glb', gltf => { 
 		let ground = gltf.scene.children[0];
-		ground.scale.set(glScale, glScale, glScale);
 		ground.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
 			n.receiveShadow = true;
 			//if (n.material.map) n.material.map.anisotropy = 1; 
-		}});
-		ground.position.set(0, -5, 0);				
-		ground.rotation.y = Math.PI * -15.7 / 180 ;
+		}});			
+		ground.scale.set(glScale, glScale, glScale);
 		
 		const geometry = ground.geometry;
 		const vertices = geometry.attributes.position.array;
@@ -570,53 +567,43 @@ function createTerrain() {
 		ground.userData.terrainWidth = 101;
 		ground.userData.terrainDepth = 101;
 		ground.userData.terrainWidthExtents = 84.32;
-		ground.userData.terrainDepthExtents = 138.24;
-		let segmentWidth = ground.userData.terrainWidthExtents / ground.userData.terrainWidth;
-		let segmentDepth = ground.userData.terrainDepthExtents / ground.userData.terrainDepth;
-		
-		let halfTerrainWidthExtents = ground.userData.terrainWidthExtents / 2;
-		let halfTerrainDepthExtents = ground.userData.terrainDepthExtents / 2;
-		
-		let sorted = false;
-		
+		ground.userData.terrainDepthExtents = 138.24;		
+
 		for (let i = 0; i < vertices.length; i += 3) {
 			let x = vertices[i];
 			let y = vertices[i + 1];
 			let z = vertices[i + 2];
 			terrainMinHeight = terrainMinHeight === undefined ? y : Math.min(terrainMinHeight, y);
-			terrainMaxHeight = terrainMaxHeight === undefined ? y : Math.max(terrainMaxHeight, y);			
-			let xIndex = Math.floor((x + halfTerrainWidthExtents) / segmentWidth);
-			let zIndex = Math.floor((z + halfTerrainDepthExtents) / segmentDepth);
-			let index = xIndex + zIndex * ground.userData.terrainWidth;
-			if (sorted) {
-				heightMap.push({x: x, y: y, z: z});
-			} else {
-				heightMap[index] = y;
-			}
+			terrainMaxHeight = terrainMaxHeight === undefined ? y : Math.max(terrainMaxHeight, y);						
+			heightMap.push({x: x, y: y, z: z});
 		}	
-		if (sorted) {	
-			heightMap.sort((a, b) => {
-				let aOrder = a.x + a.z * ground.userData.terrainWidthExtents;
-				let bOrder = b.x + b.z * ground.userData.terrainWidthExtents;
-				if (aOrder > bOrder) return 1;
-				if (aOrder < bOrder) return -1;
-				return 0;			
-			});			
-			for (let i = 0; i < heightMap.length; i++)
-				heightMap[i] = heightMap[i].y;
-		} else {
-			for (let i = 0; i < vertices.length / 3; i++) {
-				if (heightMap[i] === undefined)
-					heightMap[i] = -2;
+		heightMap.sort((a, b) => {
+			if (a.z > b.z) return 1;
+			if (a.z < b.z) return -1;
+			if (a.z == b.z) {
+				if (a.x > b.x) return 1;
+				if (a.x < b.x) return -1;
 			}
-		}		
-				
+			return 0;					
+		});			
+		
+		// clean glb duplicit vertexů
+		let hMap = [];		
+		for (let i = 0, lx, lz; i < heightMap.length; i++) {
+			if (i == 0 || heightMap[i].x != lx || heightMap[i].z != lz)
+				hMap.push(heightMap[i].y);
+			lx = heightMap[i].x;
+			lz = heightMap[i].z;
+		}
+		heightMap = hMap;	
+
 		ground.userData.terrainMinHeight = terrainMinHeight;
 		ground.userData.terrainMaxHeight = terrainMaxHeight;		
 		ground.userData.heightMap = heightMap;
 		
-		createTerrainHelper(ground);
-				
+		//createTerrainHelper(ground);
+		
+		physics.addTerrain(ground);	
 		scene.add(ground);				
 	});	
 };
@@ -675,8 +662,8 @@ function init() {
 	createTerrain();
 	/*
 	createSkybox();
-	createStaryBarak();	
 	*/
+	createStaryBarak();	
 	createFlag();
 	
 	//createStozar();	
