@@ -148,14 +148,36 @@ Physics.processor = function (callback) {
 	}
 	
 	// http://kripken.github.io/ammo.js/examples/webgl_demo_terrain/index.html
-	ret.addTerrain = function(plane) {		
-		let heightMap = plane.userData.heightMap;
-		let terrainWidthExtents = plane.userData.terrainWidthExtents;
-		let terrainDepthExtents = plane.userData.terrainDepthExtents;
-		let terrainWidth = plane.userData.terrainWidth + 1;
-		let terrainDepth = plane.userData.terrainDepth + 1;
-		let terrainMaxHeight = plane.userData.terrainMaxHeight;
-		let terrainMinHeight = plane.userData.terrainMinHeight;
+	ret.addTerrain = function(mesh, scene) {
+		const data = mesh.userData;
+		
+		let geometry = new THREE.PlaneBufferGeometry(data.terrainWidthExtents, data.terrainDepthExtents, data.terrainWidth, data.terrainDepth);
+		geometry.rotateX(-Math.PI/2);	
+		//geometry.rotateY(-Math.PI/2);	
+		const vertices = geometry.attributes.position.array;
+		for (let i = 0, j = 0, l = vertices.length; i < l; i++, j += 3)			
+			vertices[j + 1] = data.heightMap[i];	
+		geometry.computeVertexNormals();
+		
+		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, side: THREE.DoubleSide, wireframe: false});
+		let plane = new THREE.Mesh(geometry, material);
+		plane.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
+		plane.scale.set(-1,1,1);
+		plane.rotation.y = Math.PI/2;
+		
+		plane.castShadow = false;
+		plane.receiveShadow = true;
+			
+		if (showHelpers)
+			scene.add(plane);
+		
+		let heightMap = data.heightMap;
+		let terrainWidthExtents = data.terrainWidthExtents;
+		let terrainDepthExtents = data.terrainDepthExtents;
+		let terrainWidth = data.terrainWidth + 1;
+		let terrainDepth = data.terrainDepth + 1;
+		let terrainMaxHeight = data.terrainMaxHeight;
+		let terrainMinHeight = data.terrainMinHeight;
 				
 		// This parameter is not really used, since we are using PHY_FLOAT height data type and hence it is ignored
 		let heightScale = 1;

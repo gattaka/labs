@@ -5,20 +5,20 @@ import * as THREE from '../js/three.module.js';
 let Player = function (info, camera, physics, pos) {
 
 	const eyeHeight = 1.2 * Config.glScale;
-	//const radius = 0.2 * Config.glScale;
-	const radius = 1 * Config.glScale;
+	const radius = 0.2 * Config.glScale; // 0.2 funguje a nepropadává
 	const size = {x: .2 , y: .2, z: .2};
 	const quat = {x: 0, y: 0, z: 0, w: 1};
 	const mass = 5;
 	const stepHeight = .5;
 	const keys = {forward: 0, back: 0, left: 0, right: 0, jump: 0};
-	//const walkSpeed = 0.2 * Config.glScale;
-	const walkSpeed = 2 * Config.glScale;
+	const walkSpeed = 0.2 * Config.glScale;	
 	const jumpSpeed = 0.3 * Config.glScale;
 	
 	const meshType = 1;
 	
 	let moveX, moveY, moveZ;
+	
+	let body;
 	
 	let ret = {};
 	ret.keys = keys;
@@ -51,7 +51,7 @@ let Player = function (info, camera, physics, pos) {
 		colShape.calculateLocalInertia(mass, localInertia);
 
 		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
-		let body = new Ammo.btRigidBody(rbInfo);
+		body = new Ammo.btRigidBody(rbInfo);
 		
 		body.setFriction(2);
 		body.setRollingFriction(10);
@@ -102,6 +102,22 @@ let Player = function (info, camera, physics, pos) {
 		moveY = jumpSpeed * keys.jump;
 		moveZ = vec.z * walkSpeed;
 	}
+	
+	ret.resetPosition = function(pos) {
+		// https://stackoverflow.com/questions/12251199/re-positioning-a-rigid-body-in-bullet-physics
+		console.log(pos);
+		
+		let transform = new Ammo.btTransform();
+		transform.setIdentity();
+		transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+		transform.setRotation(new Ammo.btQuaternion(0, 0, 0, 1));
+	
+		body.setWorldTransform(transform);
+		body.getMotionState().setWorldTransform(transform);
+        body.setLinearVelocity(new Ammo.btVector3(0, 0, 0));
+        body.setAngularVelocity(new Ammo.btVector3(0, 0, 0));
+        body.clearForces();
+	};
 
 	return ret;
 };

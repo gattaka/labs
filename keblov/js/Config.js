@@ -3,5 +3,6 @@ let Config = {
 	phMargin: 0.001,
 	showPhHelpers: false,
 	showScHelpers: true,
+	savePlayerPosition: true
 };
 export { Config };

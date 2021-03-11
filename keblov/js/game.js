@@ -13,12 +13,11 @@ import * as THREE from './three.module.js';
 const phMargin = Config.phMargin;
 const glScale = Config.glScale;
 const showHelpers = Config.showScHelpers;
+const savePlayerPosition = Config.savePlayerPosition;
 
 let camera, scene, renderer, controls;
 let flag;
 let player;
-
-const savePlayer = false;
 
 const info = new Info();
 const loader = new Loader(info);
@@ -36,7 +35,7 @@ function createSkybox() {
 			let m = new THREE.MeshBasicMaterial({ map: t });
 			m.side = THREE.BackSide;
 			materialArray.push(m);
-			let side = 300;
+			let side = 400;
 			let skyboxGeo = new THREE.BoxGeometry(side, side, side);
 			let skybox = new THREE.Mesh(skyboxGeo, materialArray);
 			skybox.position.set(0, 0, 0);
@@ -164,6 +163,14 @@ function toRad(degree) {
 function createStaryBarak() {	
 	const sc = glScale;
 	let br = toRad(16.0526);
+	
+	loadModel(scene, 'beton_schod1.glb', sc, [{x: -3.133, y: -2.091, z: 0.66, r: br}], true);
+	loadModel(scene, 'beton_schod2.glb', sc, [{x: -1.932, y: -1.745, z: 0.594, r: br}], true);
+	loadModel(scene, 'beton_schod3.glb', sc, [{x: -1.451, y: -1.607, z: 0.527, r: br}], true);
+	loadModel(scene, 'beton_schod4.glb', sc, [{x: -0.971, y: -1.469, z: 0.459, r: br}], true);
+	loadModel(scene, 'beton_schod5.glb', sc, [{x: -0.490, y: -1.330, z: 0.391, r: br}], true);
+	loadModel(scene, 'beton_schod6.glb', sc, [{x: -0.010, y: -1.192, z: 0.324, r: br}], true);
+	
 	loadModel(scene, 'keblov_stary.glb', sc, [{x: -7.316, y: -4.273, z: 0.64, r: br}], true);		
 	loadModel(scene, 'keblov_stary_zdi.glb', sc, [{x: -7.316, y: -4.273, z: 2.177, r: br}], false);
 	loadModel(scene, 'keblov_stary_strop.glb', sc, [{x: -7.316, y: -4.273, z: 3.364, r: br}], true);		
@@ -198,7 +205,7 @@ function createStaryBarak() {
 	loadModel(scene, 'sportak_skrin1.glb', sc, [{x: -5.778, y: -10.621, z: 1.931, r: br}], true);
 	const sportakSkrin2Variants = [
 		{x: -6.089, y: -9.538, z: 1.931, r: br},
-		{x: -8.337, y: -11.598, z: 1.931, r: toRad(106)},
+		{x: -8.337, y: -11.598, z: 1.931, r: toRad(-73.9)},
 	];
 	loadModel(scene, 'sportak_skrin2.glb', sc, sportakSkrin2Variants, true);
 	const sportakSkrin3Variants = [
@@ -369,36 +376,36 @@ function createStozar() {
 			alphaTest: 0.5
 		});
 		flag = new Cloth(clothMaterial);	
-		const dx = 1.2;
-		const dy = 8.4;
+		const dx = 0.65;
+		const dy = 4.1;
 		const dz = 0;
 		flag.position.set(x + dx * glScale, y + dy * glScale, z + dz * glScale);
-		const scale = 0.01 * glScale;
+		const scale = 0.005 * glScale;
 		flag.scale.set(scale, scale, scale);
 		scene.add(flag);	
 	});
 }
 
-function createTents() {
+function createStany() {
 	const sc = glScale;
 	const stanVariants = [
 		// severní řada 9 stanů
-		{x: -12.193, y: 17.296, z: 1.139, r: toRad(106)},
-		{x: -12.908, y: 19.783, z: 1.140, r: toRad(106)},
-		{x: -13.627, y: 22.28, z: 1.140, r: toRad(106)},
-		{x: -14.327, y: 24.713, z: 1.140, r: toRad(106)},
-		{x: -15.052, y: 27.234, z: 1.140, r: toRad(106)},
-		{x: -15.775, y: 29.745, z: 1.140, r: toRad(106)},
-		{x: -16.479, y: 32.129, z: 1.140, r: toRad(106)},
-		{x: -17.214, y: 34.49, z: 1.140, r: toRad(106)},
-		{x: -17.924, y: 36.789, z: 1.140, r: toRad(106)},
+		{x: -12.679, y: 17.296, z: 1.573, r: toRad(106)},
+		{x: -13.394, y: 19.783, z: 1.574, r: toRad(106)},
+		{x: -14.113, y: 22.28, z: 1.574, r: toRad(106)},
+		{x: -14.813, y: 24.713, z: 1.574, r: toRad(106)},
+		{x: -15.538, y: 27.234, z: 1.574, r: toRad(106)},
+		{x: -16.261, y: 29.745, z: 1.574, r: toRad(106)},
+		{x: -16.965, y: 32.129, z: 1.574, r: toRad(106)},
+		{x: -17.700, y: 34.49, z: 1.574, r: toRad(106)},
+		{x: -18.410, y: 36.789, z: 1.574, r: toRad(106)},
 		
 		// východní řada 8 stanů (4. je vynechaný kvůli kořenu)
-		{x: -15.414, y: 40.769, z: 1.140, r: toRad(16.5)},
-		{x: -13.09, y: 41.383, z: 1.140, r: toRad(16.5)},
-		{x: -10.663, y: 42.104, z: 1.140, r: toRad(16.5)},
-		{x: -6.914, y: 43.23, z: 1.140, r: toRad(16.5)},
-		{x: -4.624, y: 43.912, z: 1.140, r: toRad(16.5)},
+		{x: -15.414, y: 40.769, z: 1.598, r: toRad(16.5)},
+		{x: -13.09, y: 41.383, z: 1.544, r: toRad(16.5)},
+		{x: -10.663, y: 42.104, z: 1.493, r: toRad(16.5)},
+		{x: -6.914, y: 43.23, z: 1.355, r: toRad(16.5)},
+		{x: -4.624, y: 43.912, z: 1.192, r: toRad(16.5)},
 		{x: -2.211, y: 44.63, z: 1.140, r: toRad(16.5)},
 		{x: 0.263, y: 45.365, z: 1.140, r: toRad(16.5)},
 		
@@ -422,8 +429,36 @@ function createTents() {
 }
 
 function createHangar() {	
-	loadModel(scene, 'hangar.glb', glScale, [{x: 27.639, y: -54.919, z: 7.156, r: toRad(22.1)}], true);
-}
+	loadModel(scene, 'hangar.glb', glScale, [{x: 27.639, y: -54.919, z: 6.857, r: toRad(22.1)}], true);
+};
+
+function createBirchTrees() {
+	loadModel(scene, 'birch/scene.gltf', 1.5 * glScale, [{x: -1, y: 1, z: 0, r: toRad(0)}], false, model => {
+		model.scale.z = .5 * glScale;
+		model.rotation.y = toRad(10);
+		model.rotation.x = toRad(-85);
+		
+		const configs = [
+			{sz: .5, px: 2, pz: 6, rx: -95, ry: 10, rz: 280},
+			{sz: .4, px: -1, pz: -3, rx: -95, ry: 9, rz: 280},
+			{sz: .4, px: -2, pz: -7, rx: -95, ry: 12, rz: 10},
+			{sz: .5, px: 3, pz: 10, rx: -95, ry: 8, rz: 280},
+			{sz: .4, px: 3, pz: 13, rx: -95, ry: 3, rz: 280},
+			{sz: .4, px: 4, pz: 13.5, rx: -95, ry: 5, rz: 180},
+		]
+		
+		configs.forEach(c => {
+			let mdl = model.clone();
+			mdl.scale.z = c.sz * glScale;
+			mdl.position.x += c.px * glScale;
+			mdl.position.z += c.pz * glScale;
+			mdl.rotation.x = toRad(c.rx);
+			mdl.rotation.y = toRad(c.ry);
+			mdl.rotation.z = toRad(c.rz);
+			scene.add(mdl);			
+		});
+	});
+};
 
 function createGrid() {
 	const size = 100;
@@ -440,7 +475,7 @@ function createGrid() {
 function createLight() {
 	
 	const hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.6 );
-	hemiLight.color.setHSL( 0.15, 1, 0.8 );
+	hemiLight.color.setHSL( 0.15, 1, 0.9 );
 	//hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
 	hemiLight.position.set( 0, 50, 0 );
 	scene.add( hemiLight );
@@ -544,137 +579,89 @@ function createControls() {
 			case " ":
 				player.keys.jump = down ? 1 : 0;				
 				break;
+			case "c":
+				if (down)
+					player.resetPosition(new THREE.Vector3(0, 2, 0));
+				break;
 		}
 	};
 	document.addEventListener('keydown', onKeyDown, false);
 	document.addEventListener('keyup', onKeyUp, false);
 }
 
-function createTerrainHelper(mesh) {
-	loader.loadTexture('../textures/seamless_grass.jpg', textures => {		
-		const texture = textures[0];
-		texture.wrapS = THREE.RepeatWrapping;
-		texture.wrapT = THREE.RepeatWrapping;
-		texture.repeat.set(100, 100);
-		const material = new THREE.MeshLambertMaterial({ map: texture, side: THREE.DoubleSide, wireframe: false});
-		/*
-		const color = Math.floor(Math.random() * (1 << 24));
-		const material = new THREE.MeshLambertMaterial({ color: color, side: THREE.DoubleSide});			
-		*/
-		const data = mesh.userData;
-		
-		let geometry = new THREE.PlaneBufferGeometry(data.terrainWidthExtents, data.terrainDepthExtents, data.terrainWidth, data.terrainDepth);
-		geometry.rotateX(-Math.PI/2);	
-		//geometry.rotateY(-Math.PI/2);	
-		const vertices = geometry.attributes.position.array;
-		for (let i = 0, j = 0, l = vertices.length; i < l; i++, j += 3)			
-			vertices[j + 1] = data.heightMap[i];	
-		geometry.computeVertexNormals();
-		
-		let ground = new THREE.Mesh(geometry, material);
-		//ground.position.set(mesh.position.clone());
-		//ground.position.set(0,0,0);
-		ground.scale.set(-1,1,1);
-		//ground.rotation.y = mesh.rotation.y;
-		//ground.rotation.z = mesh.rotation.z;
-		ground.rotation.y = Math.PI/2;
-		
-		ground.castShadow = false;
-		ground.receiveShadow = true;
-			
-		ground.userData.terrainWidthExtents = data.terrainWidthExtents;
-		ground.userData.terrainDepthExtents = data.terrainDepthExtents;
-		ground.userData.terrainWidth = data.terrainWidth;
-		ground.userData.terrainDepth = data.terrainDepth;
-		ground.userData.terrainMinHeight = data.terrainMinHeight;
-		ground.userData.terrainMaxHeight = data.terrainMaxHeight;		
-		ground.userData.heightMap = data.heightMap;
-				
-		scene.add(ground);		
-		physics.addTerrain(ground);	
-	});	
-};
-
-function createTerrainFromMesh(ground) {
-	const meshes = [];
-	ground.traverse(n => { if (n.isMesh) {
-		n.castShadow = true; 
-		n.receiveShadow = true;
-		meshes.push(n);
-	}});	
-		
-	let heightMap = [];
-	let terrainMinHeight, terrainMaxHeight;
-	for (let m = 0; m < meshes.length; m++) {
-		const vertices = meshes[m].geometry.attributes.position.array;
-		for (let i = 0; i < vertices.length; i += 3) {
-			let x = vertices[i];
-			let y = vertices[i + 1];
-			let z = vertices[i + 2];
-			terrainMinHeight = terrainMinHeight === undefined ? y : Math.min(terrainMinHeight, y);
-			terrainMaxHeight = terrainMaxHeight === undefined ? y : Math.max(terrainMaxHeight, y);						
-			heightMap.push({x: x, y: y, z: z});
-		}
-	}
-	
-	ground.scale.set(glScale, glScale, glScale);
-	ground.position.set(0, 0, 0);	
-	ground.rotation.x = 0;
-	ground.rotation.y = 0;
-	ground.rotation.z = 0;	
-	const faceSide = 128;
-	ground.userData.terrainWidth = faceSide;
-	ground.userData.terrainDepth = faceSide;
-	//ground.userData.terrainWidthExtents = 84.32;
-	//ground.userData.terrainDepthExtents = 138.24;		
-	ground.userData.terrainWidthExtents = 140;
-	ground.userData.terrainDepthExtents = 87.2;		
-	
-	heightMap.sort((a, b) => {
-		let firstMult = 1;
-		let secondMult = 1;
-		let firstAxisA = a.x;
-		let firstAxisB = b.x;
-		let secondAxisA = a.z;
-		let secondAxisB = b.z;
-		if (firstAxisA > firstAxisB) return 1 * firstMult;
-		if (firstAxisA < firstAxisB) return -1 * firstMult;
-		if (firstAxisA == firstAxisB) {
-			if (secondAxisA > secondAxisB) return 1 * secondMult;
-			if (secondAxisA < secondAxisB) return -1 * secondMult;
-		}		
-		return 0;					
-	});			
-	
-	// clean glb duplicit vertexů
-	let hMap = [];		
-	for (let i = 0, lx, ly, lz; i < heightMap.length; i++) {
-		let vtx = heightMap[i];
-		if (Number.isNaN(vtx.y))
-			console.log("NaN");
-		if (i == 0 || vtx.x != lx || vtx.z != lz)
-			hMap.push(heightMap[i].y);
-		if (vtx.x == lx && vtx.z == lz && vtx.y != ly)
-			console.log("vtx.y != ly");
-		lx = heightMap[i].x;
-		ly = heightMap[i].y;
-		lz = heightMap[i].z;
-	}
-	heightMap = hMap;
-
-	ground.userData.terrainMinHeight = terrainMinHeight;
-	ground.userData.terrainMaxHeight = terrainMaxHeight;		
-	ground.userData.heightMap = heightMap;
-	
-	createTerrainHelper(ground);	
-	
-	scene.add(ground);
-}
-
 function createTerrain() {	
-	loader.loadModel('../models/teren_128r.glb', gltf => { 
+	loader.loadModel('../models/teren2.glb', gltf => { 
 		const ground = gltf.scene.children[0];														
-		createTerrainFromMesh(ground);
+		const meshes = [];
+		ground.traverse(n => { if (n.isMesh) {
+			n.castShadow = true; 
+			n.receiveShadow = true;
+			meshes.push(n);
+		}});	
+			
+		let heightMap = [];
+		let terrainMinHeight, terrainMaxHeight;
+		for (let m = 0; m < meshes.length; m++) {
+			const vertices = meshes[m].geometry.attributes.position.array;
+			for (let i = 0; i < vertices.length; i += 3) {
+				let x = vertices[i];
+				let y = vertices[i + 1];
+				let z = vertices[i + 2];
+				terrainMinHeight = terrainMinHeight === undefined ? y : Math.min(terrainMinHeight, y);
+				terrainMaxHeight = terrainMaxHeight === undefined ? y : Math.max(terrainMaxHeight, y);						
+				heightMap.push({x: x, y: y, z: z});
+			}
+		}
+		
+		ground.scale.set(glScale, glScale, glScale);
+		ground.position.set(0, 5.282 * glScale, 0);	
+		ground.rotation.x = 0;
+		ground.rotation.y = 0;
+		ground.rotation.z = 0;	
+		const faceSide = 128;
+		ground.userData.terrainWidth = faceSide;
+		ground.userData.terrainDepth = faceSide;	
+		ground.userData.terrainWidthExtents = 140;
+		ground.userData.terrainDepthExtents = 87.2;		
+		
+		heightMap.sort((a, b) => {
+			let firstMult = 1;
+			let secondMult = 1;
+			let firstAxisA = a.x;
+			let firstAxisB = b.x;
+			let secondAxisA = a.z;
+			let secondAxisB = b.z;
+			if (firstAxisA > firstAxisB) return 1 * firstMult;
+			if (firstAxisA < firstAxisB) return -1 * firstMult;
+			if (firstAxisA == firstAxisB) {
+				if (secondAxisA > secondAxisB) return 1 * secondMult;
+				if (secondAxisA < secondAxisB) return -1 * secondMult;
+			}		
+			return 0;					
+		});			
+		
+		// clean glb duplicit vertexů
+		let hMap = [];		
+		for (let i = 0, lx, ly, lz; i < heightMap.length; i++) {
+			let vtx = heightMap[i];
+			if (Number.isNaN(vtx.y))
+				console.log("NaN");
+			if (i == 0 || vtx.x != lx || vtx.z != lz)
+				hMap.push(heightMap[i].y);
+			if (vtx.x == lx && vtx.z == lz && vtx.y != ly)
+				console.log("vtx.y != ly");
+			lx = heightMap[i].x;
+			ly = heightMap[i].y;
+			lz = heightMap[i].z;
+		}
+		heightMap = hMap;
+
+		ground.userData.terrainMinHeight = terrainMinHeight;
+		ground.userData.terrainMaxHeight = terrainMaxHeight;		
+		ground.userData.heightMap = heightMap;
+				
+		physics.addTerrain(ground, scene);		
+		scene.add(ground);
 	});	
 };
 
@@ -687,7 +674,7 @@ function createPlayer() {
 	camera.rotation.x = cookieUtils.getCookieNumber('camrotx') || 0;
 	camera.rotation.y = cookieUtils.getCookieNumber('camroty') || 0;
 	camera.rotation.z = cookieUtils.getCookieNumber('camrotz') || 0;
-	if (!savePlayer) 
+	if (!savePlayerPosition) 
 		lastPos = new THREE.Vector3(0,10,0);
 	player = new Player(info, camera, physics, lastPos);	
 	scene.add(player.mesh);
@@ -732,9 +719,13 @@ function init() {
 	
 	createTerrain();	
 	createSkybox();	
-	//createStaryBarak();	
+	
+	createStaryBarak();
+	createBirchTrees();
+	
 	createStozar();	
-	createTents();
+	createStany();
+	
 	createHangar();
 	/*
 	//createGrid();
@@ -777,3 +768,9 @@ function render() {
 	renderer.render(scene, camera);	
 	info.update(delta);	
 };
+
+let Console = function() {
+	
+};
+
+export { Console };
