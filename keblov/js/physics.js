@@ -175,11 +175,13 @@ Physics.processor = function (callback) {
 		// Copy the javascript height data array to the Ammo one.
 		let p = 0;
 		let p2 = 0;
-		for (let j = 0, v = 0; j < terrainDepth; j++) {
-			for (let i = 0; i < terrainWidth; i++, v += 3) {
-				// write 32-bit float data to memory				
-				Ammo.HEAPF32[ammoHeightData + p2 >> 2] = heightMap[p];
-				p++;
+		for (let j = 0; j < terrainDepth; j++, p += terrainWidth) {
+			for (let i = 0; i < terrainWidth; i++) {
+				// protože Ammo neumí zrcadlení heightmap přes scale (umí, ale pak přestane fungovat kolize) 
+				// musí se zrcadlení udělat přehozením pořadí zápisu vertexů
+				let hmpIndx = p + terrainWidth - 1 - i;
+				// write 32-bit float data to memory		
+				Ammo.HEAPF32[ammoHeightData + p2 >> 2] = heightMap[hmpIndx];
 				// 4 bytes/float
 				p2 += 4;
 			}
@@ -214,7 +216,7 @@ Physics.processor = function (callback) {
 		let quat = plane.quaternion.clone();
 		groundTransform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 		// Shifts the terrain, since bullet re-centers it on its bounding box.
-		groundTransform.setOrigin(new Ammo.btVector3(0, glScale * (terrainMaxHeight + terrainMinHeight) / 2, 0));
+		groundTransform.setOrigin(new Ammo.btVector3(0, glScale * (terrainMaxHeight + terrainMinHeight) / 2 + plane.position.y, 0));
 		let groundMass = 0;
 		let groundLocalInertia = new Ammo.btVector3(0, 0, 0);
 		let groundMotionState = new Ammo.btDefaultMotionState(groundTransform);

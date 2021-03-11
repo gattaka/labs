@@ -573,8 +573,8 @@ function createTerrainHelper(mesh) {
 		
 		let ground = new THREE.Mesh(geometry, material);
 		//ground.position.set(mesh.position.clone());
-		ground.position.set(0,0,0);
-		ground.scale.set(1,1,1);
+		//ground.position.set(0,0,0);
+		ground.scale.set(-1,1,1);
 		//ground.rotation.y = mesh.rotation.y;
 		//ground.rotation.z = mesh.rotation.z;
 		ground.rotation.y = Math.PI/2;
@@ -660,7 +660,7 @@ function createTerrainFromMesh(ground) {
 		ly = heightMap[i].y;
 		lz = heightMap[i].z;
 	}
-	heightMap = hMap;	
+	heightMap = hMap;
 
 	ground.userData.terrainMinHeight = terrainMinHeight;
 	ground.userData.terrainMaxHeight = terrainMaxHeight;		
