@@ -203,13 +203,14 @@ Physics.processor = function (callback) {
 
 		// Set horizontal scale
 		let scaleX = terrainWidthExtents / (terrainWidth - 1) * glScale;
+		let scaleY = glScale;
 		let scaleZ = terrainDepthExtents / (terrainDepth - 1) * glScale;
-		heightFieldShape.setLocalScaling(new Ammo.btVector3(scaleX, glScale, scaleZ));
+		heightFieldShape.setLocalScaling(new Ammo.btVector3(scaleX, scaleY, scaleZ));
 
 		heightFieldShape.setMargin(phMargin);
 
 		let groundTransform = new Ammo.btTransform();
-		groundTransform.setIdentity();
+		groundTransform.setIdentity();		
 		let quat = plane.quaternion.clone();
 		groundTransform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 		// Shifts the terrain, since bullet re-centers it on its bounding box.

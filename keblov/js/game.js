@@ -18,6 +18,8 @@ let camera, scene, renderer, controls;
 let flag;
 let player;
 
+const savePlayer = false;
+
 const info = new Info();
 const loader = new Loader(info);
 const clock = new THREE.Clock();
@@ -34,7 +36,7 @@ function createSkybox() {
 			let m = new THREE.MeshBasicMaterial({ map: t });
 			m.side = THREE.BackSide;
 			materialArray.push(m);
-			let side = 10000;
+			let side = 300;
 			let skyboxGeo = new THREE.BoxGeometry(side, side, side);
 			let skybox = new THREE.Mesh(skyboxGeo, materialArray);
 			skybox.position.set(0, 0, 0);
@@ -419,6 +421,10 @@ function createTents() {
 	loadModel(scene, 'stan.glb', sc, stanVariants, true);
 }
 
+function createHangar() {	
+	loadModel(scene, 'hangar.glb', glScale, [{x: 27.639, y: -54.919, z: 7.156, r: toRad(22.1)}], true);
+}
+
 function createGrid() {
 	const size = 100;
 	const divisions = 100;
@@ -550,7 +556,7 @@ function createTerrainHelper(mesh) {
 		texture.wrapS = THREE.RepeatWrapping;
 		texture.wrapT = THREE.RepeatWrapping;
 		texture.repeat.set(100, 100);
-		const material = new THREE.MeshLambertMaterial({ map: texture, side: THREE.DoubleSide});
+		const material = new THREE.MeshLambertMaterial({ map: texture, side: THREE.DoubleSide, wireframe: false});
 		/*
 		const color = Math.floor(Math.random() * (1 << 24));
 		const material = new THREE.MeshLambertMaterial({ color: color, side: THREE.DoubleSide});			
@@ -558,19 +564,20 @@ function createTerrainHelper(mesh) {
 		const data = mesh.userData;
 		
 		let geometry = new THREE.PlaneBufferGeometry(data.terrainWidthExtents, data.terrainDepthExtents, data.terrainWidth, data.terrainDepth);
-		geometry.rotateX(-Math.PI/2);
-		geometry.rotateY(-Math.PI/2);
+		geometry.rotateX(-Math.PI/2);	
+		//geometry.rotateY(-Math.PI/2);	
 		const vertices = geometry.attributes.position.array;
 		for (let i = 0, j = 0, l = vertices.length; i < l; i++, j += 3)			
 			vertices[j + 1] = data.heightMap[i];	
 		geometry.computeVertexNormals();
 		
 		let ground = new THREE.Mesh(geometry, material);
-		ground.position.set(mesh.position.clone());
+		//ground.position.set(mesh.position.clone());
 		ground.position.set(0,0,0);
-		//ground.scale.set(1,1,1);
-		ground.rotation.y = mesh.rotation.y;
-		ground.rotation.z = mesh.rotation.z;	
+		ground.scale.set(1,1,1);
+		//ground.rotation.y = mesh.rotation.y;
+		//ground.rotation.z = mesh.rotation.z;
+		ground.rotation.y = Math.PI/2;
 		
 		ground.castShadow = false;
 		ground.receiveShadow = true;
@@ -584,36 +591,22 @@ function createTerrainHelper(mesh) {
 		ground.userData.heightMap = data.heightMap;
 				
 		scene.add(ground);		
+		physics.addTerrain(ground);	
 	});	
 };
 
-function createTerrain() {
-	/*
-	new Terrain(loader, terrain => {
-		physics.addTerrain(terrain);
-		scene.add(terrain);	
-	});	
-	*/
-	
-	loader.loadModel('../models/teren.glb', gltf => { 
-		let ground = gltf.scene.children[0];
-		ground.traverse(n => { if (n.isMesh) {
-			n.castShadow = true; 
-			n.receiveShadow = true;
-			//if (n.material.map) n.material.map.anisotropy = 1; 
-		}});			
-		ground.scale.set(glScale, glScale, glScale);
+function createTerrainFromMesh(ground) {
+	const meshes = [];
+	ground.traverse(n => { if (n.isMesh) {
+		n.castShadow = true; 
+		n.receiveShadow = true;
+		meshes.push(n);
+	}});	
 		
-		const geometry = ground.geometry;
-		const vertices = geometry.attributes.position.array;
-		let heightMap = [];
-		let terrainMinHeight, terrainMaxHeight;
-		
-		ground.userData.terrainWidth = 101;
-		ground.userData.terrainDepth = 101;
-		ground.userData.terrainWidthExtents = 84.32;
-		ground.userData.terrainDepthExtents = 138.24;		
-
+	let heightMap = [];
+	let terrainMinHeight, terrainMaxHeight;
+	for (let m = 0; m < meshes.length; m++) {
+		const vertices = meshes[m].geometry.attributes.position.array;
 		for (let i = 0; i < vertices.length; i += 3) {
 			let x = vertices[i];
 			let y = vertices[i + 1];
@@ -621,35 +614,67 @@ function createTerrain() {
 			terrainMinHeight = terrainMinHeight === undefined ? y : Math.min(terrainMinHeight, y);
 			terrainMaxHeight = terrainMaxHeight === undefined ? y : Math.max(terrainMaxHeight, y);						
 			heightMap.push({x: x, y: y, z: z});
-		}	
-		heightMap.sort((a, b) => {
-			if (a.z > b.z) return 1;
-			if (a.z < b.z) return -1;
-			if (a.z == b.z) {
-				if (a.x > b.x) return 1;
-				if (a.x < b.x) return -1;
-			}
-			return 0;					
-		});			
-		
-		// clean glb duplicit vertexů
-		let hMap = [];		
-		for (let i = 0, lx, lz; i < heightMap.length; i++) {
-			if (i == 0 || heightMap[i].x != lx || heightMap[i].z != lz)
-				hMap.push(heightMap[i].y);
-			lx = heightMap[i].x;
-			lz = heightMap[i].z;
 		}
-		heightMap = hMap;	
+	}
+	
+	ground.scale.set(glScale, glScale, glScale);
+	ground.position.set(0, 0, 0);	
+	ground.rotation.x = 0;
+	ground.rotation.y = 0;
+	ground.rotation.z = 0;	
+	const faceSide = 128;
+	ground.userData.terrainWidth = faceSide;
+	ground.userData.terrainDepth = faceSide;
+	//ground.userData.terrainWidthExtents = 84.32;
+	//ground.userData.terrainDepthExtents = 138.24;		
+	ground.userData.terrainWidthExtents = 140;
+	ground.userData.terrainDepthExtents = 87.2;		
+	
+	heightMap.sort((a, b) => {
+		let firstMult = 1;
+		let secondMult = 1;
+		let firstAxisA = a.x;
+		let firstAxisB = b.x;
+		let secondAxisA = a.z;
+		let secondAxisB = b.z;
+		if (firstAxisA > firstAxisB) return 1 * firstMult;
+		if (firstAxisA < firstAxisB) return -1 * firstMult;
+		if (firstAxisA == firstAxisB) {
+			if (secondAxisA > secondAxisB) return 1 * secondMult;
+			if (secondAxisA < secondAxisB) return -1 * secondMult;
+		}		
+		return 0;					
+	});			
+	
+	// clean glb duplicit vertexů
+	let hMap = [];		
+	for (let i = 0, lx, ly, lz; i < heightMap.length; i++) {
+		let vtx = heightMap[i];
+		if (Number.isNaN(vtx.y))
+			console.log("NaN");
+		if (i == 0 || vtx.x != lx || vtx.z != lz)
+			hMap.push(heightMap[i].y);
+		if (vtx.x == lx && vtx.z == lz && vtx.y != ly)
+			console.log("vtx.y != ly");
+		lx = heightMap[i].x;
+		ly = heightMap[i].y;
+		lz = heightMap[i].z;
+	}
+	heightMap = hMap;	
 
-		ground.userData.terrainMinHeight = terrainMinHeight;
-		ground.userData.terrainMaxHeight = terrainMaxHeight;		
-		ground.userData.heightMap = heightMap;
-		
-		//createTerrainHelper(ground);
-		
-		physics.addTerrain(ground);	
-		scene.add(ground);				
+	ground.userData.terrainMinHeight = terrainMinHeight;
+	ground.userData.terrainMaxHeight = terrainMaxHeight;		
+	ground.userData.heightMap = heightMap;
+	
+	createTerrainHelper(ground);	
+	
+	scene.add(ground);
+}
+
+function createTerrain() {	
+	loader.loadModel('../models/teren_128r.glb', gltf => { 
+		const ground = gltf.scene.children[0];														
+		createTerrainFromMesh(ground);
 	});	
 };
 
@@ -662,7 +687,8 @@ function createPlayer() {
 	camera.rotation.x = cookieUtils.getCookieNumber('camrotx') || 0;
 	camera.rotation.y = cookieUtils.getCookieNumber('camroty') || 0;
 	camera.rotation.z = cookieUtils.getCookieNumber('camrotz') || 0;
-	//lastPos = new THREE.Vector3(0,10,0);
+	if (!savePlayer) 
+		lastPos = new THREE.Vector3(0,10,0);
 	player = new Player(info, camera, physics, lastPos);	
 	scene.add(player.mesh);
 };
@@ -670,7 +696,7 @@ function createPlayer() {
 function init() {
 	document.body.appendChild(stats.dom);
 	// atributy:  field of view, aspect ratio, near, far
-	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);		
+	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 400);		
 	
 	scene = new THREE.Scene();		
 	scene.background = new THREE.Color(0xdddddd);			
@@ -704,13 +730,12 @@ function init() {
 	createControls();
 	createLight();
 	
-	createTerrain();
-	/*
-	createSkybox();
-	*/
-	createStaryBarak();	
+	createTerrain();	
+	createSkybox();	
+	//createStaryBarak();	
 	createStozar();	
 	createTents();
+	createHangar();
 	/*
 	//createGrid();
 	//createTree();
