@@ -679,7 +679,8 @@ function createPlayer() {
 	player = new Player(info, camera, physics, lastPos);	
 	if (!savePlayerPosition) 
 		player.resetPosition();
-	scene.add(player.mesh);
+	if (player.mesh !== undefined)
+		scene.add(player.mesh);
 };
 
 function init() {
@@ -730,7 +731,7 @@ function init() {
 	createTerrain();	
 	createSkybox();	
 	
-	createStaryBarak();
+	//createStaryBarak();
 	createBirchTrees();
 	
 	createStozar();	
@@ -764,23 +765,21 @@ function onWindowResize() {
 
 function animate(now) {
 	requestAnimationFrame(animate);
+	const delta = clock.getDelta();	
+	
+	physics.updatePhysics(delta);
+	player.update(delta);
 	if (flag !== undefined)
 		flag.animate(now);
-	render();
-	stats.update();
-}
-
-function render() {
-	const delta = clock.getDelta();	
-	player.movePlayer(delta);
-	physics.updatePhysics(delta);
+	
 	renderer.clear();
 	renderer.render(scene, camera);	
+	
 	info.update(delta);	
-};
+	stats.update();	
+}
 
 let Console = function() {
-	
 };
 
 export { Console };

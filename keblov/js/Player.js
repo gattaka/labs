@@ -12,108 +12,64 @@ let Player = function (info, camera, physics, pos) {
 	const stepHeight = .5;
 	const keys = {forward: 0, back: 0, left: 0, right: 0, jump: 0};
 	const walkSpeed = 0.2 * Config.glScale;	
-	const jumpSpeed = 0.3 * Config.glScale;
+	const jumpSpeed = 10 * Config.glScale;
+	const maxSlopeRadians = Math.PI / 4;
+	const terminalVelocity = 3;
 	
-	const startPos = new THREE.Vector3(-2, 2, 2);
+	const startPos = new THREE.Vector3(-2, 5, 2);
 	const meshType = 2;
-	
-	let verticalLock = false;
-	let moveX, moveY, moveZ;
-	let body;
+		
+	let moveX, moveZ;
 	let ret = {};
+	
+	let colShape;
+	let controller;
+	let ghostObject;
+	
 	ret.keys = keys;
 	
-	let init = function() {
-		let transform = new Ammo.btTransform();
+	let init = function() {	
+		colShape = new Ammo.btCapsuleShape(0.5, 0.5);
+		ghostObject = new Ammo.btPairCachingGhostObject();
+		const transform = new Ammo.btTransform();
 		transform.setIdentity();
 		transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
 		transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
-		let motionState = new Ammo.btDefaultMotionState(transform);
-		
-		let mesh, colShape;
-		const material = new THREE.MeshBasicMaterial({wireframe: true});
-		mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(), material);
-		colShape = new Ammo.btCapsuleShape(radius, size);	
-		
-		ret.mesh = mesh;
-		
-		mesh.position.set(pos.x, pos.y, pos.z);
-		mesh.castShadow = true;
-		mesh.receiveShadow = true;				
-		
-		colShape.setMargin(Config.phMargin);
-		let localInertia = new Ammo.btVector3(0, 0, 0);
-		colShape.calculateLocalInertia(mass, localInertia);
+		ghostObject.setWorldTransform(transform);
+		ghostObject.setCollisionShape(colShape);
+		ghostObject.setCollisionFlags(ghostObject.getCollisionFlags() | 16); //CHARACTER_OBJECT
+		ghostObject.setActivationState(4);
+		ghostObject.activate(true);
 
-		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
-		body = new Ammo.btRigidBody(rbInfo);
-		
-		body.setFriction(0);
-		body.setRollingFriction(0);
-		body.setActivationState(Physics.STATE.DISABLE_DEACTIVATION)
-		
-		info.addInfoSource(function() {
-			let vel = body.getLinearVelocity();		
-			return "Player: speed[x: " + vel.x() + " y:" + vel.y() + " z:" + vel.z() + "]";
-		});
-		info.addInfoSource(function() {
-			return "Player friction: [linear: " + body.getFriction() + " rolling:" + body.getRollingFriction() + "]";
-		});
-		
-		mesh.userData.physicsUpdate = function() {
-			let scalingFactor = 20;			
-			mesh.userData.moveY = 0;
-			
-			let resultantImpulse = new Ammo.btVector3(moveX, moveY, moveZ)
-			resultantImpulse.op_mul(scalingFactor);
+		controller = new Ammo.btKinematicCharacterController(ghostObject, colShape, stepHeight, 1);
+		controller.setJumpSpeed(jumpSpeed);
+		controller.setMaxSlope(maxSlopeRadians);
+		controller.setFallSpeed(terminalVelocity);
+		controller.setGravity(-Config.gravity);
+		controller.setUseGhostSweepTest(true);
 
-			body.setAngularVelocity(new Ammo.btVector3(0, 0, 0));
-			
-			let vel = body.getLinearVelocity();				
-			vel.setX(moveX * scalingFactor);
-			vel.setZ(moveZ * scalingFactor);
+		controller.setGravity(70);
+		// it falls through the ground if I apply gravity
+		//controller.setGravity(-physics.getPhysicsWorld().getGravity().y());
 
-			if (moveX != 0 || moveZ != 0) {
-				verticalLock = false;
-			} else {
-				verticalLock = physics.checkContact(body);
-			}
-						
-			if (physics.checkContact(body) && moveY != 0) {
-				vel.setY(moveY * scalingFactor);
-				verticalLock = false;
-			}
-		};
-		
-		mesh.userData.physicsBody = body;
-		mesh.userData.transformationCallback = function(objThree, p, q) {
-			let nx = p.x();
-			let ny = p.y();
-			let nz = p.z();			
-			// pokud nemám explicitně nastaven pohyb dopředu nebo do strany,
-			// nechci, aby se hráč v těchto osách nijak hýbal (klouzal po svahu apod.)				
-			if (moveX != 0 || moveZ != 0) {
-				objThree.position.setX(nx);				
-				objThree.position.setZ(nz);			
-			}
-			if (!verticalLock)
-				objThree.position.setY(ny);
-			
-			// nepotřebuju, aby se fyzikální placeholder hráče otáčel
-			//objThree.quaternion.set(q.x(), q.y(), q.z(), q.w());
-			
-			camera.position.x = objThree.position.x;
-			camera.position.y = objThree.position.y + eyeHeight;
-			camera.position.z = objThree.position.z;
-						
-			if (camera.position.y < -10)
-				ret.resetPosition();
-		};
-		physics.addDynamicObject(mesh);
+		// addCollisionObject(collisionObject: Ammo.btCollisionObject, collisionFilterGroup?: number | undefined, collisionFilterMask?: number | undefined): void
+		physics.getPhysicsWorld().addCollisionObject(ghostObject, 32, -1);
+		physics.getPhysicsWorld().addAction(controller);
+		physics.getPhysicsWorld().getBroadphase().getOverlappingPairCache().setInternalGhostPairCallback(new Ammo.btGhostPairCallback());
 	};
 	init();
 	
-	ret.movePlayer = function(delta) {
+	ret.update = function(delta) {
+		
+		// Update 
+			
+		const t = controller.getGhostObject().getWorldTransform().getOrigin();		
+		camera.position.x = t.x();
+		camera.position.y = t.y();
+		camera.position.z = t.z();
+		
+		// Novy pohyb
+		
 		let vec = new THREE.Vector3();
 		vec.setFromMatrixColumn(camera.matrix, 0);
 		vec.crossVectors(camera.up, vec);
@@ -124,9 +80,13 @@ let Player = function (info, camera, physics, pos) {
 		vec2.multiplyScalar(keys.left - keys.right);
 		vec.add(vec2);
 		
-		moveX = vec.x * walkSpeed;
-		moveY = jumpSpeed * keys.jump;
-		moveZ = vec.z * walkSpeed;		
+		moveX = vec.x * walkSpeed;		
+		moveZ = vec.z * walkSpeed;			
+		
+		if (keys.jump > 0 && controller.canJump())
+			controller.jump();
+	
+		controller.setWalkDirection(new Ammo.btVector3(moveX, 0, moveZ));		
 	}
 	
 	ret.resetPosition = function() {
@@ -134,13 +94,8 @@ let Player = function (info, camera, physics, pos) {
 		let transform = new Ammo.btTransform();
 		transform.setIdentity();
 		transform.setOrigin(new Ammo.btVector3(startPos.x, startPos.y, startPos.z));
-		transform.setRotation(new Ammo.btQuaternion(0, 0, 0, 1));
-	
-		body.setWorldTransform(transform);
-		body.getMotionState().setWorldTransform(transform);
-        body.setLinearVelocity(new Ammo.btVector3(0, 0, 0));
-        body.setAngularVelocity(new Ammo.btVector3(0, 0, 0));
-        body.clearForces();
+		transform.setRotation(new Ammo.btQuaternion(0, 0, 0, 1));	
+		ghostObject.setWorldTransform(transform);
 	};
 
 	return ret;

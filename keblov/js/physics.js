@@ -303,9 +303,13 @@ Physics.processor = function (callback) {
 				updateMeshMotionState(ms, objThree);
 				if (objThree.userData.helperMesh !== undefined) 
 					updateMeshMotionState(ms, objThree.userData.helperMesh);
-			}
+			}		
 		}
-	}
+	};
+	
+	ret.getPhysicsWorld = function() {
+		return physicsWorld;
+	};
 	
 	return ret;
 };
