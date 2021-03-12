@@ -731,7 +731,7 @@ function init() {
 	createTerrain();	
 	createSkybox();	
 	
-	//createStaryBarak();
+	createStaryBarak();
 	createBirchTrees();
 	
 	createStozar();	

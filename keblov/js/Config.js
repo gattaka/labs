@@ -6,6 +6,6 @@ let Config = {
 	savePlayerPosition: true,
 	resolutionDivider: 1,
 	threejsApiResize: true,
-	gravity: -50,
+	gravity: -40,
 };
 export { Config };

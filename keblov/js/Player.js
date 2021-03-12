@@ -4,17 +4,17 @@ import * as THREE from '../js/three.module.js';
 
 let Player = function (info, camera, physics, pos) {
 
-	const eyeHeight = 1.2 * Config.glScale;
-	const radius = 0.2 * Config.glScale; // 0.2 funguje a nepropadává
-	const size = .2 * Config.glScale;
+	const radius = 0.1 * Config.glScale; // 0.2 funguje a nepropadává
+	const height = 1 * Config.glScale;
+	const eyeLevel = (height + 2 * radius) / 2;
 	const quat = {x: 0, y: 0, z: 0, w: 1};
 	const mass = 5;
 	const stepHeight = .5;
 	const keys = {forward: 0, back: 0, left: 0, right: 0, jump: 0};
-	const walkSpeed = 0.2 * Config.glScale;	
+	const walkSpeed = 0.05 * Config.glScale;	
 	const jumpSpeed = 10 * Config.glScale;
 	const maxSlopeRadians = Math.PI / 4;
-	const terminalVelocity = 3;
+	const terminalVelocity = 4;
 	
 	const startPos = new THREE.Vector3(-2, 5, 2);
 	const meshType = 2;
@@ -29,7 +29,9 @@ let Player = function (info, camera, physics, pos) {
 	ret.keys = keys;
 	
 	let init = function() {	
-		colShape = new Ammo.btCapsuleShape(0.5, 0.5);
+		// radius, height (total height is height+2*radius, so the height is just the height 
+		// between the center of each 'sphere' of the capsule caps)
+		colShape = new Ammo.btCapsuleShape(radius, height);
 		ghostObject = new Ammo.btPairCachingGhostObject();
 		const transform = new Ammo.btTransform();
 		transform.setIdentity();
@@ -44,13 +46,11 @@ let Player = function (info, camera, physics, pos) {
 		controller = new Ammo.btKinematicCharacterController(ghostObject, colShape, stepHeight, 1);
 		controller.setJumpSpeed(jumpSpeed);
 		controller.setMaxSlope(maxSlopeRadians);
-		controller.setFallSpeed(terminalVelocity);
+		//controller.setFallSpeed(terminalVelocity);
 		controller.setGravity(-Config.gravity);
 		controller.setUseGhostSweepTest(true);
 
-		controller.setGravity(70);
-		// it falls through the ground if I apply gravity
-		//controller.setGravity(-physics.getPhysicsWorld().getGravity().y());
+		controller.setGravity(-physics.getPhysicsWorld().getGravity().y());
 
 		// addCollisionObject(collisionObject: Ammo.btCollisionObject, collisionFilterGroup?: number | undefined, collisionFilterMask?: number | undefined): void
 		physics.getPhysicsWorld().addCollisionObject(ghostObject, 32, -1);
@@ -65,8 +65,11 @@ let Player = function (info, camera, physics, pos) {
 			
 		const t = controller.getGhostObject().getWorldTransform().getOrigin();		
 		camera.position.x = t.x();
-		camera.position.y = t.y();
+		camera.position.y = t.y() + eyeLevel;
 		camera.position.z = t.z();
+		
+		if (t.y() < -10)
+			ret.resetPosition();
 		
 		// Novy pohyb
 		
@@ -85,6 +88,12 @@ let Player = function (info, camera, physics, pos) {
 		
 		if (keys.jump > 0 && controller.canJump())
 			controller.jump();
+			
+		if (!controller.onGround() || moveX != 0 || moveZ != 0) {
+			controller.setGravity(-physics.getPhysicsWorld().getGravity().y());
+		} else {
+			controller.setGravity(0);
+		}
 	
 		controller.setWalkDirection(new Ammo.btVector3(moveX, 0, moveZ));		
 	}
