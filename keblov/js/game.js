@@ -14,6 +14,7 @@ const phMargin = Config.phMargin;
 const glScale = Config.glScale;
 const showHelpers = Config.showScHelpers;
 const savePlayerPosition = Config.savePlayerPosition;
+const resolutionDivider = Config.resolutionDivider;
 
 let camera, scene, renderer, controls;
 let flag;
@@ -388,41 +389,42 @@ function createStozar() {
 
 function createStany() {
 	const sc = glScale;
+	const br = 106;
 	const stanVariants = [
 		// severní řada 9 stanů
-		{x: -12.679, y: 17.296, z: 1.573, r: toRad(106)},
-		{x: -13.394, y: 19.783, z: 1.574, r: toRad(106)},
-		{x: -14.113, y: 22.28, z: 1.574, r: toRad(106)},
-		{x: -14.813, y: 24.713, z: 1.574, r: toRad(106)},
-		{x: -15.538, y: 27.234, z: 1.574, r: toRad(106)},
-		{x: -16.261, y: 29.745, z: 1.574, r: toRad(106)},
-		{x: -16.965, y: 32.129, z: 1.574, r: toRad(106)},
-		{x: -17.700, y: 34.49, z: 1.574, r: toRad(106)},
-		{x: -18.410, y: 36.789, z: 1.574, r: toRad(106)},
+		{x: -12.679, y: 17.296, z: 1.573, r: toRad(106 - br)},
+		{x: -13.394, y: 19.783, z: 1.574, r: toRad(106 - br)},
+		{x: -14.113, y: 22.28, z: 1.574, r: toRad(106 - br)},
+		{x: -14.813, y: 24.713, z: 1.574, r: toRad(106 - br)},
+		{x: -15.538, y: 27.234, z: 1.574, r: toRad(106 - br)},
+		{x: -16.261, y: 29.745, z: 1.574, r: toRad(106 - br)},
+		{x: -16.965, y: 32.129, z: 1.574, r: toRad(106 - br)},
+		{x: -17.700, y: 34.49, z: 1.574, r: toRad(106 - br)},
+		{x: -18.410, y: 36.789, z: 1.574, r: toRad(106 - br)},
 		
 		// východní řada 8 stanů (4. je vynechaný kvůli kořenu)
-		{x: -15.414, y: 40.769, z: 1.598, r: toRad(16.5)},
-		{x: -13.09, y: 41.383, z: 1.544, r: toRad(16.5)},
-		{x: -10.663, y: 42.104, z: 1.493, r: toRad(16.5)},
-		{x: -6.914, y: 43.23, z: 1.355, r: toRad(16.5)},
-		{x: -4.624, y: 43.912, z: 1.192, r: toRad(16.5)},
-		{x: -2.211, y: 44.63, z: 1.140, r: toRad(16.5)},
-		{x: 0.263, y: 45.365, z: 1.140, r: toRad(16.5)},
+		{x: -15.414, y: 40.769, z: 1.598, r: toRad(16.5 - br)},
+		{x: -13.09, y: 41.383, z: 1.544, r: toRad(16.5 - br)},
+		{x: -10.663, y: 42.104, z: 1.493, r: toRad(16.5 - br)},
+		{x: -6.914, y: 43.23, z: 1.355, r: toRad(16.5 - br)},
+		{x: -4.624, y: 43.912, z: 1.192, r: toRad(16.5 - br)},
+		{x: -2.211, y: 44.63, z: 1.140, r: toRad(16.5 - br)},
+		{x: 0.263, y: 45.365, z: 1.140, r: toRad(16.5 - br)},
 		
 		// jižní řada 13 stanů
-		{x: 3.100, y: 40.442, z: 1.140, r: toRad(281)},
-		{x: 3.547, y: 38.192, z: 1.140, r: toRad(283)},
-		{x: 4.123, y: 35.832, z: 1.140, r: toRad(283)},
-		{x: 4.753, y: 33.511, z: 1.140, r: toRad(286)},
-		{x: 5.425, y: 31.314, z: 1.140, r: toRad(286)},
-		{x: 6.039, y: 29.077, z: 1.140, r: toRad(286)},
-		{x: 6.725, y: 26.796, z: 1.140, r: toRad(286)},
-		{x: 7.504, y: 24.39, z: 1.140, r: toRad(286)},
-		{x: 8.186, y: 21.916, z: 1.140, r: toRad(286)},
-		{x: 8.847, y: 19.577, z: 1.140, r: toRad(286)},
-		{x: 9.533, y: 17.214, z: 1.140, r: toRad(286)},
-		{x: 10.219, y: 14.765, z: 1.140, r: toRad(286)},
-		{x: 10.92, y: 12.329, z: 1.140, r: toRad(286)},
+		{x: 3.100, y: 40.442, z: 1.140, r: toRad(281 - br)},
+		{x: 3.547, y: 38.192, z: 1.140, r: toRad(283 - br)},
+		{x: 4.123, y: 35.832, z: 1.140, r: toRad(283 - br)},
+		{x: 4.753, y: 33.511, z: 1.140, r: toRad(286 - br)},
+		{x: 5.425, y: 31.314, z: 1.140, r: toRad(286 - br)},
+		{x: 6.039, y: 29.077, z: 1.140, r: toRad(286 - br)},
+		{x: 6.725, y: 26.796, z: 1.140, r: toRad(286 - br)},
+		{x: 7.504, y: 24.39, z: 1.140, r: toRad(286 - br)},
+		{x: 8.186, y: 21.916, z: 1.140, r: toRad(286 - br)},
+		{x: 8.847, y: 19.577, z: 1.140, r: toRad(286 - br)},
+		{x: 9.533, y: 17.214, z: 1.140, r: toRad(286 - br)},
+		{x: 10.219, y: 14.765, z: 1.140, r: toRad(286 - br)},
+		{x: 10.92, y: 12.329, z: 1.140, r: toRad(286 - br)},
 		
 	];
 	loadModel(scene, 'stan.glb', sc, stanVariants, true);
@@ -581,7 +583,7 @@ function createControls() {
 				break;
 			case "c":
 				if (down)
-					player.resetPosition(new THREE.Vector3(0, 2, 0));
+					player.resetPosition();
 				break;
 		}
 	};
@@ -668,22 +670,22 @@ function createTerrain() {
 function createPlayer() {
 	let lastPos = new THREE.Vector3();
 	lastPos.x = cookieUtils.getCookieNumber('camposx') || 0;
-	lastPos.y = cookieUtils.getCookieNumber('camposy') || 10;
+	lastPos.y = cookieUtils.getCookieNumber('camposy') || 0;
 	lastPos.z = cookieUtils.getCookieNumber('camposz') || 0;
 	let lastRot = new THREE.Vector3();
 	camera.rotation.x = cookieUtils.getCookieNumber('camrotx') || 0;
 	camera.rotation.y = cookieUtils.getCookieNumber('camroty') || 0;
-	camera.rotation.z = cookieUtils.getCookieNumber('camrotz') || 0;
-	if (!savePlayerPosition) 
-		lastPos = new THREE.Vector3(0,10,0);
+	camera.rotation.z = cookieUtils.getCookieNumber('camrotz') || 0;		
 	player = new Player(info, camera, physics, lastPos);	
+	if (!savePlayerPosition) 
+		player.resetPosition();
 	scene.add(player.mesh);
 };
 
 function init() {
 	document.body.appendChild(stats.dom);
 	// atributy:  field of view, aspect ratio, near, far
-	camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 400);		
+	camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 400);		
 	
 	scene = new THREE.Scene();		
 	scene.background = new THREE.Color(0xdddddd);			
@@ -692,12 +694,20 @@ function init() {
 		scene.add(new THREE.AxesHelper(500));
 	
 	renderer = new THREE.WebGLRenderer({
-		antialias: true,
+		antialias: false,
 		powerPreference: "high-performance",
 		preserveDrawingBuffer: false,
 	});
-	renderer.setPixelRatio(window.devicePixelRatio);
-	renderer.setSize(window.innerWidth, window.innerHeight);
+	
+	if (Config.threejsApiResize) {		
+		renderer.setPixelRatio(window.devicePixelRatio / resolutionDivider);
+		renderer.setSize(window.innerWidth, window.innerHeight);
+	} else {
+		renderer.setSize(window.innerWidth / resolutionDivider, window.innerHeight / resolutionDivider);
+		document.body.appendChild(renderer.domElement);
+		renderer.domElement.style.width = renderer.domElement.width * resolutionDivider + 'px';
+		renderer.domElement.style.height = renderer.domElement.height * resolutionDivider + 'px';
+	}
 	renderer.shadowMap.enabled = true;
 	renderer.shadowMap.type = THREE.PCFSoftShadowMap; // default THREE.PCFShadowMap
 	document.body.appendChild(renderer.domElement);
@@ -725,8 +735,8 @@ function init() {
 	
 	createStozar();	
 	createStany();
-	
 	createHangar();
+	
 	/*
 	//createGrid();
 	//createTree();
@@ -743,19 +753,19 @@ function init() {
 	loader.performLoad(() => {
 		createPlayer();
 		animate(0);	
-	});
-	
+	});	
 }
 
 function onWindowResize() {
 	camera.aspect = window.innerWidth / window.innerHeight;
-	camera.updateProjectionMatrix();
+	camera.updateProjectionMatrix();	
 	renderer.setSize(window.innerWidth, window.innerHeight);	
 }
 
 function animate(now) {
 	requestAnimationFrame(animate);
-	flag.animate(now);
+	if (flag !== undefined)
+		flag.animate(now);
 	render();
 	stats.update();
 }

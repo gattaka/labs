@@ -1,7 +1,6 @@
 import { Config } from './Config.js';
 import * as THREE from '../js/three.module.js';			
 
-
 let Physics = {};
 Physics.STATE = { DISABLE_DEACTIVATION : 4 };
 Physics.FLAGS = { CF_KINEMATIC_OBJECT: 2 };
@@ -10,6 +9,7 @@ Physics.processor = function (callback) {
 	const glScale = Config.glScale;
 	const showHelpers = Config.showPhHelpers;
 	const phMargin = Config.phMargin;
+	const gravity = Config.gravity;
 
 	let clock;
 	let character, ghostObject;
@@ -45,7 +45,7 @@ Physics.processor = function (callback) {
 			overlappingPairCache    = new Ammo.btDbvtBroadphase(),
 			solver                  = new Ammo.btSequentialImpulseConstraintSolver();
 		physicsWorld           = new Ammo.btDiscreteDynamicsWorld(dispatcher, overlappingPairCache, solver, collisionConfiguration);
-		physicsWorld.setGravity(new Ammo.btVector3(0, -50, 0));
+		physicsWorld.setGravity(new Ammo.btVector3(0, gravity, 0));
 		setupContactResultCallback();
 	};
 
@@ -243,6 +243,8 @@ Physics.processor = function (callback) {
 		let groundLocalInertia = new Ammo.btVector3(0, 0, 0);
 		let groundMotionState = new Ammo.btDefaultMotionState(groundTransform);
 		let groundBody = new Ammo.btRigidBody(new Ammo.btRigidBodyConstructionInfo(groundMass, groundMotionState, heightFieldShape, groundLocalInertia));
+		groundBody.setFriction(4);
+		groundBody.setRollingFriction(0.001);
 		
 		physicsWorld.addRigidBody(groundBody);
 	}
@@ -259,13 +261,15 @@ Physics.processor = function (callback) {
 	function updateMeshMotionState(ms, objThree) {
 		ms.getWorldTransform(tmpTrans);
 		let p = tmpTrans.getOrigin();
-		let q = tmpTrans.getRotation();
-		objThree.position.set(p.x(), p.y(), p.z());
+		let q = tmpTrans.getRotation();		
 		if (objThree.userData.posOffset !== undefined)
-			objThree.position.add(objThree.userData.posOffset);			
-		objThree.quaternion.set(q.x(), q.y(), q.z(), q.w());
-		if (objThree.userData.transformationCallback !== undefined) 
-			objThree.userData.transformationCallback(objThree);
+			objThree.position.add(objThree.userData.posOffset);					
+		if (objThree.userData.transformationCallback !== undefined) {
+			objThree.userData.transformationCallback(objThree, p, q);
+		} else {
+			objThree.position.set(p.x(), p.y(), p.z());
+			objThree.quaternion.set(q.x(), q.y(), q.z(), q.w());
+		}
 	};
 	
 	function setupContactResultCallback() {

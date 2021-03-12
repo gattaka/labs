@@ -6,7 +6,7 @@ let Player = function (info, camera, physics, pos) {
 
 	const eyeHeight = 1.2 * Config.glScale;
 	const radius = 0.2 * Config.glScale; // 0.2 funguje a nepropadává
-	const size = {x: .2 , y: .2, z: .2};
+	const size = .2 * Config.glScale;
 	const quat = {x: 0, y: 0, z: 0, w: 1};
 	const mass = 5;
 	const stepHeight = .5;
@@ -14,12 +14,12 @@ let Player = function (info, camera, physics, pos) {
 	const walkSpeed = 0.2 * Config.glScale;	
 	const jumpSpeed = 0.3 * Config.glScale;
 	
-	const meshType = 1;
+	const startPos = new THREE.Vector3(-2, 2, 2);
+	const meshType = 2;
 	
+	let verticalLock = false;
 	let moveX, moveY, moveZ;
-	
 	let body;
-	
 	let ret = {};
 	ret.keys = keys;
 	
@@ -32,17 +32,12 @@ let Player = function (info, camera, physics, pos) {
 		
 		let mesh, colShape;
 		const material = new THREE.MeshBasicMaterial({wireframe: true});
-		if (meshType == 0) {
-			mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(), material);
-			colShape = new Ammo.btBoxShape(new Ammo.btVector3(size.x * 0.5, size.y * 0.5, size.z * 0.5));			
-		} else {
-			mesh = new THREE.Mesh(new THREE.SphereBufferGeometry(radius), material);
-			colShape = new Ammo.btSphereShape(radius);
-		}
+		mesh = new THREE.Mesh(new THREE.BoxBufferGeometry(), material);
+		colShape = new Ammo.btCapsuleShape(radius, size);	
 		
 		ret.mesh = mesh;
 		
-		mesh.position.set(pos);
+		mesh.position.set(pos.x, pos.y, pos.z);
 		mesh.castShadow = true;
 		mesh.receiveShadow = true;				
 		
@@ -53,13 +48,16 @@ let Player = function (info, camera, physics, pos) {
 		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
 		body = new Ammo.btRigidBody(rbInfo);
 		
-		body.setFriction(2);
-		body.setRollingFriction(10);
+		body.setFriction(0);
+		body.setRollingFriction(0);
 		body.setActivationState(Physics.STATE.DISABLE_DEACTIVATION)
 		
 		info.addInfoSource(function() {
 			let vel = body.getLinearVelocity();		
-			return "Player: speed[x: " + Math.floor(vel.x()) + " y:" + Math.floor(vel.y()) + " z:" + Math.floor(vel.z()) + "]";
+			return "Player: speed[x: " + vel.x() + " y:" + vel.y() + " z:" + vel.z() + "]";
+		});
+		info.addInfoSource(function() {
+			return "Player friction: [linear: " + body.getFriction() + " rolling:" + body.getRollingFriction() + "]";
 		});
 		
 		mesh.userData.physicsUpdate = function() {
@@ -69,19 +67,47 @@ let Player = function (info, camera, physics, pos) {
 			let resultantImpulse = new Ammo.btVector3(moveX, moveY, moveZ)
 			resultantImpulse.op_mul(scalingFactor);
 
+			body.setAngularVelocity(new Ammo.btVector3(0, 0, 0));
+			
 			let vel = body.getLinearVelocity();				
 			vel.setX(moveX * scalingFactor);
-			vel.setZ(moveZ * scalingFactor);			
-			if (moveY != 0 && physics.checkContact(body))
+			vel.setZ(moveZ * scalingFactor);
+
+			if (moveX != 0 || moveZ != 0) {
+				verticalLock = false;
+			} else {
+				verticalLock = physics.checkContact(body);
+			}
+						
+			if (physics.checkContact(body) && moveY != 0) {
 				vel.setY(moveY * scalingFactor);
-			body.setLinearVelocity(vel);											
+				verticalLock = false;
+			}
 		};
 		
 		mesh.userData.physicsBody = body;
-		mesh.userData.transformationCallback = function(objThree) {
+		mesh.userData.transformationCallback = function(objThree, p, q) {
+			let nx = p.x();
+			let ny = p.y();
+			let nz = p.z();			
+			// pokud nemám explicitně nastaven pohyb dopředu nebo do strany,
+			// nechci, aby se hráč v těchto osách nijak hýbal (klouzal po svahu apod.)				
+			if (moveX != 0 || moveZ != 0) {
+				objThree.position.setX(nx);				
+				objThree.position.setZ(nz);			
+			}
+			if (!verticalLock)
+				objThree.position.setY(ny);
+			
+			// nepotřebuju, aby se fyzikální placeholder hráče otáčel
+			//objThree.quaternion.set(q.x(), q.y(), q.z(), q.w());
+			
 			camera.position.x = objThree.position.x;
 			camera.position.y = objThree.position.y + eyeHeight;
 			camera.position.z = objThree.position.z;
+						
+			if (camera.position.y < -10)
+				ret.resetPosition();
 		};
 		physics.addDynamicObject(mesh);
 	};
@@ -100,16 +126,14 @@ let Player = function (info, camera, physics, pos) {
 		
 		moveX = vec.x * walkSpeed;
 		moveY = jumpSpeed * keys.jump;
-		moveZ = vec.z * walkSpeed;
+		moveZ = vec.z * walkSpeed;		
 	}
 	
-	ret.resetPosition = function(pos) {
+	ret.resetPosition = function() {
 		// https://stackoverflow.com/questions/12251199/re-positioning-a-rigid-body-in-bullet-physics
-		console.log(pos);
-		
 		let transform = new Ammo.btTransform();
 		transform.setIdentity();
-		transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+		transform.setOrigin(new Ammo.btVector3(startPos.x, startPos.y, startPos.z));
 		transform.setRotation(new Ammo.btQuaternion(0, 0, 0, 1));
 	
 		body.setWorldTransform(transform);
