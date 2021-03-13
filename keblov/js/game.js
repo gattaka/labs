@@ -567,21 +567,29 @@ function createControls() {
 	const onKeyChange = function (event, down) {
 		switch (event.key) {
 			case "w":
+			case "W":
 				player.keys.forward = down ? 1 : 0;
 				break;
 			case "a":
+			case "A":
 				player.keys.right = down ? 1 : 0;
 				break;
 			case "s":
+			case "S":
 				player.keys.back = down ? 1 : 0;
 				break;
 			case "d":
+			case "D":
 				player.keys.left = down ? 1 : 0;
 				break;
 			case " ":
 				player.keys.jump = down ? 1 : 0;				
 				break;
+			case "Shift":
+				player.keys.sprint = down ? 1 : 0;				
+				break;
 			case "c":
+			case "C":
 				if (down)
 					player.resetPosition();
 				break;
@@ -715,7 +723,7 @@ function init() {
 	window.addEventListener('resize', onWindowResize);			
 	
 	info.addInfoSource(function() {
-		const cp = camera.position, px = cp.x, py = cp.y, pz = cp.z;
+		const pp = player.getPosition(), px = pp.x(), py = pp.y(), pz = pp.z();
 		const cr = camera.rotation, rx = cr.x, ry = cr.y, rz = cr.z;
 		let flr = Math.floor;
 		// TODO tohle intervalové ukládání by nemělo být svázáno s intervalem info výpisů
