@@ -173,7 +173,46 @@ function createStaryBarak() {
 	loadModel(scene, 'beton_schod6.glb', sc, [{x: -0.010, y: -1.192, z: 0.324, r: br}], true);
 	
 	loadModel(scene, 'keblov_stary.glb', sc, [{x: -7.316, y: -4.273, z: 0.64, r: br}], true);		
-	loadModel(scene, 'keblov_stary_zdi.glb', sc, [{x: -7.316, y: -4.273, z: 2.177, r: br}], false);
+	
+	loadModel(scene, 'keblov_stary_zdi_01.glb', sc, [{x: -4.025, y: -15.71, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_02.glb', sc, [{x: -10.838, y: -5.235, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_03.glb', sc, [{x: -13.528, y: 6.321, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_04.glb', sc, [{x: -12.644, y: 6.575, z: 3.207, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_05.glb', sc, [{x: -10.9, y: 7.077, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_06.glb', sc, [{x: -9.093, y: 7.597, z: 3.207, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_07.glb', sc, [{x: -7.867, y: 7.950, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_08.glb', sc, [{x: -5.742, y: 3.457, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_09.glb', sc, [{x: -4.068, y: -2.361, z: 3.207, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_10.glb', sc, [{x: -2.777, y: -6.849, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_11.glb', sc, [{x: -1.679, y: -10.664, z: 2.217, r: br}], false);
+	loadModel(scene, 'keblov_stary_zdi_12.glb', sc, [{x: -1.036, y: -12.899, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_13.glb', sc, [{x: -3.343, y: -11.596, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_14.glb', sc, [{x: -1.694, y: -11.137, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_15.glb', sc, [{x: -2.038, y: -11.236, z: 3.207, r: br}], false);
+	loadModel(scene, 'keblov_stary_zdi_16.glb', sc, [{x: -4.084, y: -12.111, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_17.glb', sc, [{x: -4.166, y: -12.639, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_18.glb', sc, [{x: -5.215, y: -13.175, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_19.glb', sc, [{x: -3.124, y: -14.618, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_20.glb', sc, [{x: -5.963, y: -14.300, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_21.glb', sc, [{x: -6.728, y: -11.585, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_22.glb', sc, [{x: -7.789, y: -11.753, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_23.glb', sc, [{x: -8.544, y: -9.153, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_24.glb', sc, [{x: -3.143, y: -7.599, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_25.glb', sc, [{x: -5.171, y: -8.163, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_26.glb', sc, [{x: -5.785, y: -9.526, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_27.glb', sc, [{x: -5.136, y: -10.804, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_28.glb', sc, [{x: -3.344, y: -10.575, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_29.glb', sc, [{x: -12.645, y: 3.287, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_30.glb', sc, [{x: -11.758, y: 5.556, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_31.glb', sc, [{x: -9.160, y: 5.934, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_32.glb', sc, [{x: -11.023, y: 2.626, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_33.glb', sc, [{x: -8.820, y: 4.388, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_34.glb', sc, [{x: -10.492, y: 0.795, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_35.glb', sc, [{x: -11.467, y: 0.567, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_36.glb', sc, [{x: -10.047, y: -0.751, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_37.glb', sc, [{x: -10.624, y: -1.802, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_38.glb', sc, [{x: -6.827, y: -0.725, z: 2.217, r: br}], true);
+	
 	loadModel(scene, 'keblov_stary_strop.glb', sc, [{x: -7.316, y: -4.273, z: 3.364, r: br}], true);		
 	const variants = [
 		{x: -1.827, y: -13.966, z: 1.477, r: br},
