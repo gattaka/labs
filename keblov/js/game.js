@@ -286,7 +286,11 @@ function createStaryBarak() {
 	loadModel(scene, 'jidelna_vydejni_okno.glb', sc, [{x: -6.160, y: -0.501, z: 2.831, r: br}], true);	
 	loadModel(scene, 'lekarna.glb', sc, [{x: -10.759, y: 2.124, z: 2.869, r: br}], true);		
 	loadModel(scene, 'kuchyne_police1.glb', sc, [{x: -10.898, y: 3.095, z: 2.898, r: br}], true);		
-	loadModel(scene, 'kuchyne_mycak.glb', sc, [{x: -10.722, y: 2.917, z: 1.556, r: br}], true);		
+	loadModel(scene, 'kuchyne_mycak.glb', sc, [{x: -10.722, y: 2.917, z: 1.556, r: br}], true);
+	loadModel(scene, 'kuchyne_kamna.glb', sc, [{x: -7.070, y: 4.002, z: 1.928, r: br}], true);
+	loadModel(scene, 'kuchyne_komin.glb', sc, [{x: -8.552, y: 4.150, z: 2.217, r: br}], true);
+	loadModel(scene, 'kuchyne_brutar.glb', sc, [{x: -7.998, y: 3.639, z: 1.685, r: br}], true);
+	loadModel(scene, 'kuchyne_brutar_chleba.glb', sc, [{x: -8.735, y: 3.426, z: 1.514, r: br}], true);
 };
 
 // https://sketchfab.com/3d-models/lowpoly-tree-b562b2e9f029440c804b4b6d36ebe174
@@ -515,82 +519,51 @@ function createGrid() {
 // https://threejs.org/docs/#api/en/math/Color.setHSL
 function createLight() {
 	
-	const hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.6 );
-	hemiLight.color.setHSL( 0.15, 1, 0.9 );
+	const hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.5 );
+	hemiLight.color.setHSL(0.15, 1, 0.9);
 	//hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
-	hemiLight.position.set( 0, 50, 0 );
-	scene.add( hemiLight );
+	hemiLight.position.set(0, 50, 0);
+	scene.add(hemiLight);
 
 	if (showHelpers) {
-		const hemiLightHelper = new THREE.HemisphereLightHelper( hemiLight, 10 );
-		scene.add( hemiLightHelper );
+		const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 10);
+		scene.add(hemiLightHelper);
 	}
 
-	const dirLight = new THREE.DirectionalLight( 0xffffff, 1 );
-	dirLight.color.setHSL( 0.1, 1, 0.95 );
-	dirLight.position.set( -1, 1.75, 1 );
-	dirLight.position.multiplyScalar( 30 );
+	const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+	dirLight.color.setHSL(0.1, 1, 1);
+	dirLight.position.set(0.4, 1.75, 0.2);
+	dirLight.position.multiplyScalar(30);
 	dirLight.castShadow = true;
 	dirLight.shadow.mapSize.width = 2048;
 	dirLight.shadow.mapSize.height = 2048;
-	scene.add( dirLight );
-
-	const d = 50;
-
-	dirLight.shadow.camera.left = - d;
-	dirLight.shadow.camera.right = d;
-	dirLight.shadow.camera.top = d;
-	dirLight.shadow.camera.bottom = - d;
-
-	dirLight.shadow.camera.far = 3500;
-	dirLight.shadow.bias = - 0.0001;
-
-	if (showHelpers) {
-		const dirLightHelper = new THREE.DirectionalLightHelper( dirLight, 10 );
-		scene.add( dirLightHelper );
-	}
-	
-/*	
-	const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, 0.9);
-	hemiLight.color = new THREE.Color("hsl(58, 70%, 80%)");
-	hemiLight.groundColor = new THREE.Color("hsl(83, 20%, 70%)");
-	hemiLight.position.set(0, 20, 0);
-	scene.add(hemiLight);
-
-	const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 10);
-	scene.add(hemiLightHelper);
-
-	scene.add(new THREE.AmbientLight(0x999999));
-
-	const dirLight = new THREE.DirectionalLight(0xffffff, .5);	
-	dirLight.color = new THREE.Color("hsl(58, 100%, 100%)");
-	dirLight.position.set(1, 3, 1);
-	dirLight.position.multiplyScalar(10);
 	scene.add(dirLight);
 
-	dirLight.castShadow = true;
-
-	dirLight.shadow.mapSize.width = 256;
-	dirLight.shadow.mapSize.height = 256;
-
 	const d = 50;
+
 	dirLight.shadow.camera.left = -d;
 	dirLight.shadow.camera.right = d;
 	dirLight.shadow.camera.top = d;
 	dirLight.shadow.camera.bottom = -d;
-
-	dirLight.shadow.camera.far = 50;
-	dirLight.shadow.bias = -0.00001;	
+	dirLight.shadow.camera.far = 3500;
+	dirLight.shadow.bias = -0.0001;
 
 	if (showHelpers) {
 		const dirLightHelper = new THREE.DirectionalLightHelper(dirLight, 10);
 		scene.add(dirLightHelper);
-		
-		// Create a helper for the shadow camera (optional)
-		const cameraHelper = new THREE.CameraHelper(dirLight.shadow.camera);
-		scene.add(cameraHelper);
 	}
-	*/
+	
+	const pointLight = new THREE.PointLight( 0xffffff, 0.1, 100);
+	pointLight.position.set(-3, 3, 2.2);
+	pointLight.castShadow = true;
+	pointLight.shadow.mapSize.width = 2048;
+	pointLight.shadow.mapSize.height = 2048;
+	pointLight.shadow.camera.near = 0.1; // default
+	pointLight.shadow.bias = -0.0001;
+	scene.add(pointLight);
+	const sphereSize = 0.1;
+	const pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
+	scene.add(pointLightHelper);		
 }
 
 // https://threejs.org/docs/#examples/en/controls/PointerLockControls
