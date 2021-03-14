@@ -89,7 +89,7 @@ let Player = function (info, camera, physics, pos) {
 		if (keys.jump > 0 && controller.canJump())
 			controller.jump();
 			
-		if (!controller.onGround() || moveX != 0 || moveZ != 0) {
+		if (firstReset || !controller.onGround() || moveX != 0 || moveZ != 0) {
 			controller.setGravity(-physics.getPhysicsWorld().getGravity().y());
 		} else {
 			controller.setGravity(0);

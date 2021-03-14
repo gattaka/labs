@@ -27,6 +27,10 @@ const stats = new Stats();
 const physics = new Physics.processor(init);
 const cookieUtils = new CookieUtils();
 
+let KDebug = {	
+};
+document.KDebug = KDebug;
+
 // https://redstapler.co/create-3d-world-with-three-js-and-skybox-technique/
 // https://opengameart.org/content/skiingpenguins-skybox-pack
 function createSkybox() {		
@@ -137,7 +141,11 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback) {
 		model.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
 			n.receiveShadow = true;
-			//if (n.material.map) n.material.map.anisotropy = 1; 
+			if (n.material.map) n.material.map.anisotropy = 1; 
+			if (n.material) {			
+				n.material.metalness = 0;
+				n.material.roughness = 1;				
+			}
 		}});
 		const box = processBoundingBox(model);
 		variants.forEach(v => {
@@ -513,24 +521,64 @@ function createGrid() {
 	scene.add(gridHelper);
 }
 
+// https://threejs.org/docs/#api/en/lights/SpotLight
+function createHouseLight() {
+	KDebug.houseLight = [];
+	KDebug.houseLightTarget = [];	
+	let lights = [
+		{lx: -3.5, ly: 2.8, lz: 2.5, tx: -10, ty: 1, tz: 4},
+		{lx: -6 ,ly: 2.8, lz: -3, tx: -11, ty: 1, tz: -2}
+	].forEach(lt => {		
+		const spotLight = new THREE.SpotLight(0xffffff);
+		spotLight.position.set(lt.lx, lt.ly, lt.lz);
+		spotLight.penumbra = 0.7;
+		spotLight.distance = 0;
+		spotLight.power = 1.2;
+		spotLight.castShadow = true;
+
+		spotLight.shadow.mapSize.width = 1024;
+		spotLight.shadow.mapSize.height = 1024;
+		spotLight.shadow.camera.near = 1;
+		spotLight.shadow.camera.far = 50;
+		spotLight.shadow.camera.fov = 5;
+		spotLight.shadow.bias = -0.01
+
+		scene.add(spotLight);
+			
+		const targetObject = new THREE.Object3D();
+		targetObject.position.set(lt.tx, lt.ty, lt.tz);
+		scene.add(targetObject);
+		spotLight.target = targetObject;
+		
+		KDebug.houseLight.push(spotLight);
+		KDebug.houseLightTarget.push(targetObject);
+		
+		if (showHelpers) {
+			const spotLightHelper = new THREE.SpotLightHelper(spotLight);
+			scene.add(spotLightHelper);
+		}
+	});
+}
+
 // https://threejs.org/docs/#api/en/lights/shadows/DirectionalLightShadow
 // https://threejs.org/examples/webgl_lights_hemisphere.html
 // https://stackoverflow.com/questions/15478093/realistic-lighting-sunlight-with-three-js
 // https://threejs.org/docs/#api/en/math/Color.setHSL
-function createLight() {
+function createDayLight() {
 	
-	const hemiLight = new THREE.HemisphereLight( 0xffffff, 0xffffff, 0.5 );
+	const hemiLight = new THREE.HemisphereLight(0xffffff, 0xffffff, .7);
 	hemiLight.color.setHSL(0.15, 1, 0.9);
 	//hemiLight.groundColor.setHSL( 0.095, 1, 0.75 );
 	hemiLight.position.set(0, 50, 0);
 	scene.add(hemiLight);
+	KDebug.hemiLight = hemiLight;
 
 	if (showHelpers) {
 		const hemiLightHelper = new THREE.HemisphereLightHelper(hemiLight, 10);
 		scene.add(hemiLightHelper);
 	}
 
-	const dirLight = new THREE.DirectionalLight(0xffffff, 1);
+	const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
 	dirLight.color.setHSL(0.1, 1, 1);
 	dirLight.position.set(0.4, 1.75, 0.2);
 	dirLight.position.multiplyScalar(30);
@@ -538,32 +586,20 @@ function createLight() {
 	dirLight.shadow.mapSize.width = 2048;
 	dirLight.shadow.mapSize.height = 2048;
 	scene.add(dirLight);
+	KDebug.sunLight = dirLight;
 
 	const d = 50;
-
 	dirLight.shadow.camera.left = -d;
 	dirLight.shadow.camera.right = d;
 	dirLight.shadow.camera.top = d;
 	dirLight.shadow.camera.bottom = -d;
 	dirLight.shadow.camera.far = 3500;
 	dirLight.shadow.bias = -0.0001;
-
 	if (showHelpers) {
 		const dirLightHelper = new THREE.DirectionalLightHelper(dirLight, 10);
 		scene.add(dirLightHelper);
-	}
+	}		
 	
-	const pointLight = new THREE.PointLight( 0xffffff, 0.1, 100);
-	pointLight.position.set(-3, 3, 2.2);
-	pointLight.castShadow = true;
-	pointLight.shadow.mapSize.width = 2048;
-	pointLight.shadow.mapSize.height = 2048;
-	pointLight.shadow.camera.near = 0.1; // default
-	pointLight.shadow.bias = -0.0001;
-	scene.add(pointLight);
-	const sphereSize = 0.1;
-	const pointLightHelper = new THREE.PointLightHelper(pointLight, sphereSize);
-	scene.add(pointLightHelper);		
 }
 
 // https://threejs.org/docs/#examples/en/controls/PointerLockControls
@@ -746,7 +782,8 @@ function init() {
 	});
 	
 	createControls();
-	createLight();
+	createDayLight();
+	createHouseLight();
 	
 	createTerrain();	
 	createSkybox();	
@@ -799,7 +836,4 @@ function animate(now) {
 	stats.update();	
 }
 
-let Console = function() {
-};
-
-export { Console };
+export { KDebug };
