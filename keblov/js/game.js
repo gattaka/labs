@@ -156,6 +156,7 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback) {
 			// z = y
 			instance.position.set(v.x * sc, v.z * sc, -v.y * sc);
 			instance.rotation.y = v.r;
+			if (v.ry !== undefined) instance.rotation.z = v.ry;
 			scene.add(instance);
 			if (asPhysicsBody)
 				physics.addMeshObsticle(instance, scene, true, box.min, box.max);	
@@ -198,7 +199,7 @@ function createStaryBarak() {
 	loadModel(scene, 'keblov_stary_zdi_14.glb', sc, [{x: -1.694, y: -11.137, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_15.glb', sc, [{x: -2.038, y: -11.236, z: 3.207, r: br}], false);
 	loadModel(scene, 'keblov_stary_zdi_16.glb', sc, [{x: -4.084, y: -12.111, z: 2.217, r: br}], true);
-	loadModel(scene, 'keblov_stary_zdi_17.glb', sc, [{x: -4.166, y: -12.639, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_17.glb', sc, [{x: -4.166, y: -12.639, z: 3.594, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_18.glb', sc, [{x: -5.215, y: -13.175, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_19.glb', sc, [{x: -3.124, y: -14.618, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_20.glb', sc, [{x: -5.963, y: -14.300, z: 2.217, r: br}], true);
@@ -208,7 +209,7 @@ function createStaryBarak() {
 	loadModel(scene, 'keblov_stary_zdi_24.glb', sc, [{x: -3.143, y: -7.599, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_25.glb', sc, [{x: -5.171, y: -8.163, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_26.glb', sc, [{x: -5.785, y: -9.526, z: 2.217, r: br}], true);
-	loadModel(scene, 'keblov_stary_zdi_27.glb', sc, [{x: -5.136, y: -10.804, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_27.glb', sc, [{x: -5.136, y: -10.804, z: 3.605, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_28.glb', sc, [{x: -3.344, y: -10.575, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_29.glb', sc, [{x: -12.645, y: 3.287, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_30.glb', sc, [{x: -11.758, y: 5.556, z: 2.217, r: br}], true);
@@ -220,15 +221,33 @@ function createStaryBarak() {
 	loadModel(scene, 'keblov_stary_zdi_36.glb', sc, [{x: -10.047, y: -0.751, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_37.glb', sc, [{x: -10.624, y: -1.802, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_38.glb', sc, [{x: -6.827, y: -0.725, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_39.glb', sc, [{x: -10.351, y: 0.305, z: 3.182, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_40.glb', sc, [{x: -10.631, y: 1.280, z: 3.182, r: br}], true);
 	
-	loadModel(scene, 'keblov_stary_strop.glb', sc, [{x: -7.316, y: -4.273, z: 3.364, r: br}], true);		
-	const variants = [
+	loadModel(scene, 'keblov_stary_strop_01.glb', sc, [{x: -7.830, y: -2.486, z: 3.297, r: br}], true);
+	loadModel(scene, 'keblov_stary_strop_02.glb', sc, [{x: -2.959, y: -11.993, z: 3.297, r: br}], true);
+	loadModel(scene, 'keblov_stary_strop_03.glb', sc, [{x: -7.407, y: -13.272, z: 3.297, r: br}], true);
+	loadModel(scene, 'keblov_stary_strop_04.glb', sc, [{x: -4.417, y: -14.347, z: 3.297, r: br}], true);
+	
+	loadModel(scene, 'keblov_stary_puda_stit_zapad.glb', sc, [{x: -4.026, y: -15.707, z: 4.550, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_stit_vychod.glb', sc, [{x: -10.61, y: 7.172, z: 4.550, r: br}], true);
+	
+	
+	const strechaVariants = [
+		{x: -5.382, y: -3.698, z: 4.484, r: toRad(196), ry: toRad(-58.7)},
+		{x: -9.240, y: -4.811, z: 4.484, r: toRad(376), ry: toRad(-58.7)},
+	];
+	loadModel(scene, 'keblov_stary_strecha.glb', sc, strechaVariants, true);
+	
+	
+	const posteleVariants = [
 		{x: -1.827, y: -13.966, z: 1.477, r: br},
 		{x: -2.697, y: -14.216, z: 1.477, r: br},
 		{x: -4.546, y: -15.268, z: 1.477, r: toRad(106)},
 		{x: -5.016, y: -13.633, z: 1.477, r: toRad(106)},
+		{x: -8.130, y: 6.761, z: 1.477, r: br},
 	];
-	loadModel(scene, 'postel.glb', sc, variants, true);			
+	loadModel(scene, 'postel.glb', sc, posteleVariants, true);			
 	loadModel(scene, 'kamna.glb', sc, [{x: -3.846, y: -12.937, z: 1.949, r: br}], true);	
 	const stulPolovodiceVariants = [
 		{x: -3.117, y: -12.05, z: 1.557, r: br},
@@ -280,6 +299,9 @@ function createStaryBarak() {
 		{x: -9.367, y: -3.705, z: 1.551, r: br},
 		{x: -8.577, y: -3.478, z: 1.551, r: br},
 		{x: -7.789, y: -3.251, z: 1.551, r: br},
+		{x: -12.093, y: 0.889, z: 1.551, r: br},
+		{x: -12.411, y: 1.995, z: 1.551, r: br},
+		{x: -12.643, y: 2.802, z: 1.551, r: br},
 	];
 	loadModel(scene, 'stul_jidelna.glb', sc, stulJidelnaVariants, true);
 	loadModel(scene, 'stul_jidelna_varnice.glb', sc, [{x: -5.044, y: -0.683, z: 1.482, r: br}], true);	
@@ -287,18 +309,58 @@ function createStaryBarak() {
 	loadModel(scene, 'posta.glb', sc, [{x: -4.520, y: -7.817, z: 2.210, r: br}], true);	
 	loadModel(scene, 'stul_kancl.glb', sc, [{x: -3.339, y: -6.241, z: 1.504, r: br}], true);	
 	loadModel(scene, 'stul_hrnky.glb', sc, [{x: -3.914, y: -4.581, z: 1.551, r: br}], true);	
-	loadModel(scene, 'kamna_osetrovna.glb', sc, [{x: -5.204, y: -10.222, z: 1.542, r: br}], true);
+	const kamnaOsetrovnaVariants = [
+		{x: -5.204, y: -10.222, z: 1.542, r: br},
+		{x: -8.519, y: 4.814, z: 1.542, r: toRad(68.5)}
+	];
+	loadModel(scene, 'kamna_osetrovna.glb', sc, kamnaOsetrovnaVariants, true);
 	loadModel(scene, 'postel_csd.glb', sc, [{x: -2.993, y: -9.961, z: 1.359, r: br}], true);
 	loadModel(scene, 'skrinka_osetrovna.glb', sc, [{x: -4.355, y: -10.491, z: 1.642, r: br}], true);
-	loadModel(scene, 'palanda_osetrovna.glb', sc, [{x: -5.004, y: -8.663, z: 1.881, r: br}], true);
+	const palandaVariants = [
+		{x: -5.004, y: -8.663, z: 1.881, r: br},
+		{x: -7.301, y: 7.104, z: 1.881, r: toRad(106 + 180)},
+	];
+	loadModel(scene, 'palanda_osetrovna.glb', sc, palandaVariants, true);
 	loadModel(scene, 'jidelna_vydejni_okno.glb', sc, [{x: -6.160, y: -0.501, z: 2.831, r: br}], true);	
-	loadModel(scene, 'lekarna.glb', sc, [{x: -10.759, y: 2.124, z: 2.869, r: br}], true);		
-	loadModel(scene, 'kuchyne_police1.glb', sc, [{x: -10.898, y: 3.095, z: 2.898, r: br}], true);		
+	loadModel(scene, 'lekarna.glb', sc, [{x: -10.759, y: 2.124, z: 2.701, r: br}], true);		
+	loadModel(scene, 'kuchyne_police1.glb', sc, [{x: -10.898, y: 3.095, z: 2.730, r: br}], true);		
 	loadModel(scene, 'kuchyne_mycak.glb', sc, [{x: -10.722, y: 2.917, z: 1.556, r: br}], true);
 	loadModel(scene, 'kuchyne_kamna.glb', sc, [{x: -7.070, y: 4.002, z: 1.928, r: br}], true);
-	loadModel(scene, 'kuchyne_komin.glb', sc, [{x: -8.552, y: 4.150, z: 2.217, r: br}], true);
-	loadModel(scene, 'kuchyne_brutar.glb', sc, [{x: -7.998, y: 3.639, z: 1.685, r: br}], true);
+	loadModel(scene, 'kuchyne_komin.glb', sc, [{x: -8.552, y: 4.150, z: 3.479, r: br}], true);	
+	const kuchyneBrutarVariants = [
+		{x: -7.998, y: 3.639, z: 1.685, r: br},
+		{x: -9.252, y: 4.662, z: 1.685, r: toRad(-136)},
+	];
+	loadModel(scene, 'kuchyne_brutar.glb', sc, kuchyneBrutarVariants, true);
 	loadModel(scene, 'kuchyne_brutar_chleba.glb', sc, [{x: -8.735, y: 3.426, z: 1.514, r: br}], true);
+	loadModel(scene, 'sporak.glb', sc, [{x: -9.616, y: 3.705, z: 1.5794, r: br}], true);
+	loadModel(scene, 'kuchyne_stul.glb', sc, [{x: -8.048, y: 1.394, z: 1.536, r: br}], true);
+	loadModel(scene, 'kuchyne_vydejni_lavice.glb', sc, [{x: -6.021, y: -0.082, z: 1.306, r: br}], true);
+	loadModel(scene, 'kuchyne_stul_krajec.glb', sc, [{x: -5.542, y: 1.299, z: 1.545, r: br}], true);		
+	loadModel(scene, 'kuchyne_skrin_hrnce.glb', sc, [{x: -5.861, y: 2.537, z: 1.495, r: br}], true);
+	loadModel(scene, 'kuchyne_police_koreni.glb', sc, [{x: -5.428, y: 1.488, z: 2.610, r: br}], true);
+	loadModel(scene, 'kuchyne_skrin_svicky.glb', sc, [{x: -9.869, y: -0.292, z: 1.956, r: br}], true);
+	loadModel(scene, 'kuchyne_skrin_hrnky.glb', sc, [{x: -7.962, y: -0.669, z: 1.956, r: br}], true);	
+	loadModel(scene, 'talire.glb', sc, [{x: -7.933, y: -0.780, z: 2.566, r: br}], true);
+	const zidleCervenaVariants = [
+		{x: -8.499, y: 0.889, z: 1.603, r: toRad(-85.1)},
+		{x: -7.600, y: 1.180, z: 1.603, r: toRad(-66)},
+	];
+	loadModel(scene, 'zidle_cervena.glb', sc, zidleCervenaVariants, true);
+	loadModel(scene, 'drevnik.glb', sc, [{x: -13.213, y: 4.766, z: 1.499, r: br}], true);
+	const laviceKoupelnaVariants = [
+		{x: -11.547, y: 5.74, z: 1.414, r: br},
+		{x: -9.535, y: 6.318, z: 1.414, r: br},
+	];
+	loadModel(scene, 'lavice_koupelna.glb', sc, laviceKoupelnaVariants, true);
+	loadModel(scene, 'vana.glb', sc, [{x: -10.739, y: 6.705, z: 1.431, r: br}], true);
+	const skladPoliceVariants = [
+		{x: -10.337, y: -0.726, z: 1.886, r: br},
+		{x: -11.067, y: -1.651, z: 1.886, r: toRad(106)},
+		{x: -11.957, y: -0.354, z: 1.886, r: br},
+	];
+	loadModel(scene, 'sklad_police.glb', sc, skladPoliceVariants, true);	
+	
 };
 
 // https://sketchfab.com/3d-models/lowpoly-tree-b562b2e9f029440c804b4b6d36ebe174
