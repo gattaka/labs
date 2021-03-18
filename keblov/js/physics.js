@@ -27,6 +27,13 @@ Physics.processor = function (callback) {
 	// body.setActivationState(Physics.STATE.DISABLE_DEACTIVATION);
 	// body.setCollisionFlags(Physics.FLAGS.CF_KINEMATIC_OBJECT);
 
+	// Each rigid body needs to reference a collision shape. The collision shape is for collisions only, 
+	// and thus has no concept of mass, inertia, restitution, etc. If you have many bodies that use the 
+	// same collision shape [eg every spaceship in your simulation is a 5-unit-radius sphere], it is good 
+	// practice to have only one Bullet (ammo.js) collision shape, and share it among all those bodies
+	// https://medium.com/@bluemagnificent/intro-to-javascript-3d-physics-using-ammo-js-and-three-js-dd48df81f591
+	let shapeCache = {};
+
 	Ammo().then(start);
 
 	let ret = {};
@@ -65,7 +72,13 @@ Physics.processor = function (callback) {
 		return helper;
 	};
 	
-	ret.addBoxObsticle = function(scene, pos, quat, scale, kinematic, mesh) {		
+	ret.addHinge = function(object, pivot, axis) {
+		let hinge = new Ammo.btHingeConstraint(object, pivot, axis);
+        physicsWorld.addConstraint(hinge);
+	};
+	
+	ret.addBoxObsticle = function(scene, pos, quat, scale, kinematic, mesh) {	
+		// when a rigid body has a mass of zero it means the body has infinite mass hence it is static
 		let mass = kinematic ? 0 : 10000;				
 		if (showHelpers) {
 			let helper = createBoxHelper(pos, quat, scale);
@@ -81,12 +94,20 @@ Physics.processor = function (callback) {
 		transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 		let motionState = new Ammo.btDefaultMotionState(transform);
 
-		let colShape = new Ammo.btBoxShape(new Ammo.btVector3(scale.x * 0.5, scale.y * 0.5, scale.z * 0.5));
-		colShape.setMargin(phMargin);
-
 		let localInertia = new Ammo.btVector3(0, 0, 0);
-		colShape.calculateLocalInertia(mass, localInertia);
-
+		
+		let shapeSizeVector = new Ammo.btVector3(scale.x * 0.5, scale.y * 0.5, scale.z * 0.5);
+		let colShapeCacheKey = "x:" + shapeSizeVector.x() + "y:" + shapeSizeVector.y() + "z:" + shapeSizeVector.z();
+		let colShape = shapeCache[colShapeCacheKey];
+		if (colShape === undefined) {
+			colShape = new Ammo.btBoxShape(shapeSizeVector);
+			colShape.setMargin(phMargin);
+			colShape.calculateLocalInertia(mass, localInertia);
+			shapeCache[colShapeCacheKey] = colShape;
+		} else {
+			console.log("ColShapeCache hit");
+		}
+		
 		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
 		let body = new Ammo.btRigidBody(rbInfo);
 

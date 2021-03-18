@@ -55,6 +55,16 @@ let Player = function (info, camera, physics, pos) {
 		physics.getPhysicsWorld().addCollisionObject(ghostObject, 32, -1);
 		physics.getPhysicsWorld().addAction(controller);
 		physics.getPhysicsWorld().getBroadphase().getOverlappingPairCache().setInternalGhostPairCallback(new Ammo.btGhostPairCallback());
+		
+		// .. 
+		/*
+		let mass = 2;
+		let motionState = new Ammo.btDefaultMotionState(transform);
+		let localInertia = new Ammo.btVector3(0, 0, 0);
+		colShape.calculateLocalInertia(mass, localInertia);
+		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
+		let body = new Ammo.btRigidBody(rbInfo);
+		physics.getPhysicsWorld().addRigidBody(body);*/
 	};
 	init();
 	

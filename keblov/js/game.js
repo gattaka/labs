@@ -134,7 +134,7 @@ function processBoundingBox(model) {
 	return {min: bboxMin, max: bboxMax};
 };
 
-function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback) {
+function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback, physicsDetails) {
 	loader.loadModel('../models/' + name, gltf => { 
 		let model = gltf.scene.children[0];
 		model.scale.set(sc, sc, sc);
@@ -158,8 +158,12 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback) {
 			instance.rotation.y = v.r;
 			if (v.ry !== undefined) instance.rotation.z = v.ry;
 			scene.add(instance);
-			if (asPhysicsBody)
-				physics.addMeshObsticle(instance, scene, true, box.min, box.max);	
+			if (asPhysicsBody) {
+				let kinematic = true;
+				if (physicsDetails)
+					kinematic = physicsDetails.kinematic;
+				physics.addMeshObsticle(instance, scene, kinematic, box.min, box.max);	
+			}
 			if (onCreateCallback !== undefined)
 				onCreateCallback(instance);
 		});
@@ -199,7 +203,7 @@ function createStaryBarak() {
 	loadModel(scene, 'keblov_stary_zdi_14.glb', sc, [{x: -1.694, y: -11.137, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_15.glb', sc, [{x: -2.038, y: -11.236, z: 3.207, r: br}], false);
 	loadModel(scene, 'keblov_stary_zdi_16.glb', sc, [{x: -4.084, y: -12.111, z: 2.217, r: br}], true);
-	loadModel(scene, 'keblov_stary_zdi_17.glb', sc, [{x: -4.166, y: -12.639, z: 3.594, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_17.glb', sc, [{x: -4.166, y: -12.639, z: 3.554, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_18.glb', sc, [{x: -5.215, y: -13.175, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_19.glb', sc, [{x: -3.124, y: -14.618, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_20.glb', sc, [{x: -5.963, y: -14.300, z: 2.217, r: br}], true);
@@ -209,7 +213,7 @@ function createStaryBarak() {
 	loadModel(scene, 'keblov_stary_zdi_24.glb', sc, [{x: -3.143, y: -7.599, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_25.glb', sc, [{x: -5.171, y: -8.163, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_26.glb', sc, [{x: -5.785, y: -9.526, z: 2.217, r: br}], true);
-	loadModel(scene, 'keblov_stary_zdi_27.glb', sc, [{x: -5.136, y: -10.804, z: 3.605, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_27.glb', sc, [{x: -5.136, y: -10.804, z: 3.565, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_28.glb', sc, [{x: -3.344, y: -10.575, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_29.glb', sc, [{x: -12.645, y: 3.287, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_30.glb', sc, [{x: -11.758, y: 5.556, z: 2.217, r: br}], true);
@@ -224,28 +228,72 @@ function createStaryBarak() {
 	loadModel(scene, 'keblov_stary_zdi_39.glb', sc, [{x: -10.351, y: 0.305, z: 3.182, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_40.glb', sc, [{x: -10.631, y: 1.280, z: 3.182, r: br}], true);
 	
+	const oknaVariants = [
+		{x: -4.897, y: 0.538, z: 2.495, r: br},
+		{x: -3.382, y: -4.727, z: 2.495, r: br},
+		{x: -2.989, y: -6.092, z: 2.495, r: br},
+		{x: -2.165, y: -8.955, z: 2.495, r: br},
+		{x: -1.330, y: -11.858, z: 2.495, r: br},
+		{x: -2.344, y: -15.225, z: 2.495, r: br - toRad(90)},
+		{x: -4.468, y: -15.836, z: 2.495, r: br - toRad(90)},
+		{x: -9.233, y: -10.823, z: 2.490, r: br + toRad(180)},
+		{x: -10.067, y: -7.925, z: 2.490, r: br + toRad(180)},
+		{x: -10.657, y: -5.872, z: 2.490, r: br + toRad(180)},
+		{x: -11.253, y: -3.802, z: 2.490, r: br + toRad(180)},
+		{x: -11.062, y: 7.034, z: 2.495, r: br + toRad(90)},
+		{x: -6.415, y: 5.814, z: 2.495, r: br},
+		{x: -5.826, y: 3.767, z: 2.495, r: br},
+		{x: -5.461, y: 2.499, z: 2.495, r: br},		
+	];
+	loadModel(scene, 'keblov_stary_okno.glb', sc, oknaVariants, false);
+	
+	const oknaMalaVariants = [
+		{x: -11.856, y: -1.716, z: 2.490, r: br},
+		{x: -12.528, y: 0.661, z: 2.490, r: br},
+	];
+	loadModel(scene, 'keblov_stary_okno_male.glb', sc, oknaMalaVariants, false);	
+	
 	loadModel(scene, 'keblov_stary_strop_01.glb', sc, [{x: -7.830, y: -2.486, z: 3.297, r: br}], true);
 	loadModel(scene, 'keblov_stary_strop_02.glb', sc, [{x: -2.959, y: -11.993, z: 3.297, r: br}], true);
 	loadModel(scene, 'keblov_stary_strop_03.glb', sc, [{x: -7.407, y: -13.272, z: 3.297, r: br}], true);
 	loadModel(scene, 'keblov_stary_strop_04.glb', sc, [{x: -4.417, y: -14.347, z: 3.297, r: br}], true);
 	
 	loadModel(scene, 'keblov_stary_puda_stit_zapad.glb', sc, [{x: -4.026, y: -15.707, z: 4.550, r: br}], true);
-	loadModel(scene, 'keblov_stary_puda_stit_vychod.glb', sc, [{x: -10.61, y: 7.172, z: 4.550, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_stit_vychod.glb', sc, [{x: -10.61, y: 7.172, z: 4.498, r: br}], true);
 	
+	loadModel(scene, 'keblov_stary_puda_dvere_zapad.glb', sc, [{x: -3.592, y: -15.572, z: 4.254, r: br}], true);	
+	loadModel(scene, 'keblov_stary_puda_stit_vychod_dvere.glb', sc, [{x: -10.692, y: 7.374, z: 4.498, r: br}], true);	
+	
+	loadModel(scene, 'keblov_stary_puda_tramy.glb', sc, [{x: -7.323, y: -4.217, z: 4.418, r: br}], false);		
+	
+	const kominkyVariants = [
+		{x: -4.166, y: -12.639, z: 6.188, r: 0},
+		{x: -5.109, y: -10.778, z: 6.188, r: 0},
+		{x: -7.990, y: 4.302, z: 5.968, r: 0},
+		{x: -8.371, y: 4.192, z: 6.084, r: 0},
+		{x: -8.746, y: 4.084, z: 6.105, r: 0},
+		{x: -9.116, y: 3.978, z: 6.048, r: 0},
+	];
+	loadModel(scene, 'keblov_stary_kominek.glb', sc, kominkyVariants, true);	
 	
 	const strechaVariants = [
-		{x: -5.382, y: -3.698, z: 4.484, r: toRad(196), ry: toRad(-58.7)},
-		{x: -9.240, y: -4.811, z: 4.484, r: toRad(376), ry: toRad(-58.7)},
+		{x: -5.382, y: -3.698, z: 4.484, r: toRad(376), ry: toRad(58.7)},
+		{x: -9.240, y: -4.811, z: 4.484, r: toRad(196), ry: toRad(58.7)},
 	];
 	loadModel(scene, 'keblov_stary_strecha.glb', sc, strechaVariants, true);
-	
-	
+		
 	const posteleVariants = [
 		{x: -1.827, y: -13.966, z: 1.477, r: br},
 		{x: -2.697, y: -14.216, z: 1.477, r: br},
 		{x: -4.546, y: -15.268, z: 1.477, r: toRad(106)},
 		{x: -5.016, y: -13.633, z: 1.477, r: toRad(106)},
 		{x: -8.130, y: 6.761, z: 1.477, r: br},
+		{x: -7.395, y: -11.122, z: 3.709, r: toRad(106)},
+		{x: -7.713, y: -10.016, z: 3.709, r: toRad(106)},
+		{x: -7.966, y: -9.137, z: 3.709, r: toRad(106)},
+		{x: -8.265, y: -8.098, z: 3.709, r: toRad(106)},
+		{x: -8.519, y: -7.215, z: 3.709, r: toRad(106)},
+		{x: -8.819, y: -6.173, z: 3.709, r: toRad(106)},
 	];
 	loadModel(scene, 'postel.glb', sc, posteleVariants, true);			
 	loadModel(scene, 'kamna.glb', sc, [{x: -3.846, y: -12.937, z: 1.949, r: br}], true);	
@@ -361,6 +409,23 @@ function createStaryBarak() {
 	];
 	loadModel(scene, 'sklad_police.glb', sc, skladPoliceVariants, true);	
 	
+	loadModel(scene, 'smrky.glb', sc, [{x: -22.234, y: 15.663, z: 12.116, r: 0}], false);
+	
+	const dverePhysicsDetails = {kinematic: false};
+	const dvereCallback = function(mesh) {		
+	/*
+		const pos = mesh.position;
+		const pivot = new Ammo.btVector3(pos.x, pos.y, pos.z);
+		const axis = new Ammo.btVector3(0, 1, 0);
+		physics.addHinge(mesh.userData.physicsBody, pivot, axis);
+		*/
+	};
+	const kuchyneDvereVariants = [
+		{x: -7, y: 3, z: 1, r: br},
+		{x: -10.618, y: 1.285, z: 2.075, r: br},
+		{x: -10.338, y: 0.311, z: 2.075, r: br + toRad(180)},
+	];
+	loadModel(scene, 'kuchyne_dvere.glb', sc, kuchyneDvereVariants, true, dvereCallback, dverePhysicsDetails);	
 };
 
 // https://sketchfab.com/3d-models/lowpoly-tree-b562b2e9f029440c804b4b6d36ebe174
@@ -804,7 +869,7 @@ function createPlayer() {
 function init() {
 	document.body.appendChild(stats.dom);
 	// atributy:  field of view, aspect ratio, near, far
-	camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 400);		
+	camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.05, 400);		
 	
 	scene = new THREE.Scene();		
 	scene.background = new THREE.Color(0xdddddd);			
