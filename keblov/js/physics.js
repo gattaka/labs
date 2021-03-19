@@ -2,11 +2,19 @@ import { Config } from './Config.js';
 import * as THREE from '../js/three.module.js';			
 
 let Physics = {};
+
 Physics.STATE = { DISABLE_DEACTIVATION : 4 };
+
+// Every rigid body in ammo.js has a bitwise masks collision group and collision mask. 
+// The collision group represents the collision identity group of the rigid body while 
+// the collision mask represents other collision identity groups that should be collided with. 
+// collision between bodies A and B can only occur if a bitwise AND operation between the 
+// collision mask of A and the collision group of B is anything but zero and vice versa.
+// https://medium.com/@bluemagnificent/intro-to-javascript-3d-physics-using-ammo-js-and-three-js-dd48df81f591
 Physics.FLAGS = { CF_KINEMATIC_OBJECT: 2 };
+
 Physics.processor = function (callback) {
 
-	const glScale = Config.glScale;
 	const showHelpers = Config.showPhHelpers;
 	const phMargin = Config.phMargin;
 	const gravity = Config.gravity;
@@ -72,14 +80,37 @@ Physics.processor = function (callback) {
 		return helper;
 	};
 	
-	ret.addHinge = function(object, pivot, axis) {
-		let hinge = new Ammo.btHingeConstraint(object, pivot, axis);
-        physicsWorld.addConstraint(hinge);
+	ret.addHinge = function(mesh) {
+		let meshBody = mesh.userData.physicsBody;
+		let meshBBox = mesh.userData.boundingBoxScale;
+		let meshPos = mesh.position;
+		
+		let frameSize = new Ammo.btVector3(1, meshBBox.y, 1);
+		let frameShape = new Ammo.btBoxShape(frameSize);
+		let frameTrans = new Ammo.btTransform();
+		frameTrans.setIdentity();
+		// TODO pos
+		frameTrans.setOrigin(new Ammo.btVector3(meshPos.x, meshPos.y, meshPos.z - meshBBox.z / 2));		
+		var frameLocalInertia = new Ammo.btVector3(0, 0, 0);
+		var frameMotionState = new Ammo.btDefaultMotionState(frameTrans);
+		var frameBodyInfo = new Ammo.btRigidBodyConstructionInfo(0, frameMotionState, frameShape, frameLocalInertia);
+		var frameBody = new Ammo.btRigidBody(frameBodyInfo);
+		frameBody.setActivationState(4);
+				
+		let framePivot = new Ammo.btVector3(0, 0, 0);
+		let meshPivot = new Ammo.btVector3(-meshBBox.x / 2, 0, -meshBBox.z / 2);
+		let axis = new Ammo.btVector3(0, 1, 0);				
+		let hinge = new Ammo.btHingeConstraint(frameBody, meshBody, framePivot, meshPivot, axis, axis, false);		
+		
+		hinge.enableAngularMotor(true, 1.5, 50);
+		
+		//hinge.setLimit(-Math.PI/2 * 0.5, 0, 0.9, 0.3, 1);
+		physicsWorld.addConstraint(hinge, false);
 	};
 	
 	ret.addBoxObsticle = function(scene, pos, quat, scale, kinematic, mesh) {	
 		// when a rigid body has a mass of zero it means the body has infinite mass hence it is static
-		let mass = kinematic ? 0 : 10000;				
+		let mass = kinematic ? 0 : 1;				
 		if (showHelpers) {
 			let helper = createBoxHelper(pos, quat, scale);
 			scene.add(helper);			
@@ -88,11 +119,10 @@ Physics.processor = function (callback) {
 		}
 		
 		//Ammojs Section
-		let transform = new Ammo.btTransform();
-		transform.setIdentity();
-		transform.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
-		transform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
-		let motionState = new Ammo.btDefaultMotionState(transform);
+		tmpTrans.setIdentity();
+		tmpTrans.setOrigin(new Ammo.btVector3(pos.x, pos.y, pos.z));
+		tmpTrans.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
+		let motionState = new Ammo.btDefaultMotionState(tmpTrans);
 
 		let localInertia = new Ammo.btVector3(0, 0, 0);
 		
@@ -110,11 +140,11 @@ Physics.processor = function (callback) {
 		
 		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
 		let body = new Ammo.btRigidBody(rbInfo);
+		
+		//body.setCollisionFlags((kinematic ? Physics.FLAGS.CF_KINEMATIC_OBJECT : 0) | 16);
+		body.setCollisionFlags(16);
 
-		if (kinematic)
-			body.setCollisionFlags(Physics.FLAGS.CF_KINEMATIC_OBJECT);
-
-		physicsWorld.addRigidBody(body);
+		physicsWorld.addRigidBody(body, -1, -1);
 		
 		if (mesh !== undefined) {
 			mesh.userData.physicsBody = body;
@@ -165,6 +195,7 @@ Physics.processor = function (callback) {
 		const boundingBox = new THREE.Box3(bbmin, bbmax);						
 		let scale = new THREE.Vector3(bbmax.x - bbmin.x, bbmax.y - bbmin.y, bbmax.z - bbmin.z);
 		scale.multiply(mesh.scale);
+		mesh.userData.boundingBoxScale = scale;
 		ret.addBoxObsticle(scene, pos, quat, scale, kinematic, mesh);		
 	}
 	
@@ -183,7 +214,7 @@ Physics.processor = function (callback) {
 		const material = new THREE.MeshLambertMaterial({ color: 0x00ff00, side: THREE.DoubleSide, wireframe: false});
 		let plane = new THREE.Mesh(geometry, material);
 		plane.position.set(mesh.position.x, mesh.position.y, mesh.position.z);
-		plane.scale.set(-1,1,1);
+		plane.scale.set(-1, 1, 1);
 		plane.rotation.y = Math.PI/2;
 		
 		plane.castShadow = false;
@@ -247,9 +278,9 @@ Physics.processor = function (callback) {
 		);
 
 		// Set horizontal scale
-		let scaleX = terrainWidthExtents / (terrainWidth - 1) * glScale;
-		let scaleY = glScale;
-		let scaleZ = terrainDepthExtents / (terrainDepth - 1) * glScale;
+		let scaleX = terrainWidthExtents / (terrainWidth - 1);
+		let scaleY = 1;
+		let scaleZ = terrainDepthExtents / (terrainDepth - 1);
 		heightFieldShape.setLocalScaling(new Ammo.btVector3(scaleX, scaleY, scaleZ));
 
 		heightFieldShape.setMargin(phMargin);
@@ -259,14 +290,13 @@ Physics.processor = function (callback) {
 		let quat = plane.quaternion.clone();
 		groundTransform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 		// Shifts the terrain, since bullet re-centers it on its bounding box.
-		groundTransform.setOrigin(new Ammo.btVector3(0, glScale * (terrainMaxHeight + terrainMinHeight) / 2 + plane.position.y, 0));
+		groundTransform.setOrigin(new Ammo.btVector3(0, (terrainMaxHeight + terrainMinHeight) / 2 + plane.position.y, 0));
 		let groundMass = 0;
 		let groundLocalInertia = new Ammo.btVector3(0, 0, 0);
 		let groundMotionState = new Ammo.btDefaultMotionState(groundTransform);
 		let groundBody = new Ammo.btRigidBody(new Ammo.btRigidBodyConstructionInfo(groundMass, groundMotionState, heightFieldShape, groundLocalInertia));
 		groundBody.setFriction(4);
-		groundBody.setRollingFriction(0.001);
-		
+		groundBody.setRollingFriction(20);		
 		physicsWorld.addRigidBody(groundBody);
 	}
 		
@@ -311,11 +341,12 @@ Physics.processor = function (callback) {
 
 	ret.updatePhysics = function(deltaTime) {			
 		// Step world
-		physicsWorld.stepSimulation(deltaTime, 10);
+		// https://stackoverflow.com/questions/12778229/what-does-step-mean-in-stepsimulation-and-what-do-its-parameters-mean-in-bulle
+		physicsWorld.stepSimulation(deltaTime);		
 		
 		// Update rigid bodies
 		for (let i = 0; i < dynamicObjects.length; i++) {
-			let objThree = dynamicObjects[ i ];
+			let objThree = dynamicObjects[i];
 			let objAmmo = objThree.userData.physicsBody;
 			if (objThree.userData.physicsUpdate !== undefined) 
 				objThree.userData.physicsUpdate();

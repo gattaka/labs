@@ -1,6 +1,5 @@
 let Config = {
-	glScale: 1,
-	phMargin: 0.001,
+	phMargin: 0.1,
 	showPhHelpers: false,
 	showScHelpers: false,
 	savePlayerPosition: true,

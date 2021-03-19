@@ -11,7 +11,6 @@ import { Loader } from './Loader.js';
 import * as THREE from './three.module.js';
 
 const phMargin = Config.phMargin;
-const glScale = Config.glScale;
 const showHelpers = Config.showScHelpers;
 const savePlayerPosition = Config.savePlayerPosition;
 const resolutionDivider = Config.resolutionDivider;
@@ -26,6 +25,9 @@ const clock = new THREE.Clock();
 const stats = new Stats();
 const physics = new Physics.processor(init);
 const cookieUtils = new CookieUtils();
+
+const br = toRad(16.0526);
+const sc = 1;	
 
 let KDebug = {	
 };
@@ -52,73 +54,6 @@ function createSkybox() {
 		links: ['posx.jpg', 'negx.jpg', 'posy.jpg', 'negy.jpg', 'posz.jpg', 'negz.jpg'], 
 		callback: callback});	  
 }
-
-// https://anyconv.com/fbx-to-glb-converter/
-// https://sketchfab.com/3d-models/fur-tree-41fa3210e50944eaa489c148e5e2ccc7
-function createTree() {
-	new GLTFLoader().load('../models/fur_tree/scene.gltf', result => { 
-		let model = result.scene.children[0]; 		
-		model.position.set(270, 0, 10);
-		model.scale.set(.1,.1,.1);
-		model.traverse(n => { if (n.isMesh) {
-			n.castShadow = true; 
-			n.receiveShadow = true;
-			if (n.material.map) {
-				n.material.map.anisotropy = 1; 
-				if (n.material.name == "lambert5")
-					n.material.map.repeat = new THREE.Vector2(1,5);
-			}
-		}});
-		scene.add(model);
-	});		
-};
-
-// https://sketchfab.com/3d-models/pine-tree-single-01-ed72511b36c14446a1b596b7e3686d73
-function createPineTree() {
-	let config = [[40,0,-65,.19,5], [110,0,-70,.18,2], [160,0,-60,.17,0], [210,0,-70,.18,4],
-		[280,0,20,.19,5], [290,0,90,.18,2], [285,0,150,.17,0], [300,0,200,.18,4],
-		[40,0,250,.19,5], [110,0,280,.18,2], [150,0,270,.17,0], [210,0,260,.18,4], [0,0,270,.17,2], [-50,0,280,.18,3]];
-	new GLTFLoader().load('../models/pine_tree/scene.gltf', result => { 
-		let tree = result.scene.children[0]; 		
-		config.forEach(e => {
-			let model = tree.clone();
-			model.position.set(e[0], e[1], e[2]);
-			const sz = e[3];
-			model.scale.set(sz,sz,sz);
-			model.rotation.z = e[4];
-			model.traverse(n => { if (n.isMesh) {
-				n.castShadow = true; 
-				n.receiveShadow = true;
-				if (n.material.map) n.material.map.anisotropy = 1;
-			}});
-			scene.add(model);
-		});
-	});		
-};
-
-// https://sketchfab.com/3d-models/pine-tree-e52769d653cd4e52a4acff3041961e65
-function createPineTree2() {
-	let config = [[10,0,-70,.1,5], [20,0,-60,.15,2],
-		/*[280,0,20,.19,5], [290,0,90,.18,2], [285,0,150,.17,0], [300,0,200,.18,4],
-		[40,0,250,.19,5], [110,0,280,.18,2], [150,0,270,.17,0], [210,0,260,.18,4], [0,0,270,.17,2], [-50,0,280,.18,3]*/
-		];
-	new GLTFLoader().load('../models/pine_tree2/scene.gltf', result => { 
-		let tree = result.scene.children[0]; 		
-		config.forEach(e => {
-			let model = tree.clone();
-			model.position.set(e[0], e[1], e[2]);
-			const sz = e[3];
-			model.scale.set(sz,sz,sz);
-			model.rotation.z = e[4];
-			model.traverse(n => { if (n.isMesh) {
-				n.castShadow = true; 
-				n.receiveShadow = true;
-				if (n.material.map) n.material.map.anisotropy = 1;
-			}});
-			scene.add(model);
-		});
-	});		
-};
 
 function processBoundingBox(model) {
 	const bboxMax = new THREE.Vector3();
@@ -174,10 +109,7 @@ function toRad(degree) {
 	return Math.PI * degree / 180;
 };
 
-function createStaryBarak() {	
-	const sc = glScale;
-	let br = toRad(16.0526);
-	
+function createStaryBarak() {		
 	loadModel(scene, 'beton_schod1.glb', sc, [{x: -3.133, y: -2.091, z: 0.66, r: br}], true);
 	loadModel(scene, 'beton_schod2.glb', sc, [{x: -1.932, y: -1.745, z: 0.594, r: br}], true);
 	loadModel(scene, 'beton_schod3.glb', sc, [{x: -1.451, y: -1.607, z: 0.527, r: br}], true);
@@ -411,138 +343,100 @@ function createStaryBarak() {
 	
 	loadModel(scene, 'smrky.glb', sc, [{x: -22.234, y: 15.663, z: 12.116, r: 0}], false);
 	
+	
+};
+
+function createHingedObjects() {
 	const dverePhysicsDetails = {kinematic: false};
-	const dvereCallback = function(mesh) {		
-	/*
-		const pos = mesh.position;
-		const pivot = new Ammo.btVector3(pos.x, pos.y, pos.z);
-		const axis = new Ammo.btVector3(0, 1, 0);
-		physics.addHinge(mesh.userData.physicsBody, pivot, axis);
-		*/
+	const dvereCallback = function(mesh) {
+		physics.addHinge(mesh);
 	};
 	const kuchyneDvereVariants = [
-		{x: -7, y: 3, z: 1, r: br},
+		{x: -7, y: 4, z: 5, r: 0},
 		{x: -10.618, y: 1.285, z: 2.075, r: br},
 		{x: -10.338, y: 0.311, z: 2.075, r: br + toRad(180)},
 	];
 	loadModel(scene, 'kuchyne_dvere.glb', sc, kuchyneDvereVariants, true, dvereCallback, dverePhysicsDetails);	
 };
 
-// https://sketchfab.com/3d-models/lowpoly-tree-b562b2e9f029440c804b4b6d36ebe174
-function createLowPolyTree() {
-	new GLTFLoader().load('../models/lowpoly_tree/scene.gltf', result => { 
-		let model = result.scene.children[0]; 		
-		model.position.set(-20, 0, -40);
-		const sc = 3;
-		model.scale.set(sc,sc,sc);
-		model.traverse(n => { if (n.isMesh) {
-			n.castShadow = true; 
-			n.receiveShadow = true;
-			if (n.material.map) n.material.map.anisotropy = 1; 
-		}});
-		scene.add(model);
-	});		
+function createRigidBody(mass, transform, shape, size) {
+	// rigidbody is dynamic if and only if mass is non zero, otherwise static
+	var isDynamic = (mass != 0.0);
+
+	var localInertia = new Ammo.btVector3(0,0,0);
+	if (isDynamic)
+		shape.calculateLocalInertia(mass, localInertia);
+
+	var myMotionState = new Ammo.btDefaultMotionState(transform);
+	var cInfo = new Ammo.btRigidBodyConstructionInfo(mass, myMotionState, shape, localInertia);
+	var body = new Ammo.btRigidBody(cInfo);
+	body.setActivationState( 4 );
+	
+	let block = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: 0xf78a1d}));
+	block.position.set(transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z());
+	block.scale.set(size.x(), size.y(), size.z());
+	block.castShadow = true;
+	block.receiveShadow = true;
+	scene.add(block);
+	block.userData.physicsBody = body;
+	
+	if (isDynamic)
+		physics.addDynamicObject(block);
+	return body;
 };
 
-// https://sketchfab.com/3d-models/oak-trees-d841c3bcc5324daebee50f45619e05fc
-function createOakTrees() {
-	new GLTFLoader().load('../models/oak_trees/scene.gltf', result => { 
-		let model = result.scene.children[0]; 		
-		model.position.set(50, 0, -150);
-		const sc = 3;
-		model.scale.set(sc,sc,sc);
-		model.traverse(n => { if (n.isMesh) {
-			n.castShadow = true; 
-			n.receiveShadow = true;
-			if (n.material.map) n.material.map.anisotropy = 1; 
-		}});
-		scene.add(model);
-	});		
-};
+function createJointObjects(){
 
-// https://sketchfab.com/3d-models/realistic-tree-model-104028c8350a4612b84b5e1c6b409bd4
-function createRealisticTree() {
-	let config = [[130,0,-40,5,2]];
-	new GLTFLoader().load('../models/realistic_tree/scene.gltf', result => { 
-		let tree = result.scene.children[0]; 		
-		config.forEach(e => {
-			let model = tree.clone();
-			model.position.set(e[0], e[1], e[2]);
-			const sz = e[3];
-			model.scale.set(sz,sz,sz);
-			model.rotation.z = e[4];
-			model.traverse(n => { if (n.isMesh) {
-				n.castShadow = true; 
-				n.receiveShadow = true;
-				if (n.material.map) n.material.map.anisotropy = 1;
-			}});
-			scene.add(model);
-		});
-	});		
-};
+	//Block Graphics
 
-// https://sketchfab.com/3d-models/low-poly-christmas-tree-bacdf9be9880497cbb2d6d12e30349c0
-function createLowPolyXmasTree() {
-	let config = [[0,0,0,.02,0]];
-	new GLTFLoader().load('../models/low_poly_christmas_tree/scene.gltf', result => { 
-		let tree = result.scene.children[0]; 		
-		config.forEach(e => {
-			let model = tree.clone();
-			model.position.set(e[0], e[1], e[2]);
-			const sz = e[3];
-			model.scale.set(sz,sz,sz);
-			model.rotation.z = e[4];
-			model.traverse(n => { if (n.isMesh) {
-				n.castShadow = true; 
-				n.receiveShadow = true;
-				if (n.material.map) n.material.map.anisotropy = 1;
-			}});
-			scene.add(model);
-		});
-	});		
-};
-
-// https://sketchfab.com/3d-models/tree-c6a65b51988648f689bbd4665e87213e
-function createSmallTree() {
-	let config = [[100,0,0,.5,0]];
-	new GLTFLoader().load('../models/small_tree/scene.gltf', result => { 
-		let tree = result.scene.children[0]; 		
-		config.forEach(e => {
-			let model = tree.clone();
-			model.position.set(e[0], e[1], e[2]);
-			const sz = e[3];
-			model.scale.set(sz,sz,sz);
-			model.rotation.z = e[4];
-			model.traverse(n => { if (n.isMesh) {
-				n.castShadow = true; 
-				n.receiveShadow = true;
-				if (n.material.map) n.material.map.anisotropy = 1;
-			}});
-			scene.add(model);
-		});
-	});		
-};
-
-// https://sketchfab.com/3d-models/tree-low-poly-4cd243eb74c74b3ea2190ebcec0439fb
-// https://sketchfab.com/3d-models/low-poly-tree-70f0e767fc2f449fa6fef9c2308b395f
+	let boxSize1 = new Ammo.btVector3(1, 2, 1);
+	let boxShape1 = new Ammo.btBoxShape(boxSize1);
+	let boxTrans1 = new Ammo.btTransform();
+	boxTrans1.setIdentity();
+	boxTrans1.setOrigin(new Ammo.btVector3(0, 3, 0));
+	let box1 = createRigidBody(0, boxTrans1, boxShape1, boxSize1);
+					
+	let boxSize2 = new Ammo.btVector3(2, 2, 1);
+	let boxShape2 = new Ammo.btBoxShape(boxSize2);
+	let boxTrans2 = new Ammo.btTransform();
+	boxTrans2.setIdentity();
+	boxTrans2.setOrigin(new Ammo.btVector3(0, 3, 0));
+	let box2 = createRigidBody(5, boxTrans2, boxShape2, boxSize2);
+	
+	let pivot1 = new Ammo.btVector3(boxSize1.x() / 2, boxSize1.y() / 2, 0);
+	let pivot2 = new Ammo.btVector3(-boxSize2.x() / 2, boxSize2.y() / 2, 0);
+	let axis = new Ammo.btVector3(0, 1, 0);				
+	let hinge = new Ammo.btHingeConstraint( box1, box2, pivot1, pivot2, axis, axis, false);
+	hinge.enableAngularMotor(true, 1.5, 50);
+	
+	//hinge.setLimit(-Math.PI/2 * 0.5, 0, 0.9, 0.3, 1);
+	physics.getPhysicsWorld().addConstraint(hinge, false);
+	
+	// https://github.com/kripken/ammo.js/blob/master/bullet/src/BulletDynamics/ConstraintSolver/btHingeConstraint.h						
+	// http://schteppe.github.io/ammo.js-demos/demos/PendulumDemo/index.html
+	// http://schteppe.github.io/ammo.js-demos/demos/PendulumDemo/PendulumDemo.js
+	// https://github.com/kripken/ammo.js/issues/14
+	// https://stackoverflow.com/questions/57143632/enableangularmotor-in-ammo-js-doesnt-seem-to-function-when-changing-object-from
+	// https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=4198
+}
 
 function createStozar() {
-	const height = 12 * glScale; 
-	const x = -4.857 * glScale;
+	const height = 12;
+	const x = -4.857;
 	const y = height / 2; 
-	const z = -29.148 * glScale;
+	const z = -29.148;
 	loader.loadTexture('../textures/stozar.jpg', textures => {	
 		let texture = textures[0];
 		texture.wrapS = THREE.RepeatWrapping;
 		texture.wrapT = THREE.RepeatWrapping;
 		texture.repeat.set(1, 20);
-		const geometry = new THREE.CylinderGeometry(.02 * glScale, .04 * glScale, height, 16);
+		const geometry = new THREE.CylinderGeometry(.02, .04, height, 16);
 		const material = new THREE.MeshLambertMaterial({map: texture});
 		const mesh = new THREE.Mesh(geometry, material);
 		mesh.position.set(x, y, z);
 		mesh.castShadow = true;
 		mesh.receiveShadow = true;
-		mesh.scale.set(glScale, glScale, glScale);
+		mesh.scale.set(1, 1, 1);
 		scene.add(mesh);
 		physics.addCylinderObsticle(mesh);
 	});
@@ -558,63 +452,64 @@ function createStozar() {
 		const dx = 0.65;
 		const dy = 4.1;
 		const dz = 0;
-		flag.position.set(x + dx * glScale, y + dy * glScale, z + dz * glScale);
-		const scale = 0.005 * glScale;
+		flag.position.set(x + dx, y + dy, z + dz);
+		const scale = 0.005;
 		flag.scale.set(scale, scale, scale);
 		scene.add(flag);	
 	});
 }
 
 function createStany() {
-	const sc = glScale;
-	const br = 106;
+	const sc = 1;
+	const br2 = br - toRad(90);
+	const br3 = br + toRad(180);
 	const stanVariants = [
 		// severní řada 9 stanů
-		{x: -12.679, y: 17.296, z: 1.573, r: toRad(106 - br)},
-		{x: -13.394, y: 19.783, z: 1.574, r: toRad(106 - br)},
-		{x: -14.113, y: 22.28, z: 1.574, r: toRad(106 - br)},
-		{x: -14.813, y: 24.713, z: 1.574, r: toRad(106 - br)},
-		{x: -15.538, y: 27.234, z: 1.574, r: toRad(106 - br)},
-		{x: -16.261, y: 29.745, z: 1.574, r: toRad(106 - br)},
-		{x: -16.965, y: 32.129, z: 1.574, r: toRad(106 - br)},
-		{x: -17.700, y: 34.49, z: 1.574, r: toRad(106 - br)},
-		{x: -18.410, y: 36.789, z: 1.574, r: toRad(106 - br)},
+		{x: -12.679, y: 17.296, z: 1.573, r: br},
+		{x: -13.394, y: 19.783, z: 1.574, r: br},
+		{x: -14.113, y: 22.28, z: 1.574, r: br},
+		{x: -14.813, y: 24.713, z: 1.574, r: br},
+		{x: -15.538, y: 27.234, z: 1.574, r: br},
+		{x: -16.261, y: 29.745, z: 1.574, r: br},
+		{x: -16.965, y: 32.129, z: 1.574, r: br},
+		{x: -17.700, y: 34.49, z: 1.574, r: br},
+		{x: -18.410, y: 36.789, z: 1.574, r: br},
 		
-		// východní řada 8 stanů (4. je vynechaný kvůli kořenu)
-		{x: -15.414, y: 40.769, z: 1.598, r: toRad(16.5 - br)},
-		{x: -13.09, y: 41.383, z: 1.544, r: toRad(16.5 - br)},
-		{x: -10.663, y: 42.104, z: 1.493, r: toRad(16.5 - br)},
-		{x: -6.914, y: 43.23, z: 1.355, r: toRad(16.5 - br)},
-		{x: -4.624, y: 43.912, z: 1.192, r: toRad(16.5 - br)},
-		{x: -2.211, y: 44.63, z: 1.140, r: toRad(16.5 - br)},
-		{x: 0.263, y: 45.365, z: 1.140, r: toRad(16.5 - br)},
+		// východní řada 8 stanů (4. je vynechaný kvůli kořenu)		
+		{x: -15.414, y: 40.769, z: 1.598, r: br2},
+		{x: -13.09, y: 41.383, z: 1.544, r: br2},
+		{x: -10.663, y: 42.104, z: 1.493, r: br2},
+		{x: -6.914, y: 43.23, z: 1.355, r: br2},
+		{x: -4.624, y: 43.912, z: 1.192, r: br2},
+		{x: -2.211, y: 44.63, z: 1.140, r: br2},
+		{x: 0.263, y: 45.365, z: 1.140, r: br2},
 		
 		// jižní řada 13 stanů
-		{x: 3.100, y: 40.442, z: 1.140, r: toRad(281 - br)},
-		{x: 3.547, y: 38.192, z: 1.140, r: toRad(283 - br)},
-		{x: 4.123, y: 35.832, z: 1.140, r: toRad(283 - br)},
-		{x: 4.753, y: 33.511, z: 1.140, r: toRad(286 - br)},
-		{x: 5.425, y: 31.314, z: 1.140, r: toRad(286 - br)},
-		{x: 6.039, y: 29.077, z: 1.140, r: toRad(286 - br)},
-		{x: 6.725, y: 26.796, z: 1.140, r: toRad(286 - br)},
-		{x: 7.504, y: 24.39, z: 1.140, r: toRad(286 - br)},
-		{x: 8.186, y: 21.916, z: 1.140, r: toRad(286 - br)},
-		{x: 8.847, y: 19.577, z: 1.140, r: toRad(286 - br)},
-		{x: 9.533, y: 17.214, z: 1.140, r: toRad(286 - br)},
-		{x: 10.219, y: 14.765, z: 1.140, r: toRad(286 - br)},
-		{x: 10.92, y: 12.329, z: 1.140, r: toRad(286 - br)},
+		{x: 3.100, y: 40.442, z: 1.140, r: br3 - toRad(5)},
+		{x: 3.547, y: 38.192, z: 1.140, r: br3 - toRad(3)},
+		{x: 4.123, y: 35.832, z: 1.140, r: br3 - toRad(3)},
+		{x: 4.753, y: 33.511, z: 1.140, r: br3},
+		{x: 5.425, y: 31.314, z: 1.140, r: br3},
+		{x: 6.039, y: 29.077, z: 1.140, r: br3},
+		{x: 6.725, y: 26.796, z: 1.140, r: br3},
+		{x: 7.504, y: 24.39, z: 1.140, r: br3},
+		{x: 8.186, y: 21.916, z: 1.140, r: br3},
+		{x: 8.847, y: 19.577, z: 1.140, r: br3},
+		{x: 9.533, y: 17.214, z: 1.140, r: br3},
+		{x: 10.219, y: 14.765, z: 1.140, r: br3},
+		{x: 10.92, y: 12.329, z: 1.140, r: br3},
 		
 	];
 	loadModel(scene, 'stan.glb', sc, stanVariants, true);
 }
 
 function createHangar() {	
-	loadModel(scene, 'hangar.glb', glScale, [{x: 27.639, y: -54.919, z: 6.857, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar.glb', 1, [{x: 27.639, y: -54.919, z: 6.857, r: toRad(22.1)}], true);
 };
 
 function createBirchTrees() {
-	loadModel(scene, 'birch/scene.gltf', 1.5 * glScale, [{x: -1, y: 1, z: 0, r: toRad(0)}], false, model => {
-		model.scale.z = .5 * glScale;
+	loadModel(scene, 'birch/scene.gltf', 1.5, [{x: -1, y: 1, z: 0, r: toRad(0)}], false, model => {
+		model.scale.z = .5;
 		model.rotation.y = toRad(10);
 		model.rotation.x = toRad(-85);
 		
@@ -629,9 +524,9 @@ function createBirchTrees() {
 		
 		configs.forEach(c => {
 			let mdl = model.clone();
-			mdl.scale.z = c.sz * glScale;
-			mdl.position.x += c.px * glScale;
-			mdl.position.z += c.pz * glScale;
+			mdl.scale.z = c.sz;
+			mdl.position.x += c.px;
+			mdl.position.z += c.pz;
 			mdl.rotation.x = toRad(c.rx);
 			mdl.rotation.y = toRad(c.ry);
 			mdl.rotation.z = toRad(c.rz);
@@ -768,6 +663,8 @@ function createControls() {
 				if (down)
 					player.resetPosition();
 				break;
+			case "b":
+				if (down) createTestCube(); break;
 		}
 	};
 	document.addEventListener('keydown', onKeyDown, false);
@@ -798,8 +695,8 @@ function createTerrain() {
 			}
 		}
 		
-		ground.scale.set(glScale, glScale, glScale);
-		ground.position.set(0, 5.282 * glScale, 0);	
+		ground.scale.set(1, 1, 1);
+		ground.position.set(0, 5.282, 0);	
 		ground.rotation.x = 0;
 		ground.rotation.y = 0;
 		ground.rotation.z = 0;	
@@ -807,7 +704,7 @@ function createTerrain() {
 		ground.userData.terrainWidth = faceSide;
 		ground.userData.terrainDepth = faceSide;	
 		ground.userData.terrainWidthExtents = 140;
-		ground.userData.terrainDepthExtents = 87.2;		
+		ground.userData.terrainDepthExtents = 87.2;
 		
 		heightMap.sort((a, b) => {
 			let firstMult = 1;
@@ -866,6 +763,21 @@ function createPlayer() {
 		scene.add(player.mesh);
 };
 
+function createTestCube() {
+	let pos = new THREE.Vector3(0, 5, 0);
+	let quat = new THREE.Quaternion(0, 0, 0, 1);
+	let scale = new THREE.Vector3(0.5, 0.5, 0.5);
+	let color = Math.floor(Math.random() * (1 << 24));
+	let helper = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: color}));
+	helper.position.set(pos.x, pos.y, pos.z);
+	helper.geometry.scale(scale.x, scale.y, scale.z);
+	helper.rotation.setFromQuaternion(quat);
+	helper.castShadow = true;
+	helper.receiveShadow = true;
+	scene.add(helper);
+	physics.addBoxObsticle(scene, pos, quat, scale, false, helper);
+}
+
 function init() {
 	document.body.appendChild(stats.dom);
 	// atributy:  field of view, aspect ratio, near, far
@@ -913,10 +825,10 @@ function init() {
 	createHouseLight();
 	
 	createTerrain();	
-	createSkybox();	
+	createSkybox();
 	
-	createStaryBarak();
-	createBirchTrees();
+	//createStaryBarak();
+	//createBirchTrees();
 	
 	createStozar();	
 	createStany();
@@ -934,6 +846,9 @@ function init() {
 	createLowPolyXmasTree();
 	createSmallTree();
 	*/
+	
+	createHingedObjects();
+	//createJointObjects();
 	
 	loader.performLoad(() => {
 		createPlayer();

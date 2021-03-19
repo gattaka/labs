@@ -4,20 +4,19 @@ import * as THREE from '../js/three.module.js';
 
 let Player = function (info, camera, physics, pos) {
 
-	const radius = 0.1 * Config.glScale; // 0.2 funguje a nepropadává
-	const height = 1.1 * Config.glScale;
+	const radius = 0.1; // 0.2 funguje a nepropadává
+	const height = 1.1;
 	const eyeLevel = (height + 2 * radius) / 2;
 	const quat = {x: 0, y: 0, z: 0, w: 1};
 	const stepHeight = 0.2;
 	const keys = {forward: 0, back: 0, left: 0, right: 0, jump: 0, sprint: 0};
-	const walkSpeed = 0.06 * Config.glScale;	
-	const jumpSpeed = 5 * Config.glScale;
+	const walkSpeed = 0.06;	
+	const jumpSpeed = 5;
 	const sprintMult = 1;
 	const maxSlopeRadians = Math.PI / 4;
-	const terminalVelocity = 4;
 	
 	let currentPos;
-	const startPos = new Ammo.btVector3(-3, 2 - eyeLevel, 2);
+	const startPos = new Ammo.btVector3(0, 5, 0);
 	let firstReset = true;
 		
 	let moveX, moveZ;
@@ -47,28 +46,28 @@ let Player = function (info, camera, physics, pos) {
 		controller = new Ammo.btKinematicCharacterController(ghostObject, colShape, stepHeight, 1);
 		controller.setJumpSpeed(jumpSpeed);
 		controller.setMaxSlope(maxSlopeRadians);
-		//controller.setFallSpeed(terminalVelocity);
 		controller.setUseGhostSweepTest(true);
 		controller.setGravity(-physics.getPhysicsWorld().getGravity().y());
 
 		// addCollisionObject(collisionObject: Ammo.btCollisionObject, collisionFilterGroup?: number | undefined, collisionFilterMask?: number | undefined): void
-		physics.getPhysicsWorld().addCollisionObject(ghostObject, 32, -1);
+		//physics.getPhysicsWorld().addCollisionObject(ghostObject, 32, -1);
+		physics.getPhysicsWorld().addCollisionObject(ghostObject, -1, -1);
 		physics.getPhysicsWorld().addAction(controller);
 		physics.getPhysicsWorld().getBroadphase().getOverlappingPairCache().setInternalGhostPairCallback(new Ammo.btGhostPairCallback());
-		
-		// .. 
-		/*
-		let mass = 2;
+				
+		let mass = 5;
 		let motionState = new Ammo.btDefaultMotionState(transform);
 		let localInertia = new Ammo.btVector3(0, 0, 0);
 		colShape.calculateLocalInertia(mass, localInertia);
 		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
 		let body = new Ammo.btRigidBody(rbInfo);
-		physics.getPhysicsWorld().addRigidBody(body);*/
+		physics.getPhysicsWorld().addRigidBody(body);
 	};
 	init();
 	
 	ret.update = function(delta) {
+		
+		ghostObject.activate(true);
 		
 		// Update 
 			
