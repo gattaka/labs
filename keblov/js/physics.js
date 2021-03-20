@@ -29,8 +29,7 @@ Physics.processor = function (callback) {
 	//variable declaration section
 	let physicsWorld, dynamicObjects = [], tmpTrans = null	
 	let tmpPos = new THREE.Vector3(), tmpQuat = new THREE.Quaternion();
-	let ammoTmpPos = null, ammoTmpQuat = null;
-	let mouseCoords = new THREE.Vector2(), raycaster = new THREE.Raycaster();
+	let ammoTmpPos = null, ammoTmpQuat = null;	
 
 	// body.setActivationState(Physics.STATE.DISABLE_DEACTIVATION);
 	// body.setCollisionFlags(Physics.FLAGS.CF_KINEMATIC_OBJECT);
@@ -80,7 +79,7 @@ Physics.processor = function (callback) {
 		return helper;
 	};
 	
-	ret.addHinge = function(mesh) {
+	ret.addHinge = function(mesh, meshPivotX, meshPivotZ) {
 		let meshBody = mesh.userData.physicsBody;
 		let meshBBox = mesh.userData.boundingBoxScale;
 		let meshPos = mesh.position;
@@ -98,11 +97,12 @@ Physics.processor = function (callback) {
 		frameBody.setActivationState(4);
 				
 		let framePivot = new Ammo.btVector3(0, 0, 0);
-		let meshPivot = new Ammo.btVector3(-meshBBox.x / 2, 0, -meshBBox.z / 2);
+		let meshPivot = new Ammo.btVector3(meshPivotX, 0, meshPivotZ);
 		let axis = new Ammo.btVector3(0, 1, 0);				
 		let hinge = new Ammo.btHingeConstraint(frameBody, meshBody, framePivot, meshPivot, axis, axis, false);		
 		
-		hinge.enableAngularMotor(true, 1.5, 50);
+		mesh.userData.hinge = hinge;
+		//hinge.enableAngularMotor(true, 1.5, 50);
 		
 		//hinge.setLimit(-Math.PI/2 * 0.5, 0, 0.9, 0.3, 1);
 		physicsWorld.addConstraint(hinge, false);
@@ -128,7 +128,7 @@ Physics.processor = function (callback) {
 		
 		let shapeSizeVector = new Ammo.btVector3(scale.x * 0.5, scale.y * 0.5, scale.z * 0.5);
 		let colShapeCacheKey = "x:" + shapeSizeVector.x() + "y:" + shapeSizeVector.y() + "z:" + shapeSizeVector.z();
-		let colShape = shapeCache[colShapeCacheKey];
+		let colShape;// = shapeCache[colShapeCacheKey];
 		if (colShape === undefined) {
 			colShape = new Ammo.btBoxShape(shapeSizeVector);
 			colShape.setMargin(phMargin);

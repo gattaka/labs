@@ -1,7 +1,8 @@
 import {
 	Euler,
 	EventDispatcher,
-	Vector3
+	Vector3,
+	Vector2
 } from './three.module.js';
 
 var Controls = function (camera, domElement) {
@@ -11,17 +12,15 @@ var Controls = function (camera, domElement) {
 		domElement = document.body;
 	}
 
+	let self = this;
 	this.domElement = domElement;
 	this.isLocked = false;
+	this.mouseCoords = new Vector2();
 
 	// Set to constrain the pitch of the camera
 	// Range is 0 to Math.PI radians
 	this.minPolarAngle = 0; // radians
 	this.maxPolarAngle = Math.PI; // radians
-
-	//
-	// internals
-	//
 
 	var scope = this;
 
@@ -38,6 +37,10 @@ var Controls = function (camera, domElement) {
 
 		var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
 		var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
+		
+		// https://threejs.org/docs/#api/en/core/Raycaster
+		self.mouseCoords.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+		self.mouseCoords.y = - ( event.clientY / window.innerHeight ) * 2 + 1;		 
 
 		euler.setFromQuaternion(camera.quaternion);
 

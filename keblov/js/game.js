@@ -19,6 +19,9 @@ let camera, scene, renderer, controls;
 let flag;
 let player;
 
+let raycaster = new THREE.Raycaster();
+let selectedMesh, selectOutliner;
+
 const info = new Info();
 const loader = new Loader(info);
 const clock = new THREE.Clock();
@@ -349,76 +352,23 @@ function createStaryBarak() {
 function createHingedObjects() {
 	const dverePhysicsDetails = {kinematic: false};
 	const dvereCallback = function(mesh) {
-		physics.addHinge(mesh);
+		let meshBBox = mesh.userData.boundingBoxScale;
+		physics.addHinge(mesh, -meshBBox.x / 2, meshBBox.z / 2);
+		
+		let outlineMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true, side: THREE.BackSide });
+		let outlineMesh = new THREE.Mesh(mesh.geometry, outlineMaterial);
+		outlineMesh.scale.multiplyScalar(1);
+		outlineMesh.visible = false;
+		mesh.add(outlineMesh);
+		mesh.userData.outlineMesh = outlineMesh;
 	};
 	const kuchyneDvereVariants = [
-		{x: -7, y: 4, z: 5, r: 0},
+		{x: -7, y: 4, z: 3, r: 0},
 		{x: -10.618, y: 1.285, z: 2.075, r: br},
-		{x: -10.338, y: 0.311, z: 2.075, r: br + toRad(180)},
+		{x: -10.338, y: 0.311, z: 2.075, r: br + toRad(180)},		
 	];
 	loadModel(scene, 'kuchyne_dvere.glb', sc, kuchyneDvereVariants, true, dvereCallback, dverePhysicsDetails);	
 };
-
-function createRigidBody(mass, transform, shape, size) {
-	// rigidbody is dynamic if and only if mass is non zero, otherwise static
-	var isDynamic = (mass != 0.0);
-
-	var localInertia = new Ammo.btVector3(0,0,0);
-	if (isDynamic)
-		shape.calculateLocalInertia(mass, localInertia);
-
-	var myMotionState = new Ammo.btDefaultMotionState(transform);
-	var cInfo = new Ammo.btRigidBodyConstructionInfo(mass, myMotionState, shape, localInertia);
-	var body = new Ammo.btRigidBody(cInfo);
-	body.setActivationState( 4 );
-	
-	let block = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: 0xf78a1d}));
-	block.position.set(transform.getOrigin().x(), transform.getOrigin().y(), transform.getOrigin().z());
-	block.scale.set(size.x(), size.y(), size.z());
-	block.castShadow = true;
-	block.receiveShadow = true;
-	scene.add(block);
-	block.userData.physicsBody = body;
-	
-	if (isDynamic)
-		physics.addDynamicObject(block);
-	return body;
-};
-
-function createJointObjects(){
-
-	//Block Graphics
-
-	let boxSize1 = new Ammo.btVector3(1, 2, 1);
-	let boxShape1 = new Ammo.btBoxShape(boxSize1);
-	let boxTrans1 = new Ammo.btTransform();
-	boxTrans1.setIdentity();
-	boxTrans1.setOrigin(new Ammo.btVector3(0, 3, 0));
-	let box1 = createRigidBody(0, boxTrans1, boxShape1, boxSize1);
-					
-	let boxSize2 = new Ammo.btVector3(2, 2, 1);
-	let boxShape2 = new Ammo.btBoxShape(boxSize2);
-	let boxTrans2 = new Ammo.btTransform();
-	boxTrans2.setIdentity();
-	boxTrans2.setOrigin(new Ammo.btVector3(0, 3, 0));
-	let box2 = createRigidBody(5, boxTrans2, boxShape2, boxSize2);
-	
-	let pivot1 = new Ammo.btVector3(boxSize1.x() / 2, boxSize1.y() / 2, 0);
-	let pivot2 = new Ammo.btVector3(-boxSize2.x() / 2, boxSize2.y() / 2, 0);
-	let axis = new Ammo.btVector3(0, 1, 0);				
-	let hinge = new Ammo.btHingeConstraint( box1, box2, pivot1, pivot2, axis, axis, false);
-	hinge.enableAngularMotor(true, 1.5, 50);
-	
-	//hinge.setLimit(-Math.PI/2 * 0.5, 0, 0.9, 0.3, 1);
-	physics.getPhysicsWorld().addConstraint(hinge, false);
-	
-	// https://github.com/kripken/ammo.js/blob/master/bullet/src/BulletDynamics/ConstraintSolver/btHingeConstraint.h						
-	// http://schteppe.github.io/ammo.js-demos/demos/PendulumDemo/index.html
-	// http://schteppe.github.io/ammo.js-demos/demos/PendulumDemo/PendulumDemo.js
-	// https://github.com/kripken/ammo.js/issues/14
-	// https://stackoverflow.com/questions/57143632/enableangularmotor-in-ammo-js-doesnt-seem-to-function-when-changing-object-from
-	// https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=4198
-}
 
 function createStozar() {
 	const height = 12;
@@ -534,14 +484,6 @@ function createBirchTrees() {
 		});
 	});
 };
-
-function createGrid() {
-	const size = 100;
-	const divisions = 100;
-
-	const gridHelper = new THREE.GridHelper(size, divisions);
-	scene.add(gridHelper);
-}
 
 // https://threejs.org/docs/#api/en/lights/SpotLight
 function createHouseLight() {
@@ -665,6 +607,14 @@ function createControls() {
 				break;
 			case "b":
 				if (down) createTestCube(); break;
+			case "e":
+			case "E":
+				if (selectedMesh !== undefined && selectedMesh.userData.hinge !== undefined) {
+					// https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=2693					
+					selectedMesh.userData.physicsBody.applyImpulse(new Ammo.btVector3(1, 0, 1), new Ammo.btVector3(0, 0, 0));
+					selectedMesh.userData.physicsBody.activate();
+				}
+				break;
 		}
 	};
 	document.addEventListener('keydown', onKeyDown, false);
@@ -834,21 +784,12 @@ function init() {
 	createStany();
 	createHangar();
 	
+	createHingedObjects();	
+	
 	/*
-	//createGrid();
-	//createTree();
-	//createOakTrees();
-	createPineTree();
-	createPineTree2();
-	//createLowPolyTree();
-	createRealisticTree();
-	
-	createLowPolyXmasTree();
-	createSmallTree();
+	selectOutliner = new THREE.BoxHelper(selectedMesh, 0xffff00);
+	scene.add(selectOutliner);
 	*/
-	
-	createHingedObjects();
-	//createJointObjects();
 	
 	loader.performLoad(() => {
 		createPlayer();
@@ -860,7 +801,19 @@ function onWindowResize() {
 	camera.aspect = window.innerWidth / window.innerHeight;
 	camera.updateProjectionMatrix();	
 	renderer.setSize(window.innerWidth, window.innerHeight);	
-}
+};
+
+function selectMesh(mesh) {
+	if (selectedMesh !== undefined && selectedMesh.userData.outlineMesh !== undefined)
+		selectedMesh.userData.outlineMesh.visible = false;
+	selectedMesh = mesh;	
+	if (selectedMesh !== undefined && selectedMesh.userData.outlineMesh !== undefined)
+		selectedMesh.userData.outlineMesh.visible = true;
+	/*
+	selectOutliner.setFromObject(selectedMesh);
+	selectOutliner.update();
+	*/
+};
 
 function animate(now) {
 	requestAnimationFrame(animate);
@@ -870,6 +823,10 @@ function animate(now) {
 	player.update(delta);
 	if (flag !== undefined)
 		flag.animate(now);
+	
+	raycaster.setFromCamera(controls.mouseCoords, camera);
+	const intersects = raycaster.intersectObjects(scene.children);
+	selectMesh(intersects.length > 0 ? intersects[0].object : undefined);
 	
 	renderer.clear();
 	renderer.render(scene, camera);	
