@@ -1,7 +1,8 @@
 let Config = {
 	phMargin: 0.1,
-	showPhHelpers: false,
+	showPhHelpers: true,
 	showScHelpers: false,
+	cachePhShapes: true,
 	savePlayerPosition: true,
 	resolutionDivider: 1,
 	threejsApiResize: true,

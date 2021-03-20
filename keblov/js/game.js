@@ -20,7 +20,7 @@ let flag;
 let player;
 
 let raycaster = new THREE.Raycaster();
-let selectedMesh, selectOutliner;
+let selectedMesh;
 
 const info = new Info();
 const loader = new Loader(info);
@@ -193,11 +193,17 @@ function createStaryBarak() {
 	loadModel(scene, 'keblov_stary_strop_03.glb', sc, [{x: -7.407, y: -13.272, z: 3.297, r: br}], true);
 	loadModel(scene, 'keblov_stary_strop_04.glb', sc, [{x: -4.417, y: -14.347, z: 3.297, r: br}], true);
 	
-	loadModel(scene, 'keblov_stary_puda_stit_zapad.glb', sc, [{x: -4.026, y: -15.707, z: 4.550, r: br}], true);
-	loadModel(scene, 'keblov_stary_puda_stit_vychod.glb', sc, [{x: -10.61, y: 7.172, z: 4.498, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_stit_zapad_01.glb', sc, [{x: -5.802, y: -16.218, z: 4.550, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_stit_zapad_02.glb', sc, [{x: -3.592, y: -15.582, z: 5.411, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_stit_zapad_03.glb', sc, [{x: -3.591, y: -15.581, z: 3.393, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_stit_zapad_04.glb', sc, [{x: -1.815, y: -15.071, z: 4.275, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_dvere_zapad.glb', sc, [{x: -3.749, y: -16.071, z: 4.254, r: toRad(-54.9)}], true);	
 	
-	loadModel(scene, 'keblov_stary_puda_dvere_zapad.glb', sc, [{x: -3.592, y: -15.572, z: 4.254, r: br}], true);	
-	loadModel(scene, 'keblov_stary_puda_stit_vychod_dvere.glb', sc, [{x: -10.692, y: 7.374, z: 4.498, r: br}], true);	
+	loadModel(scene, 'keblov_stary_puda_stit_vychod_01.glb', sc, [{x: -12.835, y: 6.531, z: 4.201, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_stit_vychod_02.glb', sc, [{x: -11.080, y: 7.037, z: 5.325, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_stit_vychod_03.glb', sc, [{x: -11.090, y: 7.031, z: 3.369, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_stit_vychod_04.glb', sc, [{x: -8.863, y: 7.674, z: 4.498, r: br}], true);
+	loadModel(scene, 'keblov_stary_puda_stit_vychod_dvere.glb', sc, [{x: -11.685, y: 7.338, z: 4.486, r: 0}], true);		
 	
 	loadModel(scene, 'keblov_stary_puda_tramy.glb', sc, [{x: -7.323, y: -4.217, z: 4.418, r: br}], false);		
 	
@@ -344,31 +350,19 @@ function createStaryBarak() {
 	];
 	loadModel(scene, 'sklad_police.glb', sc, skladPoliceVariants, true);	
 	
-	loadModel(scene, 'smrky.glb', sc, [{x: -22.234, y: 15.663, z: 12.116, r: 0}], false);
+	const kuchyneDvereVariants = [
+		{x: -10.283, y: 0.858, z: 2.075, r: toRad(152 + 180)},
+		{x: -10.582, y: 1.841, z: 2.075, r: toRad(337)},		
+	];
+	loadModel(scene, 'kuchyne_dvere.glb', sc, kuchyneDvereVariants, true);
+	
+	loadModel(scene, 'plechove_dvere.glb', sc, [{x: -1.124, y: -11.221, z: 2.071, r: 0}], true);
+	loadModel(scene, 'dilna_okno.glb', sc, [{x: -6.094, y: -16.650, z: 2.496, r: 0}], true);
 	
 	
+	loadModel(scene, 'smrky.glb', sc, [{x: -22.234, y: 15.663, z: 12.116, r: 0}], false);	
 };
 
-function createHingedObjects() {
-	const dverePhysicsDetails = {kinematic: false};
-	const dvereCallback = function(mesh) {
-		let meshBBox = mesh.userData.boundingBoxScale;
-		physics.addHinge(mesh, -meshBBox.x / 2, meshBBox.z / 2);
-		
-		let outlineMaterial = new THREE.MeshBasicMaterial({ color: 0x00ffff, opacity: 0.5, transparent: true, side: THREE.BackSide });
-		let outlineMesh = new THREE.Mesh(mesh.geometry, outlineMaterial);
-		outlineMesh.scale.multiplyScalar(1);
-		outlineMesh.visible = false;
-		mesh.add(outlineMesh);
-		mesh.userData.outlineMesh = outlineMesh;
-	};
-	const kuchyneDvereVariants = [
-		{x: -7, y: 4, z: 3, r: 0},
-		{x: -10.618, y: 1.285, z: 2.075, r: br},
-		{x: -10.338, y: 0.311, z: 2.075, r: br + toRad(180)},		
-	];
-	loadModel(scene, 'kuchyne_dvere.glb', sc, kuchyneDvereVariants, true, dvereCallback, dverePhysicsDetails);	
-};
 
 function createStozar() {
 	const height = 12;
@@ -454,7 +448,15 @@ function createStany() {
 }
 
 function createHangar() {	
-	loadModel(scene, 'hangar.glb', 1, [{x: 27.639, y: -54.919, z: 6.857, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar_01.glb', 1, [{x: 27.798, y: -61.014, z: 6.603, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar_02.glb', 1, [{x: 31.730, y: -59.440, z: 6.605, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar_03.glb', 1, [{x: 29.828, y: -60.455, z: 7.608, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar_04.glb', 1, [{x: 27.471, y: -48.827, z: 6.603, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar_05.glb', 1, [{x: 23.543, y: -50.401, z: 6.605, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar_06.glb', 1, [{x: 25.435, y: -49.388, z: 7.608, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar_07.glb', 1, [{x: 24.574, y: -56.180, z: 6.553, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar_08.glb', 1, [{x: 30.704, y: -53.658, z: 6.553, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar_09.glb', 1, [{x: 27.639, y: -54.919, z: 8.695, r: toRad(22.1)}], true);
 };
 
 function createBirchTrees() {
@@ -605,8 +607,7 @@ function createControls() {
 				if (down)
 					player.resetPosition();
 				break;
-			case "b":
-				if (down) createTestCube(); break;
+				/*
 			case "e":
 			case "E":
 				if (selectedMesh !== undefined && selectedMesh.userData.hinge !== undefined) {
@@ -615,6 +616,7 @@ function createControls() {
 					selectedMesh.userData.physicsBody.activate();
 				}
 				break;
+				*/
 		}
 	};
 	document.addEventListener('keydown', onKeyDown, false);
@@ -622,7 +624,7 @@ function createControls() {
 }
 
 function createTerrain() {	
-	loader.loadModel('../models/teren2.glb', gltf => { 
+	loader.loadModel('../models/teren.glb', gltf => { 
 		const ground = gltf.scene.children[0];														
 		const meshes = [];
 		ground.traverse(n => { if (n.isMesh) {
@@ -646,7 +648,7 @@ function createTerrain() {
 		}
 		
 		ground.scale.set(1, 1, 1);
-		ground.position.set(0, 5.282, 0);	
+		ground.position.set(0, 4.827, 0);	
 		ground.rotation.x = 0;
 		ground.rotation.y = 0;
 		ground.rotation.z = 0;	
@@ -713,21 +715,6 @@ function createPlayer() {
 		scene.add(player.mesh);
 };
 
-function createTestCube() {
-	let pos = new THREE.Vector3(0, 5, 0);
-	let quat = new THREE.Quaternion(0, 0, 0, 1);
-	let scale = new THREE.Vector3(0.5, 0.5, 0.5);
-	let color = Math.floor(Math.random() * (1 << 24));
-	let helper = new THREE.Mesh(new THREE.BoxBufferGeometry(), new THREE.MeshPhongMaterial({color: color}));
-	helper.position.set(pos.x, pos.y, pos.z);
-	helper.geometry.scale(scale.x, scale.y, scale.z);
-	helper.rotation.setFromQuaternion(quat);
-	helper.castShadow = true;
-	helper.receiveShadow = true;
-	scene.add(helper);
-	physics.addBoxObsticle(scene, pos, quat, scale, false, helper);
-}
-
 function init() {
 	document.body.appendChild(stats.dom);
 	// atributy:  field of view, aspect ratio, near, far
@@ -777,19 +764,12 @@ function init() {
 	createTerrain();	
 	createSkybox();
 	
-	//createStaryBarak();
-	//createBirchTrees();
+	createStaryBarak();
+	createBirchTrees();
 	
 	createStozar();	
 	createStany();
 	createHangar();
-	
-	createHingedObjects();	
-	
-	/*
-	selectOutliner = new THREE.BoxHelper(selectedMesh, 0xffff00);
-	scene.add(selectOutliner);
-	*/
 	
 	loader.performLoad(() => {
 		createPlayer();
@@ -809,25 +789,21 @@ function selectMesh(mesh) {
 	selectedMesh = mesh;	
 	if (selectedMesh !== undefined && selectedMesh.userData.outlineMesh !== undefined)
 		selectedMesh.userData.outlineMesh.visible = true;
-	/*
-	selectOutliner.setFromObject(selectedMesh);
-	selectOutliner.update();
-	*/
 };
 
 function animate(now) {
 	requestAnimationFrame(animate);
 	const delta = clock.getDelta();	
 	
-	physics.updatePhysics(delta);
+	physics.updatePhysics(delta, 10);
 	player.update(delta);
 	if (flag !== undefined)
 		flag.animate(now);
-	
+	/*
 	raycaster.setFromCamera(controls.mouseCoords, camera);
 	const intersects = raycaster.intersectObjects(scene.children);
 	selectMesh(intersects.length > 0 ? intersects[0].object : undefined);
-	
+	*/
 	renderer.clear();
 	renderer.render(scene, camera);	
 	

@@ -128,7 +128,9 @@ Physics.processor = function (callback) {
 		
 		let shapeSizeVector = new Ammo.btVector3(scale.x * 0.5, scale.y * 0.5, scale.z * 0.5);
 		let colShapeCacheKey = "x:" + shapeSizeVector.x() + "y:" + shapeSizeVector.y() + "z:" + shapeSizeVector.z();
-		let colShape;// = shapeCache[colShapeCacheKey];
+		let colShape;
+		if (Config.cachePhShapes)
+			colShape = shapeCache[colShapeCacheKey];
 		if (colShape === undefined) {
 			colShape = new Ammo.btBoxShape(shapeSizeVector);
 			colShape.setMargin(phMargin);
