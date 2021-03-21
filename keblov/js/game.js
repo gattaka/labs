@@ -8,8 +8,10 @@ import { Physics } from './Physics.js';
 import { Terrain } from './Terrain.js';
 import { Player } from './Player.js';
 import { Loader } from './Loader.js';
+import { BufferGeometryUtils } from './BufferGeometryUtils.js';
 import * as THREE from './three.module.js';
 
+const mergedGeometries = Config.mergedGeometries;
 const phMargin = Config.phMargin;
 const showHelpers = Config.showScHelpers;
 const savePlayerPosition = Config.savePlayerPosition;
@@ -89,16 +91,16 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback, p
 			}
 		}});
 		const box = processBoundingBox(model);
+		const instances = [];
 		variants.forEach(v => {
-			let instance = model.clone();
+			let instance = model.clone();			
 			// JS - Blender
 			// x = x
 			// y = z
-			// z = y
+			// z = y			
 			instance.position.set(v.x * sc, v.z * sc, -v.y * sc);
-			instance.rotation.y = v.r;
-			if (v.ry !== undefined) instance.rotation.z = v.ry;
-			scene.add(instance);
+			instance.rotation.y = v.r;			
+			if (v.ry !== undefined) instance.rotation.z = v.ry;			
 			if (asPhysicsBody) {
 				let kinematic = true;
 				if (physicsDetails)
@@ -107,7 +109,23 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback, p
 			}
 			if (onCreateCallback !== undefined)
 				onCreateCallback(instance);
+			
+			if (mergedGeometries) {
+				const geometryClone = model.geometry.clone();				
+				geometryClone.rotateY(v.r);
+				if (v.ry !== undefined) geometryClone.rotateZ(v.ry);
+				geometryClone.translate(v.x, v.z, -v.y);				
+				instances.push(geometryClone);				
+			} else {
+				scene.add(instance);
+			}
 		});
+		
+		if (mergedGeometries) {
+			const mergeGeometry = BufferGeometryUtils.mergeBufferGeometries(instances);
+			const mergedMesh = new THREE.Mesh(mergeGeometry, model.material);
+			scene.add(mergedMesh);
+		}
 	});
 };
 
@@ -781,6 +799,7 @@ function init() {
 		antialias: false,
 		powerPreference: "high-performance",
 		preserveDrawingBuffer: false,
+		physicallyCorrectLights: false,
 	});
 	
 	if (Config.threejsApiResize) {		
@@ -810,17 +829,18 @@ function init() {
 	
 	createControls();
 	createDayLight();
+	
 	createTerrain();	
+	createSkybox();
+	createStany();
 	
 	/*
-	createSkybox();
 	createHouseLight();
 	
 	createBirchTrees();
 	
 	createStaryBarak();
 		
-	createStany();
 	createHangar();
 	createStozar();	
 	*/
