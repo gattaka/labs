@@ -79,7 +79,10 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback, p
 		model.traverse(n => { if (n.isMesh) {
 			n.castShadow = true; 
 			n.receiveShadow = true;
-			if (n.material.map) n.material.map.anisotropy = 1; 
+			if (n.material.map) {
+				n.material.map.anisotropy = 1; 
+				n.material.map.encoding = THREE.sRGBEncoding;
+			}
 			if (n.material) {			
 				n.material.metalness = 0;
 				n.material.roughness = 1;				
@@ -125,7 +128,7 @@ function createStaryBarak() {
 	loadModel(scene, 'keblov_stary_zdi_01.glb', sc, [{x: -4.025, y: -15.71, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_02.glb', sc, [{x: -10.838, y: -5.235, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_03.glb', sc, [{x: -13.528, y: 6.321, z: 2.217, r: br}], true);
-	loadModel(scene, 'keblov_stary_zdi_04.glb', sc, [{x: -12.644, y: 6.575, z: 3.207, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_04.glb', sc, [{x: -12.644, y: 6.575, z: 3.178, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_05.glb', sc, [{x: -10.9, y: 7.077, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_06.glb', sc, [{x: -9.093, y: 7.597, z: 3.207, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_07.glb', sc, [{x: -7.867, y: 7.950, z: 2.217, r: br}], true);
@@ -145,7 +148,7 @@ function createStaryBarak() {
 	loadModel(scene, 'keblov_stary_zdi_21.glb', sc, [{x: -6.728, y: -11.585, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_22.glb', sc, [{x: -7.789, y: -11.753, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_23.glb', sc, [{x: -8.544, y: -9.153, z: 2.217, r: br}], true);
-	loadModel(scene, 'keblov_stary_zdi_24.glb', sc, [{x: -3.143, y: -7.599, z: 2.217, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_24.glb', sc, [{x: -3.047, y: -7.572, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_25.glb', sc, [{x: -5.171, y: -8.163, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_26.glb', sc, [{x: -5.785, y: -9.526, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_27.glb', sc, [{x: -5.136, y: -10.804, z: 3.565, r: br}], true);
@@ -162,6 +165,7 @@ function createStaryBarak() {
 	loadModel(scene, 'keblov_stary_zdi_38.glb', sc, [{x: -6.827, y: -0.725, z: 2.217, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_39.glb', sc, [{x: -10.351, y: 0.305, z: 3.182, r: br}], true);
 	loadModel(scene, 'keblov_stary_zdi_40.glb', sc, [{x: -10.631, y: 1.280, z: 3.182, r: br}], true);
+	loadModel(scene, 'keblov_stary_zdi_41.glb', sc, [{x: -3.826, y: -7.796, z: 3.176, r: br}], true);
 	
 	const oknaVariants = [
 		{x: -4.897, y: 0.538, z: 2.495, r: br},
@@ -242,7 +246,8 @@ function createStaryBarak() {
 		{x: -3.117, y: -12.05, z: 1.557, r: br},
 		{x: -8.57, y: -9.665, z: 1.557, r: br}
 	];
-	loadModel(scene, 'stul_polovodice.glb', sc, stulPolovodiceVariants, true);
+	loadModel(scene, 'stul_polovodice.glb', sc, stulPolovodiceVariants, true);	
+	loadModel(scene, 'dilna_police_strop.glb', sc, [{x: -7.493, y: -15.492, z: 3.169, r: br}], true);	
 	loadModel(scene, 'dilna_police1.glb', sc, [{x: -7.388, y: -15.481, z: 2.044, r: br}], true);	
 	loadModel(scene, 'dilna_junk.glb', sc, [{x: -7.996, y: -14.232, z: 1.644, r: br}], true);	
 	loadModel(scene, 'dilna_police2.glb', sc, [{x: -8.177, y: -12.95, z: 2.015, r: br}], true);	
@@ -295,6 +300,7 @@ function createStaryBarak() {
 	loadModel(scene, 'stul_jidelna.glb', sc, stulJidelnaVariants, true);
 	loadModel(scene, 'stul_jidelna_varnice.glb', sc, [{x: -5.044, y: -0.683, z: 1.482, r: br}], true);	
 	loadModel(scene, 'jidelna_skrine_ruzne.glb', sc, [{x: -10.526, y: -2.141, z: 2.185, r: toRad(-73.9)}], true);	
+	loadModel(scene, 'sloupy.glb', sc, [{x: -6.724, y: -4.890, z: 2.214, r: br}], false);
 	loadModel(scene, 'posta.glb', sc, [{x: -4.520, y: -7.817, z: 2.210, r: br}], true);	
 	loadModel(scene, 'stul_kancl.glb', sc, [{x: -3.339, y: -6.241, z: 1.504, r: br}], true);	
 	loadModel(scene, 'stul_hrnky.glb', sc, [{x: -3.914, y: -4.581, z: 1.551, r: br}], true);	
@@ -354,15 +360,15 @@ function createStaryBarak() {
 		{x: -10.283, y: 0.858, z: 2.075, r: toRad(152 + 180)},
 		{x: -10.582, y: 1.841, z: 2.075, r: toRad(337)},		
 	];
-	loadModel(scene, 'kuchyne_dvere.glb', sc, kuchyneDvereVariants, true);
-	
+	loadModel(scene, 'kuchyne_dvere.glb', sc, kuchyneDvereVariants, true);	
 	loadModel(scene, 'plechove_dvere.glb', sc, [{x: -1.124, y: -11.221, z: 2.071, r: 0}], true);
 	loadModel(scene, 'dilna_okno.glb', sc, [{x: -6.094, y: -16.650, z: 2.496, r: 0}], true);
-	
-	
+	loadModel(scene, 'dvere_marta.glb', sc, [{x: -8.589, y: 8.148, z: 2.116, r: 0}], true);
+	loadModel(scene, 'dvere_osetrovna.glb', sc, [{x: -3.483, y: -7.241, z: 2.066, r: toRad(-88.6)}], true);
+	loadModel(scene, 'dvere_drevnik.glb', sc, [{x: -13.354, y: 6.589, z: 2.066, r: 0}], true);
+			
 	loadModel(scene, 'smrky.glb', sc, [{x: -22.234, y: 15.663, z: 12.116, r: 0}], false);	
 };
-
 
 function createStozar() {
 	const height = 12;
@@ -457,6 +463,7 @@ function createHangar() {
 	loadModel(scene, 'hangar_07.glb', 1, [{x: 24.574, y: -56.180, z: 6.553, r: toRad(22.1)}], true);
 	loadModel(scene, 'hangar_08.glb', 1, [{x: 30.704, y: -53.658, z: 6.553, r: toRad(22.1)}], true);
 	loadModel(scene, 'hangar_09.glb', 1, [{x: 27.639, y: -54.919, z: 8.695, r: toRad(22.1)}], true);
+	loadModel(scene, 'hangar_vazani.glb', 1, [{x: 27.610, y: -54.910, z: 7.485, r: toRad(22.1)}], false);
 };
 
 function createBirchTrees() {
@@ -624,6 +631,9 @@ function createControls() {
 }
 
 function createTerrain() {	
+	let grassTextureName = '../textures/trava_seamless.jpg';
+	loader.loadTexture(grassTextureName);	
+
 	loader.loadModel('../models/teren.glb', gltf => { 
 		const ground = gltf.scene.children[0];														
 		const meshes = [];
@@ -632,6 +642,12 @@ function createTerrain() {
 			n.receiveShadow = true;
 			meshes.push(n);
 		}});	
+			
+		const faceSide = 128;
+		const terrainWidthExtents = 140;
+		const terrainDepthExtents = 87.2;
+		const terrainWidth = faceSide;
+		const terrainDepth = faceSide;
 			
 		let heightMap = [];
 		let terrainMinHeight, terrainMaxHeight;
@@ -652,12 +668,7 @@ function createTerrain() {
 		ground.rotation.x = 0;
 		ground.rotation.y = 0;
 		ground.rotation.z = 0;	
-		const faceSide = 128;
-		ground.userData.terrainWidth = faceSide;
-		ground.userData.terrainDepth = faceSide;	
-		ground.userData.terrainWidthExtents = 140;
-		ground.userData.terrainDepthExtents = 87.2;
-		
+				
 		heightMap.sort((a, b) => {
 			let firstMult = 1;
 			let secondMult = 1;
@@ -689,13 +700,53 @@ function createTerrain() {
 			lz = heightMap[i].z;
 		}
 		heightMap = hMap;
+		
+		let geometry = new THREE.PlaneBufferGeometry(terrainWidthExtents, terrainDepthExtents, terrainWidth, terrainDepth);
+		geometry.rotateX(-Math.PI/2);	
+		const vertices = geometry.attributes.position.array;
+		for (let i = 0, j = 0, l = vertices.length; i < l; i++, j += 3)			
+			vertices[j + 1] = heightMap[i];	
+		geometry.computeVertexNormals();
+		
+		let texture = loader.getTexture(grassTextureName);
+		texture.wrapS = THREE.RepeatWrapping;
+		texture.wrapT = THREE.RepeatWrapping;
+		texture.anisotropy = 1;
+		texture.encoding = THREE.sRGBEncoding;
+		let rep = 100;
+		texture.repeat.set(rep, rep);
+		const material = new THREE.MeshLambertMaterial({map: texture});
+		material.metalness = 0;
+		material.roughness = 1;					
+/*
+		Object.keys(ground.material).forEach(function(key,index) {
+		  console.log(key + ": ground[" + ground.material[key] + "] material[" + material[key] + "]"); 
+		});
+		
+		Object.keys(texture).forEach(function(key,index) {
+		  console.log(key + ": ground[" + ground.material.map[key] + "] texture[" + texture[key] + "]"); 
+		});
+*/		
+		const plane = new THREE.Mesh(geometry, material);
+		plane.position.set(ground.position.x, ground.position.y, ground.position.z);
+		plane.scale.set(-1, 1, 1);
+		plane.rotation.y = Math.PI/2;	
+		plane.castShadow = false;
+		plane.receiveShadow = true;
+		
+		plane.userData.terrainWidth = terrainWidth;
+		plane.userData.terrainDepth = terrainDepth;	
+		plane.userData.terrainWidthExtents = terrainWidthExtents;
+		plane.userData.terrainDepthExtents = terrainDepthExtents;
 
-		ground.userData.terrainMinHeight = terrainMinHeight;
-		ground.userData.terrainMaxHeight = terrainMaxHeight;		
-		ground.userData.heightMap = heightMap;
+		plane.userData.terrainMinHeight = terrainMinHeight;
+		plane.userData.terrainMaxHeight = terrainMaxHeight;		
+		plane.userData.heightMap = heightMap;
 				
-		physics.addTerrain(ground, scene);		
-		scene.add(ground);
+		physics.addTerrain(plane, scene);
+		
+		scene.add(plane);
+		//scene.add(ground);
 	});	
 };
 
@@ -759,17 +810,20 @@ function init() {
 	
 	createControls();
 	createDayLight();
+	createTerrain();	
+	
+	/*
+	createSkybox();
 	createHouseLight();
 	
-	createTerrain();	
-	createSkybox();
-	
-	createStaryBarak();
 	createBirchTrees();
 	
-	createStozar();	
+	createStaryBarak();
+		
 	createStany();
 	createHangar();
+	createStozar();	
+	*/
 	
 	loader.performLoad(() => {
 		createPlayer();

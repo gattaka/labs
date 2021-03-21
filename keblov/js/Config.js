@@ -1,6 +1,6 @@
 let Config = {
 	phMargin: 0.1,
-	showPhHelpers: true,
+	showPhHelpers: false,
 	showScHelpers: false,
 	cachePhShapes: true,
 	savePlayerPosition: true,
