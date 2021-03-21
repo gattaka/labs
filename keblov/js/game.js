@@ -90,17 +90,20 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback, p
 				n.material.roughness = 1;				
 			}
 		}});
+		const merge = mergedGeometries && variants.length > 1 && model.geometry;
+		if (merge) console.log("Model " + name + " will be merged");
 		const box = processBoundingBox(model);
 		const instances = [];
 		variants.forEach(v => {
-			let instance = model.clone();			
+			let instance = merge ? model : model.clone();
 			// JS - Blender
 			// x = x
 			// y = z
 			// z = y			
-			instance.position.set(v.x * sc, v.z * sc, -v.y * sc);
-			instance.rotation.y = v.r;			
+			// rotace a translace musí být v tomto pořadí
 			if (v.ry !== undefined) instance.rotation.z = v.ry;			
+			instance.rotation.y = v.r;			
+			instance.position.set(v.x * sc, v.z * sc, -v.y * sc);
 			if (asPhysicsBody) {
 				let kinematic = true;
 				if (physicsDetails)
@@ -110,10 +113,11 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback, p
 			if (onCreateCallback !== undefined)
 				onCreateCallback(instance);
 			
-			if (mergedGeometries) {
+			if (merge) {
 				const geometryClone = model.geometry.clone();				
-				geometryClone.rotateY(v.r);
+				// rotace a translace musí být v tomto pořadí
 				if (v.ry !== undefined) geometryClone.rotateZ(v.ry);
+				geometryClone.rotateY(v.r);
 				geometryClone.translate(v.x, v.z, -v.y);				
 				instances.push(geometryClone);				
 			} else {
@@ -121,9 +125,11 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback, p
 			}
 		});
 		
-		if (mergedGeometries) {
+		if (merge) {
 			const mergeGeometry = BufferGeometryUtils.mergeBufferGeometries(instances);
 			const mergedMesh = new THREE.Mesh(mergeGeometry, model.material);
+			mergedMesh.castShadow = true; 
+			mergedMesh.receiveShadow = true;
 			scene.add(mergedMesh);
 		}
 	});
@@ -384,8 +390,6 @@ function createStaryBarak() {
 	loadModel(scene, 'dvere_marta.glb', sc, [{x: -8.589, y: 8.148, z: 2.116, r: 0}], true);
 	loadModel(scene, 'dvere_osetrovna.glb', sc, [{x: -3.483, y: -7.241, z: 2.066, r: toRad(-88.6)}], true);
 	loadModel(scene, 'dvere_drevnik.glb', sc, [{x: -13.354, y: 6.589, z: 2.066, r: 0}], true);
-			
-	loadModel(scene, 'smrky.glb', sc, [{x: -22.234, y: 15.663, z: 12.116, r: 0}], false);	
 };
 
 function createStozar() {
@@ -484,32 +488,9 @@ function createHangar() {
 	loadModel(scene, 'hangar_vazani.glb', 1, [{x: 27.610, y: -54.910, z: 7.485, r: toRad(22.1)}], false);
 };
 
-function createBirchTrees() {
-	loadModel(scene, 'birch/scene.gltf', 1.5, [{x: -1, y: 1, z: 0, r: toRad(0)}], false, model => {
-		model.scale.z = .5;
-		model.rotation.y = toRad(10);
-		model.rotation.x = toRad(-85);
-		
-		const configs = [
-			{sz: .5, px: 2, pz: 6, rx: -95, ry: 10, rz: 280},
-			{sz: .4, px: -1, pz: -3, rx: -95, ry: 9, rz: 280},
-			{sz: .4, px: -2, pz: -7, rx: -95, ry: 12, rz: 10},
-			{sz: .5, px: 3, pz: 10, rx: -95, ry: 8, rz: 280},
-			{sz: .4, px: 3, pz: 13, rx: -95, ry: 3, rz: 280},
-			{sz: .4, px: 4, pz: 13.5, rx: -95, ry: 5, rz: 180},
-		]
-		
-		configs.forEach(c => {
-			let mdl = model.clone();
-			mdl.scale.z = c.sz;
-			mdl.position.x += c.px;
-			mdl.position.z += c.pz;
-			mdl.rotation.x = toRad(c.rx);
-			mdl.rotation.y = toRad(c.ry);
-			mdl.rotation.z = toRad(c.rz);
-			scene.add(mdl);			
-		});
-	});
+function createStromy() {
+	loadModel(scene, 'brizy.glb', 1, [{x: 1.151, y: -3.228, z: 7.573, r: 0}], false);
+	loadModel(scene, 'smrky.glb', sc, [{x: 2.002, y: 13.288, z: 12.116, r: 0}], false);
 };
 
 // https://threejs.org/docs/#api/en/lights/SpotLight
@@ -833,18 +814,18 @@ function init() {
 	createTerrain();	
 	createSkybox();
 	createStany();
-	
-	/*
-	createHouseLight();
-	
-	createBirchTrees();
-	
-	createStaryBarak();
-		
 	createHangar();
 	createStozar();	
-	*/
 	
+	// až sem 45FPS na stroji bez GPU
+	
+	// zkusit ještě víc optimalizovat 
+	createStromy();
+	createStaryBarak();
+	
+	// každé další světlo je příšerná FPS zátěž
+	//createHouseLight();
+
 	loader.performLoad(() => {
 		createPlayer();
 		animate(0);	
