@@ -26,10 +26,25 @@
 			background: rgb(0 0 0 / 30%);
 			padding-top: 5px;
 			box-sizing: border-box;
+		}		
+		#physics-compile {
+			z-index: 999;
+			width: 90%;
+			height: 90%;
+			position: absolute;
+			overflow-x: scroll;
+			font-size: 12px;
+			font-family: monospace;
+			margin-left: auto;
+			margin-right: auto;
+			background: #fafafa;
+			white-space: pre;
+			display: none;
 		}
     </style>
 </head>
 <body>	
-	<div id="info"></div>	
+	<div id="info"></div>
+	<textarea id="physics-compile"></textarea>	
 </body>
 </html>

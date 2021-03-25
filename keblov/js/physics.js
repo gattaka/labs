@@ -24,7 +24,7 @@ Physics.processor = function (callback) {
 	let tempVecBt1, tempQuatBt1, transformAux1;
 	let cbContactResult;
 
-	const infoDiv = document.getElementById("info");
+	const physicsCompileOutput = document.getElementById("physics-compile");
 
 	//variable declaration section
 	let physicsWorld, dynamicObjects = [], tmpTrans = null	
@@ -108,7 +108,14 @@ Physics.processor = function (callback) {
 		physicsWorld.addConstraint(hinge, false);
 	};
 	
-	ret.addBoxObsticle = function(scene, pos, quat, scale, kinematic, mesh) {	
+	ret.addBoxObsticle = function(scene, pos, quat, scale, kinematic, mesh) {
+		if (!Config.useCompiledPhysics) {
+			let posCode = "new THREE.Vector3(" + pos.x + ", " + pos.y + ", " + pos.z + ")";
+			let quatCode = "new THREE.Quaternion(" + quat.x + ", " + quat.y + ", " + quat.z + ", " + quat.w + ")";
+			let scaleCode = "new THREE.Vector3(" + scale.x + ", " + scale.y + ", " + scale.z + ")";
+			physicsCompileOutput.value += "physics.addBoxObsticle(scene, " + posCode + ", " + quatCode + ", " + scaleCode + ", " + kinematic + ");\n";
+		}
+	
 		// when a rigid body has a mass of zero it means the body has infinite mass hence it is static
 		let mass = kinematic ? 0 : 1;				
 		if (showHelpers) {
@@ -142,8 +149,7 @@ Physics.processor = function (callback) {
 		
 		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
 		let body = new Ammo.btRigidBody(rbInfo);
-		
-		//body.setCollisionFlags((kinematic ? Physics.FLAGS.CF_KINEMATIC_OBJECT : 0) | 16);
+				
 		body.setCollisionFlags(16);
 
 		physicsWorld.addRigidBody(body, -1, -1);
