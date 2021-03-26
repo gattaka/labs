@@ -37,7 +37,7 @@ const br = toRad(16.0526);
 const sc = 1;	
 
 let KDebug = {	
-	instances: []
+	instances: [],
 };
 document.KDebug = KDebug;
 
@@ -97,26 +97,29 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback) {
 		if (merge) console.log("Model " + name + " will be merged");
 		const box = processBoundingBox(model);
 		const instances = [];
-		const materials = [];
-		variants.forEach(v => {
-			let instance = merge ? model : model.clone();
-			KDebug.instances.push(instance);
+		const materials = [];				
+		for (let i=0; i < variants.length; i++) {
+			let v = variants[i];
+			let instance = merge ? model : model.clone();			
 			// JS - Blender
 			// x = x
 			// y = z
 			// z = y		
 			
-			// rotace a translace musí být v tomto pořadí
-			if (v.rx !== undefined) instance.rotation.x = v.rx;
-			if (v.ry !== undefined) instance.rotation.z = v.ry;	
-			if (v.rz === undefined) v.rz = v.r;
-			instance.rotation.y = v.rz;
-			
 			let sx = sc, sy = sc, sz = sc;
 			if (v.sx !== undefined) sx = v.sx;
 			if (v.sy !== undefined) sy = v.sy;
 			if (v.sz !== undefined) sz = v.sz;
-			instance.position.set(v.x * sx, v.z * sz, -v.y * sy);
+			// nejprve scale, pak translate
+			instance.scale.set(sx, sz, sy);
+			
+			// rotace a translace musí být v tomto pořadí
+			if (v.rx !== undefined) instance.rotation.x = v.rx;
+			if (v.ry !== undefined) instance.rotation.z = -v.ry;	
+			if (v.rz === undefined) v.rz = v.r;
+			instance.rotation.y = v.rz;
+			
+			instance.position.set(v.x, v.z, -v.y);			
 			
 			if (!useCompiledPhysics && asPhysicsBody)
 				physics.addMeshObsticle(instance, scene, true, box.min, box.max);
@@ -125,23 +128,38 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback) {
 				onCreateCallback(instance);
 			
 			if (merge) {
-				const geometryClone = model.geometry.clone();				
-				// rotace a translace musí být v tomto pořadí
-				if (v.ry !== undefined) geometryClone.rotateZ(v.ry);
-				geometryClone.rotateY(v.rz);
-				geometryClone.translate(v.x, v.z, -v.y);				
-				instances.push(geometryClone);				
+				let modelNumber = 0;
+				instance.traverse(n => { if (n.isMesh) {
+					const geometryClone = n.geometry.clone();				
+					// nejprve scale, pak translate
+					geometryClone.scale(sx, sz, sy);
+					// rotace a translace musí být v tomto pořadí
+					if (v.rx !== undefined) geometryClone.rotateX(v.rx);
+					if (v.ry !== undefined) geometryClone.rotateZ(-v.ry);
+					geometryClone.rotateY(v.rz);
+					geometryClone.translate(v.x, v.z, -v.y);
+					if (i == 0) {
+						materials[modelNumber] = n.material;
+						instances.push([]);
+					}
+					instances[modelNumber].push(geometryClone);
+					modelNumber++;
+				}});							
 			} else {
 				scene.add(instance);
 			}
-		});
+		};
 		
 		if (merge) {
-			const mergeGeometry = BufferGeometryUtils.mergeBufferGeometries(instances);
-			const mergedMesh = new THREE.Mesh(mergeGeometry, model.material);
-			mergedMesh.castShadow = true; 
-			mergedMesh.receiveShadow = true;
-			scene.add(mergedMesh);
+			for (let i=0; i < materials.length; i++) {
+				const variantInstances = instances[i];
+				const modelMaterial = materials[i];
+				const mergeGeometry = BufferGeometryUtils.mergeBufferGeometries(variantInstances);
+				const mergedMesh = new THREE.Mesh(mergeGeometry, modelMaterial);
+				mergedMesh.castShadow = true; 
+				mergedMesh.receiveShadow = true;
+				scene.add(mergedMesh);
+			}
 		}
 	});
 };
@@ -149,11 +167,12 @@ function loadModel(scene, name, sc, variants, asPhysicsBody, onCreateCallback) {
 function toRad(degree) {
 	return Math.PI * degree / 180;
 };
+KDebug.toRad = toRad;
 
 function createStaryBarak() {		
 	if (useCompiledPhysics) {
 		// tohle jako jeden mesh je podstatně rychlejší (asi +50FPS)
-		loadModel(scene, 'barak_joined.glb', 1, [{x: -6.948, y: -3.513, z: 2.202, r: br}], true);
+		loadModel(scene, 'barak_joined.glb', 1, [{x: -7.070, y: -4.187, z: 2.274, r: 0}], false);
 	} else {
 		createStaryBarakChunks();
 	}
@@ -216,7 +235,7 @@ function createStaryBarak() {
 	
 	const lavickaLakovanaVariants = [	
 		{x: -8.025, y: -8.227, z: 1.396, r: br},
-		{x: -7.732, y: -6.817, z: 1.396, r: br},,
+		{x: -7.732, y: -6.817, z: 1.396, r: br},
 		{x: -8.712, y: -4.354, z: 1.396, r: br},
 		{x: -8.925, y: -5.817, z: 1.396, r: toRad(106)},
 	];
@@ -239,6 +258,24 @@ function createStaryBarak() {
 		{x: -12.643, y: 2.802, z: 1.551, r: br},
 	];
 	loadModel(scene, 'stul_jidelna.glb', sc, stulJidelnaVariants, true);
+	
+	const pudaTramVariants = [
+		{x: -10.089, y: 5.393, z: 4.418, r: br},
+		{x: -9.535, y: 3.471, z: 4.418, r: br},
+		{x: -8.982, y: 1.549, z: 4.418, r: br},
+		{x: -8.429, y: -0.373, z: 4.418, r: br},
+		{x: -7.876, y: -2.295, z: 4.418, r: br},
+		{x: -7.323, y: -4.217, z: 4.418, r: br},
+		{x: -6.770, y: -6.139, z: 4.418, r: br},
+		{x: -6.217, y: -8.061, z: 4.418, r: br},
+		{x: -5.664, y: -9.983, z: 4.418, r: br},
+		{x: -5.111, y: -11.905, z: 4.418, r: br},
+		{x: -4.558, y: -13.827, z: 4.418, r: br},
+	];
+	loadModel(scene, 'puda_tram.glb', sc, pudaTramVariants, false);		
+
+	// chyba v UV mapování mi znemožňuje model začlenit do join modelu aniž by ztratil textury
+	loadModel(scene, 'kamna.glb', sc, [{x: -3.846, y: -12.937, z: 1.949, r: br}], true);
 };
 
 function createStaryBarakChunks() {		
@@ -314,19 +351,16 @@ function createStaryBarakChunks() {
 	loadModel(scene, 'keblov_stary_puda_stit_vychod_02.glb', sc, [{x: -11.080, y: 7.037, z: 5.325, r: br}], true);
 	loadModel(scene, 'keblov_stary_puda_stit_vychod_03.glb', sc, [{x: -11.090, y: 7.031, z: 3.369, r: br}], true);
 	loadModel(scene, 'keblov_stary_puda_stit_vychod_04.glb', sc, [{x: -8.863, y: 7.674, z: 4.498, r: br}], true);
-	loadModel(scene, 'keblov_stary_puda_stit_vychod_dvere.glb', sc, [{x: -11.685, y: 7.338, z: 4.486, r: 0}], true);		
-	
-	loadModel(scene, 'keblov_stary_puda_tramy.glb', sc, [{x: -7.323, y: -4.217, z: 4.418, r: br}], false);			
+	loadModel(scene, 'keblov_stary_puda_stit_vychod_dvere.glb', sc, [{x: -11.685, y: 7.338, z: 4.486, r: 0}], true);			
 	
 	const strechaVariants = [
 		{x: -5.382, y: -3.698, z: 4.484, r: toRad(376), ry: toRad(58.7)},
 		{x: -9.240, y: -4.811, z: 4.484, r: toRad(196), ry: toRad(58.7)},
 	];
 	loadModel(scene, 'keblov_stary_strecha.glb', sc, strechaVariants, true);
-					
-	loadModel(scene, 'kamna.glb', sc, [{x: -3.846, y: -12.937, z: 1.949, r: br}], true);	
+						
 	const stulPolovodiceVariants = [
-		{x: -3.117, y: -12.05, z: 1.557, r: br},
+		{x: -3.158, y: -12.062, z: 1.557, r: br},
 		{x: -8.57, y: -9.665, z: 1.557, r: br}
 	];
 	loadModel(scene, 'stul_polovodice.glb', sc, stulPolovodiceVariants, true);	
@@ -383,7 +417,7 @@ function createStaryBarakChunks() {
 	loadModel(scene, 'kuchyne_stul_krajec.glb', sc, [{x: -5.542, y: 1.299, z: 1.545, r: br}], true);		
 	loadModel(scene, 'kuchyne_skrin_hrnce.glb', sc, [{x: -5.861, y: 2.537, z: 1.495, r: br}], true);
 	loadModel(scene, 'kuchyne_police_koreni.glb', sc, [{x: -5.428, y: 1.488, z: 2.610, r: br}], true);
-	loadModel(scene, 'kuchyne_skrin_svicky.glb', sc, [{x: -9.869, y: -0.292, z: 1.956, r: br}], true);
+	loadModel(scene, 'kuchyne_skrin_svicky.glb', sc, [{x: -9.841, y: -0.390, z: 1.956, r: br}], true);
 	loadModel(scene, 'kuchyne_skrin_hrnky.glb', sc, [{x: -7.962, y: -0.669, z: 1.956, r: br}], true);	
 	loadModel(scene, 'talire.glb', sc, [{x: -7.933, y: -0.780, z: 2.566, r: br}], true);
 	const zidleCervenaVariants = [
@@ -410,11 +444,27 @@ function createStaryBarakChunks() {
 		{x: -10.582, y: 1.841, z: 2.075, r: toRad(337)},		
 	];
 	loadModel(scene, 'kuchyne_dvere.glb', sc, kuchyneDvereVariants, true);	
+	loadModel(scene, 'okap.glb', sc, [{x: -3.444, y: -3.130, z: 3.147, r: br}], true);
 	loadModel(scene, 'plechove_dvere.glb', sc, [{x: -1.124, y: -11.221, z: 2.071, r: 0}], true);
 	loadModel(scene, 'dilna_okno.glb', sc, [{x: -6.094, y: -16.650, z: 2.496, r: 0}], true);
 	loadModel(scene, 'dvere_marta.glb', sc, [{x: -8.589, y: 8.148, z: 2.116, r: 0}], true);
 	loadModel(scene, 'dvere_osetrovna.glb', sc, [{x: -3.483, y: -7.241, z: 2.066, r: toRad(-88.6)}], true);
-	loadModel(scene, 'dvere_drevnik.glb', sc, [{x: -13.354, y: 6.589, z: 2.066, r: 0}], true);
+	loadModel(scene, 'dvere_marodka.glb', sc, [{x: -2.334, y: -11.724, z: 2.094, r: 0}], true);
+	loadModel(scene, 'dvere_dilna.glb', sc, [{x: -6.078, y: -12.377, z: 2.110, r: 0}], true);
+	loadModel(scene, 'dvere_koupelna.glb', sc, [{x: -11.124, y: 4.700, z: 2.110, r: 0}], true);	
+		
+	loadModel(scene, 'sklo_koupelna.glb', sc, [{x: -11.064, y: 7.046, z: 2.489, r: br}], false);	
+	
+	const drevnikDvereVariants = [
+		{x: -13.133, y: 6.862, z: 2.066, r: 0},
+		{x: -8.997, y: -0.976, z: 2.066, r: toRad(-4.02)},		
+	];
+	loadModel(scene, 'dvere_drevnik.glb', sc, drevnikDvereVariants, true);
+	
+	loadModel(scene, 'vrata.glb', sc, [{x: -3.380, y: -4.018, z: 2.074, r: 0}], true);
+	loadModel(scene, 'vrata2.glb', sc, [{x: -4.405, y: -0.547, z: 2.074, r: 0}], true);
+	
+	loadModel(scene, 'okap.glb', sc, [{x: -3.444, y: -3.130, z: 3.147, r: br}], true);
 };
 
 function createStozar() {
@@ -501,6 +551,15 @@ function createStany() {
 }
 
 function createHangar() {	
+if (useCompiledPhysics) {
+		// tohle jako jeden mesh je podstatně rychlejší 
+		loadModel(scene, 'hangar_joined.glb', 1, [{x: 27.639, y: -54.919, z: 8.695, r: toRad(22.1)}], false);
+	} else {
+		createHangarChunks();
+	}
+}
+
+function createHangarChunks() {	
 	loadModel(scene, 'hangar_01.glb', 1, [{x: 27.798, y: -61.014, z: 6.603, r: toRad(22.1)}], true);
 	loadModel(scene, 'hangar_02.glb', 1, [{x: 31.730, y: -59.440, z: 6.605, r: toRad(22.1)}], true);
 	loadModel(scene, 'hangar_03.glb', 1, [{x: 29.828, y: -60.455, z: 7.608, r: toRad(22.1)}], true);
@@ -518,7 +577,12 @@ function createStromy() {
 	//loadModel(scene, 'smrky.glb', sc, [{x: 2.002, y: 13.288, z: 12.116, r: 0}], false);
 	
 	const brizaVariants = [
-		{x: 1.69008, y: -11.3279, z: -1.01911, rx: toRad(11), ry: toRad(1.11), rz: toRad(84.3), sx: 1.058, sy: 1.051, sz: 0.831}
+		{x: 1.690, y: -11.327, z: -1.019, rx: toRad(11), ry: toRad(1.11), rz: toRad(84.3), sx: 1.058, sy: 1.051, sz: 0.831}, 
+		{x: 1.330, y: -9.970, z: -0.155, rx: toRad(-5.05), ry: toRad(4.59), rz: toRad(-47.8), sx: 1.420, sy: 1.419, sz: 0.878},
+		{x: 0.048, y: -5.259, z: -0.178, rx: toRad(-7.36), ry: toRad(7.64), rz: toRad(-11.3), sx: 1.450, sy: 1.458, sz: 0.778},
+		{x: -1.748, y: 0.985, z: -0.523, rx: toRad(-14.2), ry: toRad(-2.4), rz: toRad(-109), sx: 1.498, sy: 1.459, sz: 0.873},
+		{x: -2.449, y: 3.422, z: -0.178, rx: toRad(-5.72), ry: toRad(0), rz: toRad(-56), sx: 0.748, sy: 0.747, sz: 0.582},
+		{x: -3.819, y: 8.182, z: -0.178, rx: toRad(0), ry: toRad(8.67), rz: toRad(16.1), sx: 0.995, sy: 1.000, sz: 0.782},
 	];
 	loadModel(scene, 'briza.glb', 1, brizaVariants, false);
 };
