@@ -176,103 +176,6 @@ function createStaryBarak() {
 	} else {
 		createStaryBarakChunks();
 	}
-		
-	// Merged geometry optimalizace
-	
-	const schodVariants = [];
-	const schod1 = {x: -4.62629, y: -12.479, z: 1.18457, r: br};
-	const schod2 = {x: -4.80439, y: -12.5303, z: 1.41163, r: br};
-	const xStep = schod2.x - schod1.x;
-	const yStep = schod2.y - schod1.y;
-	const zStep = schod2.z - schod1.z;
-	for (let i = 0; i < 10; i++)
-		schodVariants.push({x: schod1.x + i * xStep, y: schod1.y + i * yStep, z: schod1.z + i * zStep, r: br});
-	loadModel(scene, 'schod.glb', sc, schodVariants, true);
-	
-	const oknaVariants = [
-		{x: -4.897, y: 0.538, z: 2.495, r: br},
-		{x: -3.382, y: -4.727, z: 2.495, r: br},
-		{x: -2.989, y: -6.092, z: 2.495, r: br},
-		{x: -2.165, y: -8.955, z: 2.495, r: br},
-		{x: -1.330, y: -11.858, z: 2.495, r: br},
-		{x: -2.344, y: -15.225, z: 2.495, r: br - toRad(90)},
-		{x: -4.468, y: -15.836, z: 2.495, r: br - toRad(90)},
-		{x: -9.233, y: -10.823, z: 2.490, r: br + toRad(180)},
-		{x: -10.067, y: -7.925, z: 2.490, r: br + toRad(180)},
-		{x: -10.657, y: -5.872, z: 2.490, r: br + toRad(180)},
-		{x: -11.253, y: -3.802, z: 2.490, r: br + toRad(180)},
-		{x: -11.062, y: 7.034, z: 2.495, r: br + toRad(90)},
-		{x: -6.415, y: 5.814, z: 2.495, r: br},
-		{x: -5.826, y: 3.767, z: 2.495, r: br},
-		{x: -5.461, y: 2.499, z: 2.495, r: br},		
-	];
-	loadModel(scene, 'keblov_stary_okno.glb', sc, oknaVariants, false);
-	
-	const posteleVariants = [
-		{x: -1.827, y: -13.966, z: 1.477, r: br},
-		{x: -2.697, y: -14.216, z: 1.477, r: br},
-		{x: -4.546, y: -15.268, z: 1.477, r: toRad(106)},
-		{x: -5.016, y: -13.633, z: 1.477, r: toRad(106)},
-		{x: -8.130, y: 6.761, z: 1.477, r: br},
-		{x: -7.395, y: -11.122, z: 3.709, r: toRad(106)},
-		{x: -7.713, y: -10.016, z: 3.709, r: toRad(106)},
-		{x: -7.966, y: -9.137, z: 3.709, r: toRad(106)},
-		{x: -8.265, y: -8.098, z: 3.709, r: toRad(106)},
-		{x: -8.519, y: -7.215, z: 3.709, r: toRad(106)},
-		{x: -8.819, y: -6.173, z: 3.709, r: toRad(106)},
-	];
-	loadModel(scene, 'postel.glb', sc, posteleVariants, true);
-	
-	const kominkyVariants = [
-		{x: -4.166, y: -12.639, z: 6.188, r: 0},
-		{x: -5.109, y: -10.778, z: 6.188, r: 0},
-		{x: -7.990, y: 4.302, z: 5.968, r: 0},
-		{x: -8.371, y: 4.192, z: 6.084, r: 0},
-		{x: -8.746, y: 4.084, z: 6.105, r: 0},
-		{x: -9.116, y: 3.978, z: 6.048, r: 0},
-	];
-	loadModel(scene, 'keblov_stary_kominek.glb', sc, kominkyVariants, true);
-	
-	const lavickaLakovanaVariants = [	
-		{x: -8.025, y: -8.227, z: 1.396, r: br},
-		{x: -7.732, y: -6.817, z: 1.396, r: br},
-		{x: -8.712, y: -4.354, z: 1.396, r: br},
-		{x: -8.925, y: -5.817, z: 1.396, r: toRad(106)},
-	];
-	loadModel(scene, 'lavicka_lakovana.glb', sc, lavickaLakovanaVariants, true);	
-	
-	const stulJidelnaVariants = [
-		{x: -7.4435, y: -7.423, z: 1.551, r: br},
-		{x: -8.230, y: -7.649, z: 1.551, r: br},
-		{x: -9.021, y: -7.877, z: 1.551, r: br},
-		{x: -9.248, y: -7.09, z: 1.551, r: br},
-		{x: -9.474, y: -6.302, z: 1.551, r: br},
-		{x: -9.702, y: -5.512, z: 1.551, r: br},
-		{x: -9.929, y: -4.724, z: 1.551, r: br},
-		{x: -10.157, y: -3.932, z: 1.551, r: br},
-		{x: -9.367, y: -3.705, z: 1.551, r: br},
-		{x: -8.577, y: -3.478, z: 1.551, r: br},
-		{x: -7.789, y: -3.251, z: 1.551, r: br},
-		{x: -12.093, y: 0.889, z: 1.551, r: br},
-		{x: -12.411, y: 1.995, z: 1.551, r: br},
-		{x: -12.643, y: 2.802, z: 1.551, r: br},
-	];
-	loadModel(scene, 'stul_jidelna.glb', sc, stulJidelnaVariants, true);
-	
-	const pudaTramVariants = [
-		{x: -10.089, y: 5.393, z: 4.418, r: br},
-		{x: -9.535, y: 3.471, z: 4.418, r: br},
-		{x: -8.982, y: 1.549, z: 4.418, r: br},
-		{x: -8.429, y: -0.373, z: 4.418, r: br},
-		{x: -7.876, y: -2.295, z: 4.418, r: br},
-		{x: -7.323, y: -4.217, z: 4.418, r: br},
-		{x: -6.770, y: -6.139, z: 4.418, r: br},
-		{x: -6.217, y: -8.061, z: 4.418, r: br},
-		{x: -5.664, y: -9.983, z: 4.418, r: br},
-		{x: -5.111, y: -11.905, z: 4.418, r: br},
-		{x: -4.558, y: -13.827, z: 4.418, r: br},
-	];
-	loadModel(scene, 'puda_tram.glb', sc, pudaTramVariants, false);		
 
 	// chyba v UV mapování mi znemožňuje model začlenit do join modelu aniž by ztratil textury
 	loadModel(scene, 'kamna.glb', sc, [{x: -3.846, y: -12.937, z: 1.949, r: br}], true);
@@ -354,8 +257,8 @@ function createStaryBarakChunks() {
 	loadModel(scene, 'keblov_stary_puda_stit_vychod_dvere.glb', sc, [{x: -11.685, y: 7.338, z: 4.486, r: 0}], true);			
 	
 	const strechaVariants = [
-		{x: -5.382, y: -3.698, z: 4.484, r: toRad(376), ry: toRad(58.7)},
-		{x: -9.240, y: -4.811, z: 4.484, r: toRad(196), ry: toRad(58.7)},
+		{x: -5.382, y: -3.698, z: 4.484, r: toRad(376), ry: toRad(-58.7)},
+		{x: -9.240, y: -4.811, z: 4.484, r: toRad(196), ry: toRad(-58.7)},
 	];
 	loadModel(scene, 'keblov_stary_strecha.glb', sc, strechaVariants, true);
 						
@@ -465,6 +368,103 @@ function createStaryBarakChunks() {
 	loadModel(scene, 'vrata2.glb', sc, [{x: -4.405, y: -0.547, z: 2.074, r: 0}], true);
 	
 	loadModel(scene, 'okap.glb', sc, [{x: -3.444, y: -3.130, z: 3.147, r: br}], true);
+	
+	// Merged geometry optimalizace
+	
+	const schodVariants = [];
+	const schod1 = {x: -4.62629, y: -12.479, z: 1.18457, r: br};
+	const schod2 = {x: -4.80439, y: -12.5303, z: 1.41163, r: br};
+	const xStep = schod2.x - schod1.x;
+	const yStep = schod2.y - schod1.y;
+	const zStep = schod2.z - schod1.z;
+	for (let i = 0; i < 10; i++)
+		schodVariants.push({x: schod1.x + i * xStep, y: schod1.y + i * yStep, z: schod1.z + i * zStep, r: br});
+	loadModel(scene, 'schod.glb', sc, schodVariants, true);
+	
+	const oknaVariants = [
+		{x: -4.897, y: 0.538, z: 2.495, r: br},
+		{x: -3.382, y: -4.727, z: 2.495, r: br},
+		{x: -2.989, y: -6.092, z: 2.495, r: br},
+		{x: -2.165, y: -8.955, z: 2.495, r: br},
+		{x: -1.330, y: -11.858, z: 2.495, r: br},
+		{x: -2.344, y: -15.225, z: 2.495, r: br - toRad(90)},
+		{x: -4.468, y: -15.836, z: 2.495, r: br - toRad(90)},
+		{x: -9.233, y: -10.823, z: 2.490, r: br + toRad(180)},
+		{x: -10.067, y: -7.925, z: 2.490, r: br + toRad(180)},
+		{x: -10.657, y: -5.872, z: 2.490, r: br + toRad(180)},
+		{x: -11.253, y: -3.802, z: 2.490, r: br + toRad(180)},
+		{x: -11.062, y: 7.034, z: 2.495, r: br + toRad(90)},
+		{x: -6.415, y: 5.814, z: 2.495, r: br},
+		{x: -5.826, y: 3.767, z: 2.495, r: br},
+		{x: -5.461, y: 2.499, z: 2.495, r: br},		
+	];
+	loadModel(scene, 'keblov_stary_okno.glb', sc, oknaVariants, false);
+	
+	const posteleVariants = [
+		{x: -1.827, y: -13.966, z: 1.477, r: br},
+		{x: -2.697, y: -14.216, z: 1.477, r: br},
+		{x: -4.546, y: -15.268, z: 1.477, r: toRad(106)},
+		{x: -5.016, y: -13.633, z: 1.477, r: toRad(106)},
+		{x: -8.130, y: 6.761, z: 1.477, r: br},
+		{x: -7.395, y: -11.122, z: 3.709, r: toRad(106)},
+		{x: -7.713, y: -10.016, z: 3.709, r: toRad(106)},
+		{x: -7.966, y: -9.137, z: 3.709, r: toRad(106)},
+		{x: -8.265, y: -8.098, z: 3.709, r: toRad(106)},
+		{x: -8.519, y: -7.215, z: 3.709, r: toRad(106)},
+		{x: -8.819, y: -6.173, z: 3.709, r: toRad(106)},
+	];
+	loadModel(scene, 'postel.glb', sc, posteleVariants, true);
+	
+	const kominkyVariants = [
+		{x: -4.166, y: -12.639, z: 6.188, r: 0},
+		{x: -5.109, y: -10.778, z: 6.188, r: 0},
+		{x: -7.990, y: 4.302, z: 5.968, r: 0},
+		{x: -8.371, y: 4.192, z: 6.084, r: 0},
+		{x: -8.746, y: 4.084, z: 6.105, r: 0},
+		{x: -9.116, y: 3.978, z: 6.048, r: 0},
+	];
+	loadModel(scene, 'keblov_stary_kominek.glb', sc, kominkyVariants, true);
+	
+	const lavickaLakovanaVariants = [	
+		{x: -8.025, y: -8.227, z: 1.396, r: br},
+		{x: -7.732, y: -6.817, z: 1.396, r: br},
+		{x: -8.712, y: -4.354, z: 1.396, r: br},
+		{x: -8.925, y: -5.817, z: 1.396, r: toRad(106)},
+	];
+	loadModel(scene, 'lavicka_lakovana.glb', sc, lavickaLakovanaVariants, true);	
+	
+	const stulJidelnaVariants = [
+		{x: -7.4435, y: -7.423, z: 1.551, r: br},
+		{x: -8.230, y: -7.649, z: 1.551, r: br},
+		{x: -9.021, y: -7.877, z: 1.551, r: br},
+		{x: -9.248, y: -7.09, z: 1.551, r: br},
+		{x: -9.474, y: -6.302, z: 1.551, r: br},
+		{x: -9.702, y: -5.512, z: 1.551, r: br},
+		{x: -9.929, y: -4.724, z: 1.551, r: br},
+		{x: -10.157, y: -3.932, z: 1.551, r: br},
+		{x: -9.367, y: -3.705, z: 1.551, r: br},
+		{x: -8.577, y: -3.478, z: 1.551, r: br},
+		{x: -7.789, y: -3.251, z: 1.551, r: br},
+		{x: -12.093, y: 0.889, z: 1.551, r: br},
+		{x: -12.411, y: 1.995, z: 1.551, r: br},
+		{x: -12.643, y: 2.802, z: 1.551, r: br},
+	];
+	loadModel(scene, 'stul_jidelna.glb', sc, stulJidelnaVariants, true);
+	
+	const pudaTramVariants = [
+		{x: -10.089, y: 5.393, z: 4.418, r: br},
+		{x: -9.535, y: 3.471, z: 4.418, r: br},
+		{x: -8.982, y: 1.549, z: 4.418, r: br},
+		{x: -8.429, y: -0.373, z: 4.418, r: br},
+		{x: -7.876, y: -2.295, z: 4.418, r: br},
+		{x: -7.323, y: -4.217, z: 4.418, r: br},
+		{x: -6.770, y: -6.139, z: 4.418, r: br},
+		{x: -6.217, y: -8.061, z: 4.418, r: br},
+		{x: -5.664, y: -9.983, z: 4.418, r: br},
+		{x: -5.111, y: -11.905, z: 4.418, r: br},
+		{x: -4.558, y: -13.827, z: 4.418, r: br},
+	];
+	loadModel(scene, 'puda_tram.glb', sc, pudaTramVariants, false);	
 };
 
 function createStozar() {
@@ -507,7 +507,11 @@ function createStozar() {
 }
 
 function createStany() {
-	const sc = 1;
+	if (useCompiledPhysics) {		
+		loadModel(scene, 'stany_joined.glb', 1, [{x: -3.5722, y: 30.731, z: 0.835, r: 0}], false);
+		return;
+	} 
+	
 	const br2 = br - toRad(90);
 	const br3 = br + toRad(180);
 	const stanVariants = [
@@ -551,30 +555,46 @@ function createStany() {
 }
 
 function createHangar() {	
-if (useCompiledPhysics) {
+	if (useCompiledPhysics) {
 		// tohle jako jeden mesh je podstatně rychlejší 
 		loadModel(scene, 'hangar_joined.glb', 1, [{x: 27.639, y: -54.919, z: 8.695, r: toRad(22.1)}], false);
 	} else {
-		createHangarChunks();
+		loadModel(scene, 'hangar_01.glb', 1, [{x: 27.798, y: -61.014, z: 6.603, r: toRad(22.1)}], true);
+		loadModel(scene, 'hangar_02.glb', 1, [{x: 31.730, y: -59.440, z: 6.605, r: toRad(22.1)}], true);
+		loadModel(scene, 'hangar_03.glb', 1, [{x: 29.828, y: -60.455, z: 7.608, r: toRad(22.1)}], true);
+		loadModel(scene, 'hangar_04.glb', 1, [{x: 27.471, y: -48.827, z: 6.603, r: toRad(22.1)}], true);
+		loadModel(scene, 'hangar_05.glb', 1, [{x: 23.543, y: -50.401, z: 6.605, r: toRad(22.1)}], true);
+		loadModel(scene, 'hangar_06.glb', 1, [{x: 25.435, y: -49.388, z: 7.608, r: toRad(22.1)}], true);
+		loadModel(scene, 'hangar_07.glb', 1, [{x: 24.574, y: -56.180, z: 6.553, r: toRad(22.1)}], true);
+		loadModel(scene, 'hangar_08.glb', 1, [{x: 30.704, y: -53.658, z: 6.553, r: toRad(22.1)}], true);
+		loadModel(scene, 'hangar_09.glb', 1, [{x: 27.639, y: -54.919, z: 8.695, r: toRad(22.1)}], true);
+		loadModel(scene, 'hangar_vazani.glb', 1, [{x: 27.610, y: -54.910, z: 7.485, r: toRad(22.1)}], false);
 	}
 }
 
-function createHangarChunks() {	
-	loadModel(scene, 'hangar_01.glb', 1, [{x: 27.798, y: -61.014, z: 6.603, r: toRad(22.1)}], true);
-	loadModel(scene, 'hangar_02.glb', 1, [{x: 31.730, y: -59.440, z: 6.605, r: toRad(22.1)}], true);
-	loadModel(scene, 'hangar_03.glb', 1, [{x: 29.828, y: -60.455, z: 7.608, r: toRad(22.1)}], true);
-	loadModel(scene, 'hangar_04.glb', 1, [{x: 27.471, y: -48.827, z: 6.603, r: toRad(22.1)}], true);
-	loadModel(scene, 'hangar_05.glb', 1, [{x: 23.543, y: -50.401, z: 6.605, r: toRad(22.1)}], true);
-	loadModel(scene, 'hangar_06.glb', 1, [{x: 25.435, y: -49.388, z: 7.608, r: toRad(22.1)}], true);
-	loadModel(scene, 'hangar_07.glb', 1, [{x: 24.574, y: -56.180, z: 6.553, r: toRad(22.1)}], true);
-	loadModel(scene, 'hangar_08.glb', 1, [{x: 30.704, y: -53.658, z: 6.553, r: toRad(22.1)}], true);
-	loadModel(scene, 'hangar_09.glb', 1, [{x: 27.639, y: -54.919, z: 8.695, r: toRad(22.1)}], true);
-	loadModel(scene, 'hangar_vazani.glb', 1, [{x: 27.610, y: -54.910, z: 7.485, r: toRad(22.1)}], false);
-};
+function createKadibudka() {
+	if (useCompiledPhysics) {
+		// tohle jako jeden mesh je podstatně rychlejší 
+		loadModel(scene, 'kadibudka_joined.glb', 1, [{x: -4.054, y: -24.483, z: 3.440, r: br}], false);
+		return;
+	} 
+	
+	loadModel(scene, 'kadibudka_dvere_hromada.glb', 1, [{x: -3.226, y: -22.613, z: 2.492, r: 0}], true);
+	loadModel(scene, 'kadibudka_dvere.glb', 1, [{x: -3.591, y: -22.516, z: 3.488, r: 0}], true);
+	loadModel(scene, 'kadibudka1.glb', 1, [{x: -4.089, y: -24.736, z: 4.531, r: br}], true);
+	loadModel(scene, 'kadibudka2.glb', 1, [{x: -2.521, y: -26.813, z: 3.593, r: br}], true);
+	loadModel(scene, 'kadibudka3.glb', 1, [{x: -3.374, y: -23.809, z: 3.593, r: br}], true);
+	loadModel(scene, 'kadibudka4.glb', 1, [{x: -4.577, y: -24.872, z: 3.559, r: br}], true);
+	loadModel(scene, 'kadibudka5.glb', 1, [{x: -4.361, y: -22.242, z: 3.511, r: br}], true);
+	loadModel(scene, 'kadibudka6.glb', 1, [{x: -4.096, y: -24.734, z: 2.487, r: br}], true);	
+}
 
 function createStromy() {
-	//loadModel(scene, 'brizy.glb', 1, [{x: 1.151, y: -3.228, z: 7.573, r: 0}], false);
-	//loadModel(scene, 'smrky.glb', sc, [{x: 2.002, y: 13.288, z: 12.116, r: 0}], false);
+	if (useCompiledPhysics) {
+		loadModel(scene, 'smrky_joined.glb', sc, [{x: 2.002, y: 13.288, z: 12.116, r: 0}], false);
+		loadModel(scene, 'brizy_joined.glb', sc, [{x: 0.53, y: -2.413, z: 7.157, r: 0}], false);
+		return;
+	}
 	
 	const brizaVariants = [
 		{x: 1.690, y: -11.327, z: -1.019, rx: toRad(11), ry: toRad(1.11), rz: toRad(84.3), sx: 1.058, sy: 1.051, sz: 0.831}, 
@@ -907,21 +927,18 @@ function init() {
 	
 	createTerrain();	
 	createSkybox();
-	createStany();
-	createHangar();
 	createStozar();	
 	
-	// až sem 45FPS na stroji bez GPU
+	if (useCompiledPhysics) {
+		ScenePhysicsBlueprint.build(scene, physics);
+		//loadModel(scene, 'keblov_all.glb', sc, [{x: -4.4754, y: 12.2, z: 7.341, r: br}], false);
+	} 
 	
-	// zkusit ještě víc optimalizovat 
+	createStany();
+	createHangar();
 	createStromy();	
 	createStaryBarak();	
-	
-	// každé další světlo je příšerná FPS zátěž
-	//createHouseLight();
-	
-	if (useCompiledPhysics) 
-		ScenePhysicsBlueprint.build(scene, physics);
+	createKadibudka();
 
 	loader.performLoad(() => {
 		createPlayer();
