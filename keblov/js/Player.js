@@ -46,19 +46,21 @@ let Player = function (info, camera, physics, pos) {
 		controller = new Ammo.btKinematicCharacterController(ghostObject, colShape, stepHeight, 1);
 		controller.setJumpSpeed(jumpSpeed);
 		controller.setMaxSlope(maxSlopeRadians);
-		controller.setUseGhostSweepTest(true);
+		// pokud je tohle true, tak jsou hned po startu kolize chvíli z nějakého důvodu ignorovány
+		// a až poté, co hráč propadne povrchem a resetuju ho, začne vše fungovat -- neznám důvod
+		controller.setUseGhostSweepTest(false);
 		controller.setGravity(-physics.getPhysicsWorld().getGravity().y());
-
+			
 		physics.getPhysicsWorld().addCollisionObject(ghostObject, 32, -1);
 		physics.getPhysicsWorld().addAction(controller);
 		physics.getPhysicsWorld().getBroadphase().getOverlappingPairCache().setInternalGhostPairCallback(new Ammo.btGhostPairCallback());
+		
+		console.log(JSON.stringify(ghostObject));
 	};
 	init();
 	
-	ret.update = function(delta) {
-		
-		ghostObject.activate(true);
-		
+	ret.update = function(delta) {		
+
 		// Update 
 			
 		currentPos = controller.getGhostObject().getWorldTransform().getOrigin();		
@@ -87,13 +89,14 @@ let Player = function (info, camera, physics, pos) {
 		
 		if (keys.jump > 0 && controller.canJump())
 			controller.jump();
-			
+		
+		// workaround proti sklouzávání po svahu
 		if (firstReset || !controller.onGround() || moveX != 0 || moveZ != 0) {
 			controller.setGravity(-physics.getPhysicsWorld().getGravity().y());
 		} else {
 			controller.setGravity(0);
 		}
-	
+		
 		controller.setWalkDirection(new Ammo.btVector3(moveX, 0, moveZ));		
 	}
 	

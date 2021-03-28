@@ -90,15 +90,7 @@ Terrain.create = function(loader, physics, scene) {
 		const material = new THREE.MeshLambertMaterial({map: texture});
 		material.metalness = 0;
 		material.roughness = 1;					
-/*
-		Object.keys(ground.material).forEach(function(key,index) {
-		  console.log(key + ": ground[" + ground.material[key] + "] material[" + material[key] + "]"); 
-		});
 		
-		Object.keys(texture).forEach(function(key,index) {
-		  console.log(key + ": ground[" + ground.material.map[key] + "] texture[" + texture[key] + "]"); 
-		});
-*/		
 		const plane = new THREE.Mesh(geometry, material);
 		plane.position.set(ground.position.x, ground.position.y, ground.position.z);
 		plane.scale.set(-1, 1, 1);

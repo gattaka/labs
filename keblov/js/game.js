@@ -194,6 +194,8 @@ function init() {
 	document.body.appendChild(renderer.domElement);
 	window.addEventListener('resize', onWindowResize);			
 	
+	createControls();
+	
 	info.addInfoSource(function() {
 		const pp = player.getPosition(), px = pp.x(), py = pp.y(), pz = pp.z();
 		const cr = camera.rotation, rx = cr.x, ry = cr.y, rz = cr.z;
@@ -217,8 +219,6 @@ function init() {
 	Outhouse.create(itemManager, scene, KDebug);
 
 	if (Config.useCompiledPhysics) ScenePhysicsBlueprint.build(scene, physics);		
-	
-	createControls();
 	
 	loader.performLoad(() => {
 		createPlayer();

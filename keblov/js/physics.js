@@ -279,12 +279,13 @@ Physics.processor = function (callback) {
 		groundTransform.setRotation(new Ammo.btQuaternion(quat.x, quat.y, quat.z, quat.w));
 		// Shifts the terrain, since bullet re-centers it on its bounding box.
 		groundTransform.setOrigin(new Ammo.btVector3(0, (terrainMaxHeight + terrainMinHeight) / 2 + plane.position.y, 0));
-		let groundMass = 0;
+		let groundMass = 0; // nesmí mít >0
 		let groundLocalInertia = new Ammo.btVector3(0, 0, 0);
 		let groundMotionState = new Ammo.btDefaultMotionState(groundTransform);
 		let groundBody = new Ammo.btRigidBody(new Ammo.btRigidBodyConstructionInfo(groundMass, groundMotionState, heightFieldShape, groundLocalInertia));
 		groundBody.setFriction(4);
 		groundBody.setRollingFriction(20);		
+		groundBody.setRestitution(0);
 		physicsWorld.addRigidBody(groundBody);
 	}
 		
