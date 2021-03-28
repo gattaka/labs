@@ -5,9 +5,10 @@ let Trees = {};
 Trees.create = function(itemManager, scene, KDebug) {
 	let loadModel = itemManager.construct;
 	
+	loadModel(scene, 'smrky_joined.glb', [{x: -4.5232, y: 23.943, z: 10.025, r: 0}], false, m => KDebug.instances["smrky"] = m);
+	
 	if (Config.useCompiledPhysics) {
-		loadModel(scene, 'smrky_joined.glb', [{x: 2.002, y: 13.288, z: 12.116, r: 0}], false, m => KDebug.instances["smrky"] = m);
-		loadModel(scene, 'brizy_joined.glb', [{x: 0.53, y: -2.413, z: 7.157, r: 0}], false, m => KDebug.instances["brizy"] = m);
+		loadModel(scene, 'brizy_joined.glb', [{x: 0.53034, y: -2.4138, z: 7.1579, r: 0}], false, m => KDebug.instances["brizy"] = m);
 		return;
 	}
 	
@@ -19,7 +20,7 @@ Trees.create = function(itemManager, scene, KDebug) {
 		{x: -2.449, y: 3.422, z: -0.178, rx: -5.72, ry: 0, rz: -56, sx: 0.748, sy: 0.747, sz: 0.582},
 		{x: -3.819, y: 8.182, z: -0.178, rx: 0, ry: 8.67, rz: 16.1, sx: 0.995, sy: 1.000, sz: 0.782},
 	];
-	loadModel(scene, 'briza.glb', 1, brizaVariants, false);
+	loadModel(scene, 'briza.glb', brizaVariants, false);
 };
 
 export { Trees };

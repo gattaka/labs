@@ -9,7 +9,7 @@ Hangar.create = function(itemManager, scene, KDebug) {
 	
 	if (Config.useCompiledPhysics) {
 		// tohle jako jeden mesh je podstatně rychlejší 
-		loadModel(scene, 'hangar_joined.glb', [{x: 27.639, y: -54.919, z: 8.695, r: 22.1}], false, m => KDebug.instances["hangar"] = m);
+		loadModel(scene, 'hangar_joined.glb', [{x: 27.643, y: -54.917, z: 7.152, r: 0}], false, m => KDebug.instances["hangar"] = m);
 	} else {
 		loadModel(scene, 'hangar_01.glb', [{x: 27.798, y: -61.014, z: 6.603, r: 22.1}], true);
 		loadModel(scene, 'hangar_02.glb', [{x: 31.730, y: -59.440, z: 6.605, r: 22.1}], true);

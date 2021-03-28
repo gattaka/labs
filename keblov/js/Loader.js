@@ -5,7 +5,7 @@ var Loader = function (info) {
 	let ret = {};
 	
 	let itemsDone = 0;
-	let itemsToLoad = 0;
+	let itemsToLoad = 1; // init
 	
 	let loadings = [];
 	let finishCallback;
@@ -38,11 +38,11 @@ var Loader = function (info) {
 		let loaded = [];
 		request.links.forEach(link => {
 			let fullLink = link;
+			indicateProgress(fullLink);
 			if (request.linkPrefix !== undefined)
 				fullLink = request.linkPrefix + fullLink;
 			let tex = new THREE.TextureLoader().load(fullLink);
 			loadedTextures[fullLink] = tex;
-			indicateProgress(fullLink);
 			loaded.push(tex);
 		});
 		if (request.callback !== undefined)
@@ -51,9 +51,9 @@ var Loader = function (info) {
 	};
 	
 	let modelLoad = function(request, i) {
+		indicateProgress(request.link);
 		new GLTFLoader().load(request.link, model => {
 			request.callback(model);			
-			indicateProgress(request.link);
 			loadedModels[request.link] = model;
 			loadLoading(i + 1);
 		});	

@@ -8,7 +8,7 @@ Tents.create = function(itemManager, scene, KDebug) {
 	let br = 16.0526;
 	
 	if (Config.useCompiledPhysics) {		
-		loadModel(scene, 'stany_joined.glb', [{x: -3.5722, y: 30.731, z: 0.835, r: 0}], false, m => KDebug.instances["stany"] = m);
+		loadModel(scene, 'stany_joined.glb', [{x: -3.5722, y: 30.731, z: 0.83549, r: 0}], false, m => KDebug.instances["stany"] = m);
 		return;
 	} 
 	

@@ -45,7 +45,65 @@ document.KDebug = KDebug;
 
 // https://threejs.org/docs/#examples/en/controls/PointerLockControls
 // https://sbcode.net/threejs/pointerlock-controls/
-function createControls() {
+function createControls() {	
+	if (VirtualJoystick.touchScreenAvailable()) {
+		createTouchscreenControls();
+	} else {
+		createMouseAndKeyboardControls();
+	}
+}
+
+function createTouchscreenControls() {
+	console.log("Creating TouchscreenControls");
+	
+	let walkJoystick = new VirtualJoystick({
+		container: document.body,
+		strokeStyle: 'cyan',
+		limitStickTravel: true,
+		stickRadius: 120,	
+	});
+	walkJoystick.addEventListener('touchStartValidation', function(event) {
+		let touch = event.changedTouches[0];
+		if (touch.pageX >= window.innerWidth / 2) return false;
+		return true;
+	});
+
+	// one on the right of the screen
+	let lookJoystick = new VirtualJoystick({
+		container	: document.body,
+		strokeStyle	: 'orange',
+		limitStickTravel: true,
+		stickRadius	: 120		
+	});
+	lookJoystick.addEventListener('touchStartValidation', function(event){
+		let touch	= event.changedTouches[0];
+		if (touch.pageX < window.innerWidth / 2) return false;
+		return true;
+	});
+	
+	const PI_2 = Math.PI / 2;
+	const minPolarAngle = 0; // radians
+	const maxPolarAngle = Math.PI; // radians	
+	const euler = new THREE.Euler(0, 0, 0, 'YXZ');
+	setInterval(function(){
+		if (player !== undefined) {
+			player.keys.forward = walkJoystick.up() ? 1 : 0;
+			player.keys.right = walkJoystick.left() ? 1 : 0;
+			player.keys.back = walkJoystick.down() ? 1 : 0;
+			player.keys.left = walkJoystick.right() ? 1 : 0;
+		}
+		
+		euler.setFromQuaternion(camera.quaternion);
+		euler.y -= lookJoystick.deltaX() * 0.0004;
+		euler.x -= lookJoystick.deltaY() * 0.0004;
+		euler.x = Math.max(PI_2 - maxPolarAngle, Math.min(PI_2 - minPolarAngle, euler.x));
+		camera.quaternion.setFromEuler(euler);
+		
+	}, 1/30 * 1000);
+};
+
+function createMouseAndKeyboardControls() {	
+	console.log("Creating MouseAndKeyboardControls");
 	controls = new Controls(camera, document.body);	
 	document.body.addEventListener('click', function () {
 		controls.lock();
@@ -82,16 +140,6 @@ function createControls() {
 				if (down)
 					player.resetPosition();
 				break;
-				/*
-			case "e":
-			case "E":
-				if (selectedMesh !== undefined && selectedMesh.userData.hinge !== undefined) {
-					// https://pybullet.org/Bullet/phpBB3/viewtopic.php?t=2693					
-					selectedMesh.userData.physicsBody.applyImpulse(new Ammo.btVector3(1, 0, 1), new Ammo.btVector3(0, 0, 0));
-					selectedMesh.userData.physicsBody.activate();
-				}
-				break;
-				*/
 		}
 	};
 	document.addEventListener('keydown', onKeyDown, false);
@@ -156,14 +204,12 @@ function init() {
 		return "Camera = pos[x: " + flr(px) + " y: " + flr(py) + " z: " + flr(pz) + "]" + 
 			" rot[" + flr(rx) + " y: " + flr(ry) + " z: " + flr(rz) + "]" ;		
 	});
-	
-	createControls();
+		
 	Lights.create(scene);
 	
 	Skybox.create(loader, scene);
 	Terrain.create(loader, physics, scene);
 	Flagpole.create(loader, physics, scene, animateCallbacks);
-		
 	Tents.create(itemManager, scene, KDebug);
 	Hangar.create(itemManager, scene, KDebug);
 	Trees.create(itemManager, scene, KDebug);	
@@ -171,6 +217,8 @@ function init() {
 	Outhouse.create(itemManager, scene, KDebug);
 
 	if (Config.useCompiledPhysics) ScenePhysicsBlueprint.build(scene, physics);		
+	
+	createControls();
 	
 	loader.performLoad(() => {
 		createPlayer();

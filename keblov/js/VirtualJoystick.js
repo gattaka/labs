@@ -38,9 +38,9 @@ let VirtualJoystick	= function(opts) {
 	this._$onTouchStart	= __bind(this._onTouchStart	, this);
 	this._$onTouchEnd	= __bind(this._onTouchEnd	, this);
 	this._$onTouchMove	= __bind(this._onTouchMove	, this);
-	this._container.addEventListener( 'touchstart'	, this._$onTouchStart	, false );
-	this._container.addEventListener( 'touchend'	, this._$onTouchEnd	, false );
-	this._container.addEventListener( 'touchmove'	, this._$onTouchMove	, false );
+	this._container.addEventListener( 'touchstart'	, this._$onTouchStart	, { passive: false } );
+	this._container.addEventListener( 'touchend'	, this._$onTouchEnd	, { passive: false } );
+	this._container.addEventListener( 'touchmove'	, this._$onTouchMove	, { passive: false } );
 	if( this._mouseSupport ){
 		this._$onMouseDown	= __bind(this._onMouseDown	, this);
 		this._$onMouseUp	= __bind(this._onMouseUp	, this);
@@ -252,7 +252,9 @@ VirtualJoystick.prototype._onTouchStart	= function(event)
 	// dispatch touchStart
 	this.dispatchEvent('touchStart', event);
 
+	// [Intervention] Unable to preventDefault inside passive event listener due to target being treated as passive.
 	event.preventDefault();
+	
 	// get the first who changed
 	var touch	= event.changedTouches[0];
 	// set the touchIdx of this joystick
@@ -300,6 +302,7 @@ VirtualJoystick.prototype._onTouchMove	= function(event)
 	if( i === touchList.length)	return;
 	var touch	= touchList[i];
 
+	// [Intervention] Unable to preventDefault inside passive event listener due to target being treated as passive.
 	event.preventDefault();
 
 	var x		= touch.pageX;

@@ -9,7 +9,7 @@ Outhouse.create = function(itemManager, scene, KDebug) {
 	
 	if (Config.useCompiledPhysics) {
 		// tohle jako jeden mesh je podstatně rychlejší 
-		loadModel(scene, 'kadibudka_joined.glb', [{x: -4.054, y: -24.483, z: 3.440, r: 0}], false, m => KDebug.instances["kadibudka"] = m);
+		loadModel(scene, 'kadibudka_joined.glb', [{x: -4.0765, y: -24.391, z: 3.464, r: 0}], false, m => KDebug.instances["kadibudka"] = m);
 		return;
 	} 
 	

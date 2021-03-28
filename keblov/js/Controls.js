@@ -15,7 +15,6 @@ var Controls = function (camera, domElement) {
 	let self = this;
 	this.domElement = domElement;
 	this.isLocked = false;
-	this.mouseCoords = new Vector2();
 
 	// Set to constrain the pitch of the camera
 	// Range is 0 to Math.PI radians
@@ -36,11 +35,7 @@ var Controls = function (camera, domElement) {
 		if (scope.isLocked === false) return;
 
 		var movementX = event.movementX || event.mozMovementX || event.webkitMovementX || 0;
-		var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0;
-		
-		// https://threejs.org/docs/#api/en/core/Raycaster
-		self.mouseCoords.x = ( event.clientX / window.innerWidth ) * 2 - 1;
-		self.mouseCoords.y = - ( event.clientY / window.innerHeight ) * 2 + 1;		 
+		var movementY = event.movementY || event.mozMovementY || event.webkitMovementY || 0; 
 
 		euler.setFromQuaternion(camera.quaternion);
 

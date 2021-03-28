@@ -144,7 +144,7 @@ Physics.processor = function (callback) {
 			colShape.calculateLocalInertia(mass, localInertia);
 			shapeCache[colShapeCacheKey] = colShape;
 		} else {
-			console.log("ColShapeCache hit");
+			//console.log("ColShapeCache hit");
 		}
 		
 		let rbInfo = new Ammo.btRigidBodyConstructionInfo(mass, motionState, colShape, localInertia);
