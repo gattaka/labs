@@ -10,6 +10,8 @@ House.create = function(itemManager, scene, KDebug) {
 	// chyba v UV mapování mi znemožňuje model začlenit do join modelu aniž by ztratil textury
 	loadModel(scene, 'kamna.glb', [{x: -3.846, y: -12.937, z: 1.949, r: br}], true);
 	
+	loadModel(scene, 'nastenka_ovladani.glb', [{x: -7.9015, y: -1.1188, z: 2.5017, r: br}], false);
+	
 	if (Config.useCompiledPhysics) {
 		// tohle jako jeden mesh je podstatně rychlejší (asi +50FPS)
 		loadModel(scene, 'barak_joined.glb', [{x: -7.5091, y: -3.191, z: 2.3048, r: 0}], false, m => KDebug.instances["barak"] = m);

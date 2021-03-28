@@ -2,7 +2,7 @@ import { Config } from './Config.js';
 import { Physics } from './Physics.js';
 import * as THREE from '../js/three.module.js';		
 
-let Player = function (info, camera, physics, pos) {
+let Player = function (info, camera, physics, pos, startPos, startRot) {
 
 	const radius = 0.1; // 0.2 funguje a nepropadává
 	const height = 1.1;
@@ -15,8 +15,7 @@ let Player = function (info, camera, physics, pos) {
 	const sprintMult = 1;
 	const maxSlopeRadians = Math.PI / 4;
 	
-	let currentPos;
-	const startPos = new Ammo.btVector3(0, 5, 0);
+	let currentPos;	
 	let firstReset = true;
 		
 	let moveX, moveZ;
@@ -106,15 +105,16 @@ let Player = function (info, camera, physics, pos) {
 	
 	ret.resetPosition = function() {
 		// https://stackoverflow.com/questions/12251199/re-positioning-a-rigid-body-in-bullet-physics
-		currentPos = startPos;
+		currentPos = new Ammo.btVector3(startPos.x, startPos.y, startPos.z);
 		if (firstReset) {
-			// Workaround
+			// Workaround (teď už snad nebude potřeba)
 			currentPos = new Ammo.btVector3(pos.x, pos.y, pos.z);
-			firstReset = false
+			firstReset = false;
 		}
 		let transform = new Ammo.btTransform();
 		transform.setIdentity();
 		transform.setOrigin(currentPos);
+		camera.rotation.setFromVector3(startRot)
 		transform.setRotation(new Ammo.btQuaternion(0, 0, 0, 1));	
 		ghostObject.setWorldTransform(transform);
 	};

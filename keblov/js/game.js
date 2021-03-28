@@ -24,6 +24,9 @@ const showHelpers = Config.showScHelpers;
 const savePlayerPosition = Config.savePlayerPosition;
 const resolutionDivider = Config.resolutionDivider;
 
+const startPos = new THREE.Vector3(-6.98729133605957, 1.7499996423721313, 2.3810875415802);
+const startRot = new THREE.Vector3(0.1252434889107173, 0.5723312354046406, -0.06808254378135847);
+
 let camera, scene, renderer, controls;
 let animateCallbacks = [];
 let player;
@@ -115,18 +118,22 @@ function createMouseAndKeyboardControls() {
 		switch (event.key) {
 			case "w":
 			case "W":
+			case "ArrowUp":
 				player.keys.forward = down ? 1 : 0;
 				break;
 			case "a":
 			case "A":
+			case "ArrowLeft":
 				player.keys.right = down ? 1 : 0;
 				break;
 			case "s":
 			case "S":
+			case "ArrowDown":
 				player.keys.back = down ? 1 : 0;
 				break;
 			case "d":
 			case "D":
+			case "ArrowRight":
 				player.keys.left = down ? 1 : 0;
 				break;
 			case " ":
@@ -148,14 +155,14 @@ function createMouseAndKeyboardControls() {
 
 function createPlayer() {
 	let lastPos = new THREE.Vector3();
-	lastPos.x = cookieUtils.getCookieNumber('camposx') || 0;
-	lastPos.y = cookieUtils.getCookieNumber('camposy') || 0;
-	lastPos.z = cookieUtils.getCookieNumber('camposz') || 0;
+	lastPos.x = cookieUtils.getCookieNumber('camposx') || startPos.x;
+	lastPos.y = cookieUtils.getCookieNumber('camposy') || startPos.y;
+	lastPos.z = cookieUtils.getCookieNumber('camposz') || startPos.z;
 	let lastRot = new THREE.Vector3();
-	camera.rotation.x = cookieUtils.getCookieNumber('camrotx') || 0;
-	camera.rotation.y = cookieUtils.getCookieNumber('camroty') || 0;
-	camera.rotation.z = cookieUtils.getCookieNumber('camrotz') || 0;		
-	player = new Player(info, camera, physics, lastPos);	
+	camera.rotation.x = cookieUtils.getCookieNumber('camrotx') || startRot.x;
+	camera.rotation.y = cookieUtils.getCookieNumber('camroty') || startRot.y;
+	camera.rotation.z = cookieUtils.getCookieNumber('camrotz') || startRot.z;
+	player = new Player(info, camera, physics, lastPos, startPos, startRot);	
 	if (!savePlayerPosition) 
 		player.resetPosition();
 	if (player.mesh !== undefined)
@@ -244,7 +251,7 @@ function animate(now) {
 	renderer.clear();
 	renderer.render(scene, camera);	
 	
-	info.update(delta);	
+	//info.update(delta);	
 	stats.update();	
 }
 

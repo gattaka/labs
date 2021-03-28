@@ -1,8 +1,10 @@
 import * as THREE from './three.module.js';
 import { GLTFLoader } from './GLTFLoader.js';
 
-var Loader = function (info) {
+var Loader = function () {
 	let ret = {};
+	
+	const loaderInfo = document.getElementById("loaderInfo");
 	
 	let itemsDone = 0;
 	let itemsToLoad = 1; // init
@@ -31,7 +33,7 @@ var Loader = function (info) {
 	let indicateProgress = function(caption) {
 		itemsDone++;
 		let progress = Math.floor(itemsDone / itemsToLoad * 100);
-		info.displayNow("<div>" + progress + "%<div/><div>" + caption + "</div>");
+		loaderInfo.innerHTML = "<div>" + progress + "%<div/><div>" + caption + "</div>";		
 	};
 	
 	let textureLoad = function(request, i) {
@@ -61,6 +63,7 @@ var Loader = function (info) {
 	
 	let loadLoading = function(i) {
 		if (loadings.length == i) {
+			loaderInfo.style.display = "none";
 			finishCallback();	
 		} else {
 			let loading = loadings[i];
