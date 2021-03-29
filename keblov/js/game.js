@@ -13,8 +13,10 @@ import { House } from './House.js';
 import { Outhouse } from './Outhouse.js';
 import { Hangar } from './Hangar.js';
 import { Tents } from './Tents.js';
+import { WaterTent } from './WaterTent.js';
 import { Flagpole } from './Flagpole.js';
 import { Player } from './Player.js';
+import { SoundManager } from './SoundManager.js';
 import { Loader } from './Loader.js';
 import { VirtualJoystick } from './VirtualJoystick.js';
 import { ItemManager } from './ItemManager.js';
@@ -224,6 +226,7 @@ function init() {
 	Trees.create(itemManager, scene, KDebug);	
 	House.create(itemManager, scene, KDebug);	
 	Outhouse.create(itemManager, scene, KDebug);
+	WaterTent.create(itemManager, scene, KDebug);
 
 	if (Config.useCompiledPhysics) ScenePhysicsBlueprint.build(scene, physics);		
 	
