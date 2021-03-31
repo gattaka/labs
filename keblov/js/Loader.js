@@ -38,15 +38,31 @@ var Loader = function () {
 	
 	let textureLoad = function(request, i) {
 		let loaded = [];
-		request.links.forEach(link => {
-			let fullLink = link;
-			indicateProgress(fullLink);
-			if (request.linkPrefix !== undefined)
-				fullLink = request.linkPrefix + fullLink;
-			let tex = new THREE.TextureLoader().load(fullLink);
-			loadedTextures[fullLink] = tex;
-			loaded.push(tex);
-		});
+		if (request.cube) {
+			let fullLinks = [];
+			let key = "cubeTex";
+			request.links.forEach(link => {
+				let fullLink = link;
+				key += "_" + link;
+				indicateProgress(fullLink);
+				if (request.linkPrefix !== undefined)
+					fullLink = request.linkPrefix + fullLink;
+				fullLinks.push(fullLink);				
+			});
+			let cubeTex = new THREE.CubeTextureLoader().load(fullLinks);
+			loadedTextures[key] = cubeTex;
+			loaded.push(cubeTex);
+		} else {
+			request.links.forEach(link => {
+				let fullLink = link;
+				indicateProgress(fullLink);
+				if (request.linkPrefix !== undefined)
+					fullLink = request.linkPrefix + fullLink;
+				let tex = new THREE.TextureLoader().load(fullLink);
+				loadedTextures[fullLink] = tex;
+				loaded.push(tex);
+			});
+		}
 		if (request.callback !== undefined)
 			request.callback(loaded);
 		loadLoading(i + 1);
