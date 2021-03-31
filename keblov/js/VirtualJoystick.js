@@ -1,5 +1,5 @@
 //https://github.com/jeromeetienne/virtualjoystick.js
-let VirtualJoystick	= function(opts) {
+let VirtualJoystick	= function(opts, onActivate) {
 	opts			= opts			|| {};
 	this._container		= opts.container	|| document.body;
 	this._strokeStyle	= opts.strokeStyle	|| 'cyan';
@@ -12,7 +12,8 @@ let VirtualJoystick	= function(opts) {
 	this._limitStickTravel	= opts.limitStickTravel || false
 	this._stickRadius	= opts.stickRadius !== undefined ? opts.stickRadius : 100
 	this._useCssTransform	= opts.useCssTransform !== undefined ? opts.useCssTransform : false
-
+	this._onActivate = onActivate;
+	
 	this._container.style.position	= "relative"
 
 	this._container.appendChild(this._baseEl)
@@ -69,9 +70,13 @@ VirtualJoystick.prototype.destroy	= function()
 /**
  * @returns {Boolean} true if touchscreen is currently available, false otherwise
 */
-VirtualJoystick.touchScreenAvailable	= function()
-{
-	return 'createTouch' in document ? true : false;
+VirtualJoystick.touchScreenAvailable	= function() {
+	try {  
+		document.createEvent("TouchEvent");  
+		return true;  
+	} catch (e) {  
+		return false;  
+	} 	
 }
 
 /**
@@ -242,6 +247,7 @@ VirtualJoystick.prototype._onMouseMove	= function(event)
 
 VirtualJoystick.prototype._onTouchStart	= function(event)
 {
+	
 	// if there is already a touch inprogress do nothing
 	if( this._touchIdx !== null )	return;
 
@@ -268,6 +274,8 @@ VirtualJoystick.prototype._onTouchStart	= function(event)
 
 VirtualJoystick.prototype._onTouchEnd	= function(event)
 {
+	if (this._onActivate !== undefined) this._onActivate();
+	
 	// if there is no touch in progress, do nothing
 	if( this._touchIdx === null )	return;
 

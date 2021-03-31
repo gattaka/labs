@@ -67,7 +67,7 @@ function createTouchscreenControls() {
 		strokeStyle: 'cyan',
 		limitStickTravel: true,
 		stickRadius: 120,	
-	});
+	}, initSound);
 	walkJoystick.addEventListener('touchStartValidation', function(event) {
 		let touch = event.changedTouches[0];
 		if (touch.pageX >= window.innerWidth / 2) return false;
@@ -93,10 +93,8 @@ function createTouchscreenControls() {
 	const euler = new THREE.Euler(0, 0, 0, 'YXZ');
 	setInterval(function(){
 		if (player !== undefined) {
-			player.keys.forward = walkJoystick.up() ? 1 : 0;
-			player.keys.right = walkJoystick.left() ? 1 : 0;
-			player.keys.back = walkJoystick.down() ? 1 : 0;
-			player.keys.left = walkJoystick.right() ? 1 : 0;
+			player.keys.back = walkJoystick.deltaY() * 0.03;
+			player.keys.left = walkJoystick.deltaX() * 0.03;
 		}
 		
 		euler.setFromQuaternion(camera.quaternion);
@@ -108,15 +106,19 @@ function createTouchscreenControls() {
 	}, 1/30 * 1000);
 };
 
+function initSound() {
+	if (!soundManager.active) {
+		soundManager.active = true;
+		soundManager.play("ambient");
+	}
+};
+
 function createMouseAndKeyboardControls() {	
 	console.log("Creating MouseAndKeyboardControls");
 	controls = new Controls(camera, document.body);	
 	document.body.addEventListener('click', function () {
 		controls.lock();
-		if (!soundManager.active) {
-			soundManager.active = true;
-			soundManager.play("ambient");
-		}
+		initSound();
 	}, false);
 	
 	const onKeyDown = function (event) { onKeyChange(event, true) };
