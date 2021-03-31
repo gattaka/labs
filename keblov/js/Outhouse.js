@@ -9,7 +9,7 @@ Outhouse.create = function(itemManager, scene, KDebug) {
 	
 	if (Config.useCompiledPhysics) {
 		// tohle jako jeden mesh je podstatně rychlejší 
-		loadModel(scene, 'kadibudka_joined.glb', [{x: -4.0765, y: -24.391, z: 3.464, r: 0}], false, m => KDebug.instances["kadibudka"] = m);
+		loadModel(scene, 'kadibudka_joined.glb', [{x: -4.7018, y: -23.533, z: 3.2636, r: br}], false, m => KDebug.instances["kadibudka"] = m);
 		return;
 	} 
 	
@@ -28,6 +28,9 @@ Outhouse.create = function(itemManager, scene, KDebug) {
 	loadModel(scene, 'kadibudka11.glb', [{x: -4.405, y: -25.348, z: 3.559, r: br}], true);
 	loadModel(scene, 'kadibudka12.glb', [{x: -4.678, y: -24.401, z: 3.559, r: br}], true);
 	loadModel(scene, 'kadibudka13.glb', [{x: -4.956, y: -23.436, z: 3.559, r: br}], true);
+	loadModel(scene, 'kadibudka_cisterna.glb', [{x: -5.5663, y: -21.194, z: 2.2593, r: br}], true);
+	loadModel(scene, 'kadibudka_vylevka.glb', [{x: -5.3325, y: -21.741, z: 2.745, r: br}], true);
+	loadModel(scene, 'kadibudka_vylevka_mriz.glb', [{x: -5.7267, y: -20.72, z: 2.5772, r: br}], true);	
 };
 
 export { Outhouse };

@@ -40,6 +40,7 @@ const stats = new Stats();
 const physics = new Physics.processor(init);
 const cookieUtils = new CookieUtils();
 const itemManager = new ItemManager(loader, physics);
+const soundManager = new SoundManager();
 
 let loadModel = itemManager.construct;
 
@@ -112,6 +113,10 @@ function createMouseAndKeyboardControls() {
 	controls = new Controls(camera, document.body);	
 	document.body.addEventListener('click', function () {
 		controls.lock();
+		if (!soundManager.active) {
+			soundManager.active = true;
+			soundManager.play("ambient");
+		}
 	}, false);
 	
 	const onKeyDown = function (event) { onKeyChange(event, true) };
@@ -226,7 +231,16 @@ function init() {
 	Trees.create(itemManager, scene, KDebug);	
 	House.create(itemManager, scene, KDebug);	
 	Outhouse.create(itemManager, scene, KDebug);
-	WaterTent.create(itemManager, scene, KDebug);
+	WaterTent.create(itemManager, scene, KDebug);	
+	
+	if (Config.useCompiledPhysics) {
+		itemManager.construct(scene, 'pila_joined.glb', [{x: -20.659, y: 9.4807, z: 1.1402, r: 0}], true);	
+	} else {
+		itemManager.construct(scene, 'koza.glb', [
+			{x: -22.141, y: 8.287, z: 1.1545, r: 0}, 
+			{x: -19.301, y: 10.431, z: 1.126, r: -54.1}
+		], true);		
+	}
 
 	if (Config.useCompiledPhysics) ScenePhysicsBlueprint.build(scene, physics);		
 	

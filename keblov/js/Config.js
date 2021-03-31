@@ -1,7 +1,7 @@
 let Config = {
 	mergedGeometries: true,
 	phMargin: 0.01,
-	useCompiledPhysics: true,
+	useCompiledPhysics: false,
 	showPhHelpers: false,
 	showScHelpers: false,
 	cachePhShapes: true,

@@ -5,7 +5,7 @@ let Trees = {};
 Trees.create = function(itemManager, scene, KDebug) {
 	let loadModel = itemManager.construct;
 	
-	loadModel(scene, 'smrky_joined.glb', [{x: -4.5232, y: 23.943, z: 10.025, r: 0}], false, m => KDebug.instances["smrky"] = m);
+	loadModel(scene, 'smrky_joined.glb', [{x: -7.5204, y: 13.484, z: 10.79, r: 0}], false, m => KDebug.instances["smrky"] = m);
 	
 	if (Config.useCompiledPhysics) {
 		loadModel(scene, 'brizy_joined.glb', [{x: 0.53034, y: -2.4138, z: 7.1579, r: 0}], false, m => KDebug.instances["brizy"] = m);

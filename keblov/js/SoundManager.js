@@ -16,11 +16,13 @@ let SoundManager = function () {
 		}
 	};
 	
+	
 	let	lib = {};
-	lib["ambient"] = new sound("../music/Atrium.mp3", true);
-	lib["walking"] = new sound("../sfx/walking.mp3", true);	
+	lib["ambient"] = new sound("../sfx/keblov.mp3", true);
+	//lib["walking"] = new sound("../sfx/walking.mp3", true);	
 	
 	let ret = {};
+	ret.active = false;
 	
 	ret.play = function(name) {
 		let sound = lib[name];
