@@ -1,0 +1,117 @@
+<head>
+	<script type="text/javascript" src="../libs/colors.js"></script>
+</head>
+
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Vertices <3-10></td>			
+			<td></td>
+		</tr>
+		<tr>
+			<td><input id="verticesInput" style="width: 80px;" value="6"></td>			
+			<td><button type="button" onclick="$.fractalPolygon.start()">Run!</button></td>
+		</tr>
+	</tbody>
+</table>
+<div><canvas id="myCanvas" width="700" height="600"></canvas></div>[/HTML]
+<script>
+var $ = $ || {};
+$.mandel = (function() {
+		
+	let interval = 100;
+	let pointSize = 4;
+	let steps = 20;
+	let hueStep = 255 / 15;
+	
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+
+	let width = canvas.width;
+	let height = canvas.height;
+	let xCenter = width / 2;
+	let yCenter = height / 2;
+		
+	let iFrom = 1;
+	let rFrom = -2; 
+	let iTo = -1;
+	let rTo = 1;
+	
+	let xToPlane = (rTo - rFrom) / width;
+	let yToPlane = (iFrom - iTo) / height;
+	
+	let wPoints = width / pointSize;
+	let hPoints = height / pointSize;
+	let innerIntervalCallback;
+
+	let test = function(level, z, c, s) {
+		if (z.r * z.r - z.i * z.i > 4)
+			return false;
+		if (level > s)
+			return true;			
+		return test(level + 1, {
+			r: z.r * z.r - z.i * z.i + c.r, 
+			i: z.r * z.i + z.i * z.r + c.i
+		}, c, s);
+	};
+
+	let draw = function() {
+		for (let s = 1; s < steps; s++) {
+			ctx.fillStyle = "hsl(" + Math.floor(hueStep * s) + ", 100%, 50%)";
+			for (let i = iFrom, y = 0; y < height; i -= pointSize * yToPlane, y += pointSize) {
+				for (let r = rFrom, x = 0; x < width; r += pointSize * xToPlane, x += pointSize) {
+					if (test(0, {r: 0, i: 0}, {r: r, i: i}, s))
+						ctx.fillRect(x, y, pointSize, pointSize);
+				}
+			}
+		}
+	};
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		if (interval) 
+			console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {				
+			draw(0);			
+		}, interval);
+	};
+
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+
+	return {
+		start: function() {
+			let verticesParam = validate("Invalid vertices", "verticesInput", 3, 10);			
+			if (verticesParam) {					
+				vertexCount = verticesParam;
+				//innnerChangeInterval(speedParam);
+			}
+			
+			draw();
+		}
+	};
+
+})();
+
+$.mandel.start();</script>
