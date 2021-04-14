@@ -25,15 +25,30 @@ $.mandel = (function() {
 	let steps = 50;
 	let hueStep = 255 / 15;
 	
+	let smoothing = false;
 	let canvas = document.getElementById("myCanvas");
-	let ctx = canvas.getContext("2d");
-	let innerIntervalCallback;
-
+	let ctx = canvas.getContext("2d", { alpha: false });
+	
 	let width = canvas.width;
 	let height = canvas.height;
 	let wHalf = width / 2;
 	let hHalf = height / 2;
-		
+	
+	ctx.webkitImageSmoothingEnabled = smoothing;
+	ctx.mozImageSmoothingEnabled = smoothing;
+	ctx.imageSmoothingEnabled = smoothing;
+	ctx.msImageSmoothingEnabled = smoothing; 
+	
+	let writeAs32Bit = true;
+			
+	let imageData = ctx.getImageData(0, 0, width, height);
+	let data = imageData.data;
+	let buf = new ArrayBuffer(imageData.data.length);
+	let buf8 = new Uint8ClampedArray(buf);
+	let data32 = new Uint32Array(buf);	
+	
+	let innerIntervalCallback;
+
 	let zoomStep = .1;
 	let zoom = 1;
 	let xZoomPoint = 0;
@@ -68,15 +83,73 @@ $.mandel = (function() {
 		}, c);
 	};
 
+	let cache = [];
+
+	let HSLToRGB = function(h, s, l) {
+		// Must be fractions of 1
+		s /= 100;
+		l /= 100;
+
+		let c = (1 - Math.abs(2 * l - 1)) * s,
+			x = c * (1 - Math.abs((h / 60) % 2 - 1)),
+			m = l - c/2,
+			r = 0,
+			g = 0,
+			b = 0;
+		  
+		if (0 <= h && h < 60) {
+			r = c; g = x; b = 0;  
+		} else if (60 <= h && h < 120) {
+			r = x; g = c; b = 0;
+		} else if (120 <= h && h < 180) {
+			r = 0; g = c; b = x;
+		} else if (180 <= h && h < 240) {
+			r = 0; g = x; b = c;
+		} else if (240 <= h && h < 300) {
+			r = x; g = 0; b = c;
+		} else if (300 <= h && h < 360) {
+			r = c; g = 0; b = x;
+		}
+		r = Math.round((r + m) * 255);
+		g = Math.round((g + m) * 255);
+		b = Math.round((b + m) * 255);
+		
+		return {r: r, g: g, b: b};
+	};
+
 	let draw = function() {
-		for (let y = 0; y < height; y += pointSize) {
-			for (let x = 0; x < width; x += pointSize) {
+		for (let y = 0; y < height; y++) {
+			for (let x = 0; x < width; x++) {
 				let r = (x + xOffset) * zoom * xToPlane;
 				let i = (y + yOffset) * zoom * yToPlane;
 				let level = test(0, {r: 0, i: 0}, {r: r, i: i});
-				ctx.fillStyle = "hsl(" + Math.floor(hueStep * level) + ", 100%, 50%)";
-				ctx.fillRect(x, y, pointSize, pointSize);
+				let color = cache[level];
+				if (color === undefined) {
+					color = HSLToRGB((level * 10) % 255, 100, 50);
+					cache[level] = color;
+				}
+				let index = y * width + x;
+				putPixel(index, color.r, color.g, color.b, 255);
 			}
+		}
+		
+		if (writeAs32Bit)
+			imageData.data.set(buf8);
+			
+		ctx.putImageData(imageData, 0, 0);
+	};
+
+	// https://hacks.mozilla.org/2011/12/faster-canvas-pixel-manipulation-with-typed-arrays/
+	// https://jsperf.com/canvas-pixel-manipulation
+	let putPixel = function(index, r, g, b, a) {
+		if (writeAs32Bit) {
+			data32[index] = (a << 24) | (b << 16) | (g <<  8) | r;
+		} else {
+			let smallIndex = index * 4;
+			data[smallIndex]     = r;    // red
+			data[smallIndex + 1] = g;    // green
+			data[smallIndex + 2] = b;    // blue
+			data[smallIndex + 3] = a;    // alpha
 		}
 	};
 	
