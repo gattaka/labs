@@ -1,0 +1,234 @@
+[HTML]<div id="table" style=""></div>[/HTML]
+<script>let $ = {};
+$.sudoku = (function() {
+
+	let table = document.getElementById("table");
+	
+	let inputs = [];
+	
+	// jaké hodnoty zbývají doplnit do daného sloupce (pole sloupců)
+	let cols;
+	
+	// jaké hodnoty zbývají doplnit do daného řádku (pole řádků)
+	let rows;
+	
+	// kolik buněk skupiny má danou cifru ještě v options (pole skupin)
+	let groups;
+	
+	let cells;
+	
+	let lastToFill;
+	let toFill;
+	
+	function construct() {
+		let size = 25;
+		let divSize = 9 * size;
+		table.style = "border: 1px solid grey; border-right: none; border-top: none; margin-left: auto; margin-right: auto; text-align: center;" + 
+						"width: " + divSize + "; height: " + divSize + ";";
+		let content = "";
+		for (let r = 0; r < 9; r++) {						
+			for (let c = 0; c < 9; c++) {
+				let id = "r" + r + "c" + c;
+				let style = "height: " + size + "px; width: " + size + "px; border: 1px solid grey; border-left: none; border-bottom: none;"
+							+ "text-align: center; font-size: 20px; font-weight: bold;";
+				if ((Math.floor(r / 3) + Math.floor(c / 3)) % 2 == 0)
+					style += "background-color: lightgrey";
+				content += "<input maxlength=\"1\" style=\"" + style + "\" id=\"" + id + "\"/>";
+			}
+			content += "<br/>";
+		}		
+		table.innerHTML = content + "<button type=\"button\" style=\"margin-top: 10px;\" onclick=\"$.sudoku.solve()\">Vyřešit!</button>";
+		
+		// reference na input elementy
+		for (let r = 0; r < 9; r++) {						
+			let row = [];
+			inputs[r] = row;
+			for (let c = 0; c < 9; c++) {
+				let id = "r" + r + "c" + c;
+				row[c] = document.getElementById(id);
+			}
+		}
+	};
+	
+	function init() {	
+		cols = [];
+		rows = [];
+		groups = [];
+		
+		cells = [];
+		
+		lastToFill = -1;
+		toFill = 9 * 9;
+		
+		createOptions = function() {						
+			return [1,2,3,4,5,6,7,8,9];
+		};
+		
+		for (let c = 0; c < 9; c++)
+			cols[c] = createOptions();
+			
+		for (let r = 0; r < 9; r++)
+			rows[r] = createOptions();		
+		
+		// 0 index se nepoužívá pro jednoduchost kódu (hodnoty -> indexy)
+		for (let g = 0; g < 9; g++)
+			groups[g] = ['X', 9,9,9,9,9,9,9,9,9]; 
+			
+		for (let r = 0; r < 9; r++) {		
+			let cr = [];
+			cells[r] = cr;
+			for (let c = 0; c < 9; c++) {				
+				cr[c] = {opt: createOptions()};
+			}
+		}
+	};
+	
+	// true, pokud byla daná hodnota nalezena a odebrána
+	// false, pokud daná hodnota v poli není a nebylo co odebrat
+	function splice(arr, val) {
+		let index = arr.indexOf(val);
+		if (index < 0) return false;
+		arr.splice(index, 1);
+		return true;
+	};
+	
+	function groupByCoord(r, c) {
+		return Math.floor(r / 3) * 3 + Math.floor(c / 3);
+	};
+		
+	function index(r, c, val) {				
+		let col = cols[c];
+		splice(col, val);
+		
+		let row = rows[r];
+		splice(row, val);				
+		
+		// ostatním buňkám ve stejném sloupci odeber možnost této hodnoty
+		for (let rr = 0; rr < 9; rr++) {
+			let cell = cells[rr][c];
+			if (cell.val > 0) continue;
+			let opt = cell.opt;
+			if (splice(opt, val))
+				groups[groupByCoord(rr, c)][val]--;				
+		}		
+		
+		// ostatním buňkám ve stejném řádku odeber možnost této hodnoty
+		for (let cc = 0; cc < 9; cc++) {
+			let cell = cells[r][cc];
+			if (cell.val > 0) continue;
+			let opt = cell.opt;
+			if (splice(opt, val)) 
+				groups[groupByCoord(r, cc)][val]--;				
+		}
+		
+		// ostatním buňkám ve stejné skupině odeber možnost této hodnoty
+		let gr = Math.floor(r / 3) * 3; // start řádek skupiny
+		let gc = Math.floor(c / 3) * 3; // start sloupec skupiny
+		let group = groups[groupByCoord(gr, gc)];			
+		for (let rr = gr; rr < gr + 3; rr++) {
+			for (let cc = gc; cc < gc + 3; cc++) {
+				if (rr == r && cc == c) continue; // sebe vynech
+				let cell = cells[rr][cc];
+				if (cell.val > 0) continue;
+				let opt = cell.opt;
+				if (splice(opt, val))
+					group[val]--;				
+			}
+		}		
+	};
+		
+	function fill(r, c, val) {
+		let cell = cells[r][c];
+		cell.val = val;
+		
+		// pro každou zbývající options hodnotu buňky v momentě 
+		// doplnění sniž počty hodnoty v options skupiny
+		let group = groups[groupByCoord(r, c)];		
+		for (let i = 0; i < cell.opt.length; i++)
+			group[cell.opt[i]]--;
+		cell.opt = [];
+		
+		index(r, c, val);
+		inputs[r][c].value = val;
+		toFill--;		
+	};
+		
+	function solve() {									
+		// read
+		for (let r = 0; r < 9; r++) {		
+			for (let c = 0; c < 9; c++) {
+				let val = Number(inputs[r][c].value);
+				cells[r][c].val = val;
+				if (val > 0) {
+					fill(r, c, val);
+				}
+			}
+		}
+		
+		while (toFill > 0) {
+			if (lastToFill == toFill) {
+				alert("Nevím co dál");
+				break;
+			}
+			lastToFill = toFill;
+			
+			// pro každou buňku projdi její col, row a group a uprav obsazení			
+			for (let r = 0; r < 9; r++)	{			
+				for (let c = 0; c < 9; c++) {
+					let group = groups[groupByCoord(r, c)];
+					let cell = cells[r][c];
+					if (cell.val == 0) {						
+					
+						// zbývají možnosti buněk v rámci skupiny
+						// pokud je tato buňka u nějaké cifry jediná
+						// která v rámci skupiny má tuto cifru v options
+						// je možné ji vyplnit
+						for (let val = 1; val <= 9; val++) {
+							if (cell.opt.indexOf(val) >= 0 && group[val] == 1) {
+								fill(r, c, val);
+								continue;
+							}
+						}
+											
+						// zbývají hodnoty buňky (okolí)						
+						if (cell.opt.length == 1) {
+							fill(r, c, cell.opt[0]);
+							continue;
+						}
+					
+						// zbývají hodnoty sloupce
+						let col = cols[c];
+						if (col.length == 1) {
+							fill(r, c, col[0]);
+							continue;
+						}
+						
+						// zbývající hodnoty řádku
+						let row = rows[r];
+						if (row.length == 1) {
+							fill(r, c, row[0]);
+							continue;
+						}						
+					}					
+				}
+			}					
+		}
+	
+	};
+	
+	return {
+
+		start: function() {	
+			construct();
+		},
+		
+		solve: function() {
+			init();			
+			solve();
+		},
+		
+	};
+
+})();
+
+$.sudoku.start();</script>
