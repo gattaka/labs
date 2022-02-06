@@ -4,7 +4,13 @@ $.sudoku = (function() {
 
 	let table = document.getElementById("table");
 	
+	let cellSize = 35;
+	let optFontSize = cellSize / 3 - 2;	
+	let divSize = 9 * cellSize;
+	let cellFontSize = cellSize - 3;
+	
 	let inputs = [];
+	let opts = [];
 	
 	// jaké hodnoty zbývají doplnit do daného sloupce (pole sloupců)
 	let cols;
@@ -24,20 +30,30 @@ $.sudoku = (function() {
 		return "r" + r + "c" + c;
 	};
 	
-	function construct() {
-		let size = 25;
-		let divSize = 9 * size;
+	function construct() {		
 		table.style = "border: 1px solid grey; border-right: none; border-top: none; margin-left: auto; margin-right: auto; text-align: center;" + 
 						"width: " + divSize + "; height: " + divSize + ";";
 		let content = "";
 		for (let r = 0; r < 9; r++) {						
 			for (let c = 0; c < 9; c++) {
 				let id = createId(r, c);
-				let style = "height: " + size + "px; width: " + size + "px; border: 1px solid grey; border-left: none; border-bottom: none;"
-							+ "text-align: center; font-size: 20px; font-weight: bold;";
+				
+				let divStyle = "display: inline-block; position: relative; height: 35px; width: 35px; ";
 				if ((Math.floor(r / 3) + Math.floor(c / 3)) % 2 == 0)
-					style += "background-color: lightgrey";
-				content += "<input maxlength=\"1\" style=\"" + style + "\" id=\"" + id + "\"/>";
+					divStyle += "background-color: lightgrey; ";				
+				content += "<div style=\"" + divStyle + "\">";
+								
+				let optStyle = "font-family: monospace; word-break: break-word; text-align: "
+								+ "center; height: " + cellSize + "px; width: " + cellSize + "px; font-size: " + optFontSize + "px; "
+								+ "position: absolute; top: 0; left: 0; color: grey;"
+				content += "<span id=\"" + id + "opt\" style=\"" + optStyle + "\">1 2 3 4 5 6 7 8 9</span>";
+				
+				let inputStyle = "height: " + cellSize + "px; width: " + cellSize + "px; border: 1px solid grey; border-left: none; "
+								+ "border-bottom: none; text-align: center; font-size: " + cellFontSize + "px; font-weight: bold; "
+								+ "background: none; position: absolute; top: 0; left: 0;";
+				content += "<input maxlength=\"1\" style=\"" + inputStyle + "\" id=\"" + id + "\"/>";
+				
+				content += "</div>";
 			}
 			content += "<br/>";
 		}		
@@ -62,13 +78,16 @@ $.sudoku = (function() {
 			}
 		}
 		
-		// reference na input elementy
+		// reference na input elementy a opt display elementy
 		for (let r = 0; r < 9; r++) {						
-			let row = [];
-			inputs[r] = row;
+			let inputRow = [];
+			let optRow = [];
+			inputs[r] = inputRow;
+			opts[r] = optRow;
 			for (let c = 0; c < 9; c++) {
 				let id = "r" + r + "c" + c;
-				row[c] = document.getElementById(id);
+				inputRow[c] = document.getElementById(id);
+				optRow[c] = document.getElementById(id + "opt");				
 			}
 		}
 	};
@@ -129,12 +148,33 @@ $.sudoku = (function() {
 		arr.splice(index, 1);
 		return true;
 	};
+	
+	function updateOpt(cell) {
+		let str = "";	
+		let n = 1;
+		for (let i = 0; i < cell.opt.length; i++) {
+			let val = cell.opt[i];
+			if (val == n) {
+				str += n + " ";
+			} else {
+				str += "&nbsp; ";
+				i--;
+			}
+			n++;
+		}
+		opts[cell.r][cell.c].innerHTML = str;
+	};
 		
+	// true, pokud byla provedena nějaká změna
+	// false, pokud nebyla provedena žádná změna
 	function unmarkCell(cell, val) {		
-		if (cell.val > 0) return;
+		if (cell.val > 0) return false;
 		let opt = cell.opt;
-		if (splice(opt, val))
-			splice(cell.group[val], cell);			
+		if (splice(opt, val)) {
+			splice(cell.group[val], cell);
+			updateOpt(cell);
+		}
+		return true;
 	};
 	
 	function unmarkByInline() {
@@ -202,10 +242,7 @@ $.sudoku = (function() {
 			for (let cc = gc; cc < gc + 3; cc++) {
 				if (rr == r && cc == c) continue; // sebe vynech
 				let cell = cells[rr][cc];
-				if (cell.val > 0) continue;
-				let opt = cell.opt;
-				if (splice(opt, val))
-					splice(cell.group[val], cell);		
+				if (!unmarkCell(cell, val)) continue;				
 			}
 		}		
 	};
@@ -222,6 +259,7 @@ $.sudoku = (function() {
 			splice(group[optVal], cell);
 		}
 		cell.opt = [];
+		updateOpt(cell);
 		
 		index(r, c, val);
 		inputs[r][c].value = val;
