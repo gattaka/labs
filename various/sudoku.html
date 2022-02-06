@@ -12,7 +12,7 @@ $.sudoku = (function() {
 	// jaké hodnoty zbývají doplnit do daného řádku (pole řádků)
 	let rows;
 	
-	// kolik buněk skupiny má danou cifru ještě v options (pole skupin)
+	// kolik buněk skupiny (a které to jsou) má danou cifru ještě v options (pole skupin)
 	let groups;
 	
 	let cells;
@@ -50,6 +50,10 @@ $.sudoku = (function() {
 		}
 	};
 	
+	function groupByCoord(r, c) {
+		return groups[Math.floor(r / 3) * 3 + Math.floor(c / 3)];
+	};
+	
 	function init() {	
 		cols = [];
 		rows = [];
@@ -70,15 +74,26 @@ $.sudoku = (function() {
 		for (let r = 0; r < 9; r++)
 			rows[r] = createOptions();		
 		
-		// 0 index se nepoužívá pro jednoduchost kódu (hodnoty -> indexy)
-		for (let g = 0; g < 9; g++)
-			groups[g] = ['X', 9,9,9,9,9,9,9,9,9]; 
+		// groups = pole skupin
+		// skupina = pole cifer
+		// cifra = pole odkazů na buňky, které tuto cifru mají v options
+		for (let i = 0; i < 9; i++) {
+			let group = [];
+			groups[i] = group; 
+			for (let n = 1; n <= 9; n++)
+				group[n] = [];
+		}
 			
 		for (let r = 0; r < 9; r++) {		
 			let cr = [];
 			cells[r] = cr;
-			for (let c = 0; c < 9; c++) {				
-				cr[c] = {opt: createOptions()};
+			for (let c = 0; c < 9; c++) {			
+				let cell = {opt: createOptions(), r: r, c: c};
+				cr[c] = cell;
+				let group = groupByCoord(r, c);
+				cell.group = group;
+				for (let n = 1; n <= 9; n++)
+					group[n].push(cell);
 			}
 		}
 	};
@@ -91,9 +106,54 @@ $.sudoku = (function() {
 		arr.splice(index, 1);
 		return true;
 	};
+		
+	function unmarkCell(cell, val) {		
+		if (cell.val > 0) return;
+		let opt = cell.opt;
+		if (splice(opt, val))
+			splice(cell.group[val], cell);			
+	};
 	
-	function groupByCoord(r, c) {
-		return Math.floor(r / 3) * 3 + Math.floor(c / 3);
+	function unmarkByInline() {
+		// pokud v nějaké skupině má doplněnou hodnotu 3 a méně buněk,
+		// dá se prověřit, jestli nejsou v řadě za sebou a tím pro se 
+		// ostatní skupiny nejeví jako jasně vyplněná buňka
+		for (let g = 0; g < 9; g++) {
+			let group = groups[g];
+			for (let val = 1; val <= 9; val++) {
+				let groupValRestCnt = group[val].length;
+				if (groupValRestCnt > 1 && groupValRestCnt < 4) {
+					let sr = true;
+					let sc = true;
+					let r = -1;
+					let c = -1;
+					let groupCells = group[val];
+					for (let i = 0; i < groupCells.length - 1; i++) {
+						let cell = groupCells[i];
+						r = cell.r;
+						c = cell.c;
+						sr = sr && r == groupCells[i + 1].r;
+						sc = sc && c == groupCells[i + 1].c;
+					}
+					if (sr) { // hodnota je ve stejném řádku
+						for (let cc = 0; cc < 9; cc++) {
+							// platí to mimo tuto skupinu
+							let cell = cells[r][cc];
+							if (cell.group != group)
+								unmarkCell(cell, val);
+						}						
+					}
+					if (sc) { // hodnota je ve stejném sloupci
+						for (let rr = 0; rr < 9; rr++) {
+							// platí to mimo tuto skupinu
+							let cell = cells[rr][c];
+							if (cell.group != group)
+								unmarkCell(cell, val);
+						}
+					}
+				}
+			}
+		}
 	};
 		
 	function index(r, c, val) {				
@@ -104,27 +164,17 @@ $.sudoku = (function() {
 		splice(row, val);				
 		
 		// ostatním buňkám ve stejném sloupci odeber možnost této hodnoty
-		for (let rr = 0; rr < 9; rr++) {
-			let cell = cells[rr][c];
-			if (cell.val > 0) continue;
-			let opt = cell.opt;
-			if (splice(opt, val))
-				groups[groupByCoord(rr, c)][val]--;				
-		}		
+		for (let rr = 0; rr < 9; rr++)
+			unmarkCell(cells[rr][c], val);
 		
 		// ostatním buňkám ve stejném řádku odeber možnost této hodnoty
-		for (let cc = 0; cc < 9; cc++) {
-			let cell = cells[r][cc];
-			if (cell.val > 0) continue;
-			let opt = cell.opt;
-			if (splice(opt, val)) 
-				groups[groupByCoord(r, cc)][val]--;				
-		}
+		for (let cc = 0; cc < 9; cc++)
+			unmarkCell(cells[r][cc], val);
 		
 		// ostatním buňkám ve stejné skupině odeber možnost této hodnoty
 		let gr = Math.floor(r / 3) * 3; // start řádek skupiny
 		let gc = Math.floor(c / 3) * 3; // start sloupec skupiny
-		let group = groups[groupByCoord(gr, gc)];			
+		let group = groupByCoord(gr, gc);
 		for (let rr = gr; rr < gr + 3; rr++) {
 			for (let cc = gc; cc < gc + 3; cc++) {
 				if (rr == r && cc == c) continue; // sebe vynech
@@ -132,7 +182,7 @@ $.sudoku = (function() {
 				if (cell.val > 0) continue;
 				let opt = cell.opt;
 				if (splice(opt, val))
-					group[val]--;				
+					splice(cell.group[val], cell);		
 			}
 		}		
 	};
@@ -143,9 +193,11 @@ $.sudoku = (function() {
 		
 		// pro každou zbývající options hodnotu buňky v momentě 
 		// doplnění sniž počty hodnoty v options skupiny
-		let group = groups[groupByCoord(r, c)];		
-		for (let i = 0; i < cell.opt.length; i++)
-			group[cell.opt[i]]--;
+		let group = cell.group;
+		for (let i = 0; i < cell.opt.length; i++) {
+			let optVal = cell.opt[i];
+			splice(group[optVal], cell);
+		}
 		cell.opt = [];
 		
 		index(r, c, val);
@@ -159,9 +211,8 @@ $.sudoku = (function() {
 			for (let c = 0; c < 9; c++) {
 				let val = Number(inputs[r][c].value);
 				cells[r][c].val = val;
-				if (val > 0) {
-					fill(r, c, val);
-				}
+				if (val > 0)
+					fill(r, c, val);				
 			}
 		}
 		
@@ -172,11 +223,13 @@ $.sudoku = (function() {
 			}
 			lastToFill = toFill;
 			
+			//unmarkByInline();
+			
 			// pro každou buňku projdi její col, row a group a uprav obsazení			
 			for (let r = 0; r < 9; r++)	{			
 				for (let c = 0; c < 9; c++) {
-					let group = groups[groupByCoord(r, c)];
 					let cell = cells[r][c];
+					let group = cell.group;
 					if (cell.val == 0) {						
 					
 						// zbývají možnosti buněk v rámci skupiny
@@ -184,7 +237,7 @@ $.sudoku = (function() {
 						// která v rámci skupiny má tuto cifru v options
 						// je možné ji vyplnit
 						for (let val = 1; val <= 9; val++) {
-							if (cell.opt.indexOf(val) >= 0 && group[val] == 1) {
+							if (cell.opt.indexOf(val) >= 0 && group[val].length == 1) {
 								fill(r, c, val);
 								continue;
 							}
