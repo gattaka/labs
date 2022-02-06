@@ -1,31 +1,15 @@
-<head>
-	<script type="text/javascript" src="../libs/colors.js"></script>
-</head>
-
 [N1]Demo[/N1]
-[HTML]<table>
-	<tbody>
-		<tr>
-			<td>Vertices <3-10></td>			
-			<td></td>
-		</tr>
-		<tr>
-			<td><input id="verticesInput" style="width: 80px;" value="6"></td>			
-			<td><button type="button" onclick="$.fractalPolygon.start()">Run!</button></td>
-		</tr>
-	</tbody>
-</table>
-<div><canvas id="myCanvas" width="700" height="600"></canvas></div>[/HTML]
+[HTML]<div><canvas id="myCanvas" width="700" height="600"></canvas></div>[/HTML]
 <script>
 var $ = $ || {};
 $.mandel = (function() {
 		
-	let interval = 100;
 	let pointSize = 5;
-	let steps = 50;
+	let stepsOrig = 20;
+	let steps = stepsOrig;
 	let hueStep = 255 / 15;
 	
-	let smoothing = false;
+	let smoothing = true;
 	let canvas = document.getElementById("myCanvas");
 	let ctx = canvas.getContext("2d", { alpha: false });
 	
@@ -47,8 +31,6 @@ $.mandel = (function() {
 	let buf8 = new Uint8ClampedArray(buf);
 	let data32 = new Uint32Array(buf);	
 	
-	let innerIntervalCallback;
-
 	let zoomStep = .1;
 	let zoom = 1;
 	let xZoomPoint = 0;
@@ -71,16 +53,25 @@ $.mandel = (function() {
 	let xToPlaneOrig = xToPlane;
 	let yToPlaneOrig = yToPlane;
 	
-	let test = function(level, z, c) {
-		if (z.r * z.r - z.i * z.i > 4)
+	let z = [];
+	let c = [];
+	
+	//paradoxně je typované pole pomalejší
+	//let z = new Float32Array(2);
+	//let c = new Float32Array(2);
+	
+	let test = function(level) {
+		// z.r * z.r - z.i * z.i
+		let prod = z[0] * z[0] - z[1] * z[1];
+		if (prod > 4)
 			return level;
 		level++;
 		if (level > steps)
-			return level;			
-		return test(level, {
-			r: z.r * z.r - z.i * z.i + c.r, 
-			i: z.r * z.i + z.i * z.r + c.i
-		}, c);
+			return -1;
+		let crosProd = z[0] * z[1];
+		z[0] = prod + c[0];
+		z[1] = crosProd * 2 + c[1];
+		return test(level);
 	};
 
 	let cache = [];
@@ -122,10 +113,18 @@ $.mandel = (function() {
 			for (let x = 0; x < width; x++) {
 				let r = (x + xOffset) * zoom * xToPlane;
 				let i = (y + yOffset) * zoom * yToPlane;
-				let level = test(0, {r: 0, i: 0}, {r: r, i: i});
+				z[0] = 0;
+				z[1] = 0;
+				c[0] = r;
+				c[1] = i;
+				let level = test(0);
 				let color = cache[level];
 				if (color === undefined) {
-					color = HSLToRGB((level * 10) % 255, 100, 50);
+					if (level == -1) {
+						color = {r: 0, g: 0, b: 0};
+					} else {
+						color = HSLToRGB((level * 10) % 255, 100, 50);
+					}
 					cache[level] = color;
 				}
 				let index = y * width + x;
@@ -153,24 +152,6 @@ $.mandel = (function() {
 		}
 	};
 	
-	let innnerChangeInterval = function(value) {
-		if (isNaN(value))
-			return;
-		let newValue = Number(value);
-		if (newValue < 1)
-			return;
-		if (interval) 
-			console.log("interval changed from '" + interval + "' to '" + newValue + "'");
-		interval = newValue;
-		
-		if (innerIntervalCallback) 
-			clearInterval(innerIntervalCallback);
-		
-		innerIntervalCallback = setInterval(function() {				
-			draw();			
-		}, interval);
-	};
-
 	let validate = function(msg, field, min, max) {
 		let value = document.getElementById(field).value;
 		if (isNaN(value)) {
@@ -193,7 +174,8 @@ $.mandel = (function() {
 		let y = e.clientY - bound.y;
 		
 		let oldZoom = zoom;
-		zMult = 1 + Math.sign(e.deltaY) * zoomStep;
+		let sgn = Math.sign(e.deltaY);
+		zMult = 1 + sgn * zoomStep;
 		zoom *= zMult;
 				
 		let dx = (oldZoom - zoom) * (x + xOffset) / zoom;
@@ -201,6 +183,9 @@ $.mandel = (function() {
 				
 		xOffset += dx;
 		yOffset += dy;		
+		
+		steps -= sgn;
+		
 		draw();
 	});
 		
@@ -236,17 +221,13 @@ $.mandel = (function() {
 		xOffset = xOffsetOrig;
 		yOffset = yOffsetOrig;
 		zoom = 1;
+		steps = stepsOrig;
 		draw();
 	}, false);
 
 	return {
 		start: function() {
-			let verticesParam = validate("Invalid vertices", "verticesInput", 3, 10);			
-			if (verticesParam) {					
-				vertexCount = verticesParam;
-				//innnerChangeInterval(interval);
-				draw();				
-			}			
+			draw();			
 		}
 	};
 
