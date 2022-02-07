@@ -1,8 +1,8 @@
-[HTML]<div style="text-align: center; margin-bottom: 10px;"><textarea id="seed"></textarea></div><div id="table" style=""></div>[/HTML]
+[HTML]<div style="text-align: center; margin-bottom: 10px;"><textarea id="seed" style="width: 600px; height: 60px;"></textarea></div><div id="sudokuDiv"></div>[/HTML]
 <script>let $ = {};
 $.sudoku = (function() {
 
-	let table = document.getElementById("table");
+	let table = document.getElementById("sudokuDiv");
 	
 	let cellSize = 35;
 	let optFontSize = cellSize / 3 - 2;	
@@ -39,78 +39,141 @@ $.sudoku = (function() {
 		seedInput.value = seed;
 	};
 	
-	function construct() {		
-		table.style = "border: 1px solid grey; border-right: none; border-top: none; margin-left: auto; margin-right: auto; text-align: center;" + 
-						"width: " + divSize + "; height: " + divSize + ";";
-		let content = "";
-		for (let r = 0; r < 9; r++) {						
-			for (let c = 0; c < 9; c++) {
-				let id = createId(r, c);
-				
-				let divStyle = "display: inline-block; position: relative; height: 35px; width: 35px; ";
-				if ((Math.floor(r / 3) + Math.floor(c / 3)) % 2 == 0)
-					divStyle += "background-color: lightgrey; ";				
-				content += "<div style=\"" + divStyle + "\">";
-								
-				let optStyle = "font-family: monospace; word-break: break-word; text-align: "
-								+ "center; height: " + cellSize + "px; width: " + cellSize + "px; font-size: " + optFontSize + "px; "
-								+ "position: absolute; top: 0; left: 0; color: grey;"
-				content += "<span id=\"" + id + "opt\" style=\"" + optStyle + "\">1 2 3 4 5 6 7 8 9</span>";
-				
-				let inputStyle = "height: " + cellSize + "px; width: " + cellSize + "px; border: 1px solid grey; border-left: none; "
-								+ "border-bottom: none; text-align: center; font-size: " + cellFontSize + "px; font-weight: bold; "
-								+ "background: none; position: absolute; top: 0; left: 0; margin: 0; padding: 0;";
-				content += "<input maxlength=\"1\" style=\"" + inputStyle + "\" id=\"" + id + "\"/>";
-				
-				content += "</div>";
-			}
-			content += "<br/>";
-		}		
-		table.innerHTML = content + "<button type=\"button\" style=\"margin-top: 10px;\" onclick=\"$.sudoku.solve()\">Vyřešit!</button>";
-		
-		for (let r = 0; r < 9; r++) {						
-			for (let c = 0; c < 9; c++) {							
-				let element = document.getElementById(createId(r, c));
-				element.value = " ";
-				element.oldValue = element.value;
-				["keydown"].forEach(function(eventType) {
-					element.addEventListener(eventType, function(e) {
-						let focusIfExists = function(input) {
-							if (input != null && typeof input !== "undefined") input.focus();
-						};
-						if (event.keyCode == 9) return; // tab
-						if (event.keyCode == 37) {
-							focusIfExists(document.getElementById(createId(r, c - 1)));				
-						} else if (event.keyCode == 39) {
-							focusIfExists(document.getElementById(createId(r, c + 1)));
-						} else if (event.keyCode == 38) {
-							focusIfExists(document.getElementById(createId(r - 1, c)));
-						} else if (event.keyCode == 40) {
-							focusIfExists(document.getElementById(createId(r + 1, c)));
-						} else {
-							if (Number(e.key) > 0 || e.key == '') {								
-								this.value = e.key;
-								this.oldValue = this.value;
-								writeSeed();		
-							} else {								
-								this.value = this.oldValue;							
-							}
-						}		
-					});
-				});
-			}
+	function construct() {								
+		let shadow = table.attachShadow({mode: 'open'});		
+
+		let style = document.createElement('style');
+		style.textContent = `
+		:host {
+			text-align: center;
+		}
+		.cellDiv {
+			display: inline-block;
+			position: relative;
+			height: ` + cellSize + `px;
+			width: ` + cellSize + `px;
+			margin: 0;
+			padding: 0;
 		}
 		
-		// reference na input elementy a opt display elementy
-		for (let r = 0; r < 9; r++) {						
+		.optSpan {
+			font-family: monospace;
+			word-break: break-word;
+			text-align: center;
+			height: ` + cellSize + `px;
+			width: ` + cellSize + `px;
+			font-size: ` + optFontSize + `px;
+			position: absolute;
+			top: 0;
+			left: 0;
+			color: grey;
+			line-height: 12px;
+		}
+		
+		.inputCell {			
+			height: ` + cellSize + `px;
+			width: ` + cellSize + `px;
+			border: 1px solid grey;
+			border-left: none;
+			border-bottom: none;
+			text-align: center;
+			font-size: ` + cellFontSize + `px;
+			font-weight: bold;
+			background: none;
+			position: absolute;
+			top: 0;
+			left: 0;
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}`;
+		shadow.appendChild(style);		
+		
+		let wrapperDiv = document.createElement('div');
+		let wrapperDivStyle = wrapperDiv.style;
+		wrapperDivStyle.setProperty("border", "1px solid grey");
+		wrapperDivStyle.setProperty("border-right", "none");
+		wrapperDivStyle.setProperty("border-top", "none");
+		wrapperDivStyle.setProperty("margin-left", "auto");
+		wrapperDivStyle.setProperty("margin-right", "auto");
+		wrapperDivStyle.setProperty("text-align", "center");
+		wrapperDivStyle.setProperty("width", divSize + "px");
+		wrapperDivStyle.setProperty("height", divSize + "px");		
+		wrapperDivStyle.setProperty("line-height", "13px");
+		shadow.appendChild(wrapperDiv);
+
+		for (let r = 0; r < 9; r++) {	
 			let inputRow = [];
 			let optRow = [];
 			inputs[r] = inputRow;
 			opts[r] = optRow;
 			for (let c = 0; c < 9; c++) {
-				let id = "r" + r + "c" + c;
-				inputRow[c] = document.getElementById(id);
-				optRow[c] = document.getElementById(id + "opt");				
+				let id = createId(r, c);									
+					
+				let cellDiv = document.createElement('div');
+				cellDiv.setAttribute("class", "cellDiv");
+				let cellDivStyle = cellDiv.style;
+				wrapperDiv.appendChild(cellDiv);
+							
+				if ((Math.floor(r / 3) + Math.floor(c / 3)) % 2 == 0)
+					cellDivStyle.setProperty("background-color", "lightgrey");				
+								
+				let optSpan = document.createElement('span');		
+				optSpan.setAttribute("class", "optSpan");				
+				optRow[c] = optSpan;
+				let optSpanStyle = optSpan.style;
+				cellDiv.appendChild(optSpan);
+				
+				optSpan.id = id + "opt";						
+								
+				let inputCell = document.createElement('input');
+				inputCell.setAttribute("class", "inputCell");				
+				inputRow[c] = inputCell;
+				let inputStyle = inputCell.style;
+				cellDiv.appendChild(inputCell);
+				
+				inputCell.setAttribute('maxLength',1);				
+				inputCell.id = id;				
+			}
+		}		
+		let solveBtn = document.createElement('button');
+		solveBtn.style.setProperty("margin-top", "10px");
+		shadow.appendChild(solveBtn);
+		
+		solveBtn.type = "button";
+		solveBtn.setAttribute("onclick","$.sudoku.solve()");
+		solveBtn.innerHTML = "Vyřešit";		
+		
+		for (let r = 0; r < 9; r++) {						
+			for (let c = 0; c < 9; c++) {							
+				let element = inputs[r][c];
+				element.value = " ";
+				element.oldValue = element.value;
+				["keydown"].forEach(function(eventType) {
+					element.addEventListener(eventType, function(event) {
+						let focusIfExists = function(input) {
+							if (input != null && typeof input !== "undefined") input.focus();
+						};
+						if (event.keyCode == 9) return; // tab
+						if (event.keyCode == 37) {
+							focusIfExists(inputs[r][c - 1]);
+						} else if (event.keyCode == 39) {
+							focusIfExists(inputs[r][c + 1]);							
+						} else if (event.keyCode == 38) {
+							focusIfExists(inputs[r - 1][c]);							
+						} else if (event.keyCode == 40) {
+							focusIfExists(inputs[r + 1][c]);							
+						} else {						
+							if (Number(event.key) > 0 || event.key == '') {								
+								element.value = event.key;
+								element.oldValue = element.value;
+								writeSeed();		
+							} else {								
+								element.value = element.oldValue;							
+							}
+						}		
+					});
+				});
 			}
 		}
 	};
