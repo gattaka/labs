@@ -1,0 +1,252 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Point size <2-20></td>			
+			<td>Speed (ms) <1-50></td>
+			<td>Spread <1/2/3/4/5></td>	
+			<td></td>
+			<td></td>	
+			<td></td>
+		</tr>
+		<tr>				
+			<td><input id="pointsInput" style="width: 120px;" value="10">	
+			<td><input id="speedInput" style="width: 100px;" value="10"></td>				
+			<td><input id="spreadInput" style="width: 100px;" value="1"></td>						
+			<td><input id="rainbowInput" type="checkbox" onclick="$.fingerprint.rainbow(this.checked)" >Rainbow?</input></td>
+			<td><input id="rainbowInput" type="checkbox" onclick="$.fingerprint.infill(this.checked)" >Infill?</input></td>
+			<td><button type="button" onclick="$.fingerprint.start()">Run!</button></td>			
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.fingerprint = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let hWidth = width / 2; 
+	let hHeight = height / 2;	
+	let maxResult = Math.pow(Math.max(width, height), 2) / 2;
+	
+	let interval = 1;
+	let innerIntervalCallback;
+		
+	let pointSize;
+	let colors;
+	let infill;
+	let pw;
+	let ph;
+	
+	let done;
+	
+	let map;
+	let x;
+	let y;
+	
+	let hue;
+	let validateAlgorithm;
+	
+	let stack = [];
+		
+	let updateColor = function() {		
+		ctx.fillStyle = colors ? "hsl(" + hue + ", 100%, 50%)" : "black";
+	};
+		
+	let validateCell = function(x, y) {
+		if (x < 0 || x >= pw || y < 0 || y >= ph)
+			return false;
+		if (map[x][y])
+			return false;
+		return true;
+	};
+		
+	let validateMove = function(nx, ny) {
+		switch (validateAlgorithm) {
+		default:
+		case 1: return validateMoveB(nx, ny, 1);
+		case 2: return validateMoveB(nx, ny, 2);
+		case 3: return validateMoveB(nx, ny, 3);		
+		case 4: return validateMoveB(nx, ny, 4);
+		case 5: return validateMoveA(nx, ny);		
+		}
+	};	
+	
+	let validateMoveA = function(nx, ny) {
+		return validateCell(nx, ny)
+		   &&  (validateCell(nx - 1, ny) || validateCell(nx - 1, ny - 1) || validateCell(nx, ny - 1))
+		   &&  (validateCell(nx, ny - 1) || validateCell(nx + 1, ny - 1) || validateCell(nx + 1, ny))
+		   &&  (validateCell(nx - 1, ny) || validateCell(nx - 1, ny + 1) || validateCell(nx, ny + 1))
+		   &&  (validateCell(nx + 1, ny) || validateCell(nx + 1, ny + 1) || validateCell(nx, ny + 1));
+	};
+	
+	let validateMoveB = function(nx, ny, maxHits) {
+		if (!validateCell(nx, ny))
+			return false;
+		let hits = 0;
+		for (dx = -1; dx <= 1; dx++) {
+			for (dy = -1; dy <= 1; dy++) {				
+				if (nx + dx == x && ny + dy == y) 
+					continue;
+				if (!validateCell(nx + dx, ny + dy))
+					hits++;
+				if (hits > maxHits)
+					return false;
+			}
+		}
+		return true;
+	};
+		
+	let move = function() {
+		hue = (hue + 1) % 360;
+		updateColor();
+		let dir = Math.floor(Math.random() * 4);
+		for (let i = 0; i < 4; i++) {
+			switch (dir) {
+			case 0: // Right
+				if (validateMove(x + 1, y)) {
+					x++; return 0;
+				}
+			case 1: // Left
+				if (validateMove(x - 1, y)) {
+					x--; return 1;
+				}
+			case 2: // Down
+				if (validateMove(x, y + 1)) {
+					y++; return 2;
+				}
+			case 3: // Up
+				if (validateMove(x, y - 1)) {
+					y--; return 3;
+				}
+			}
+			dir = (dir + 1) % 4;
+		}
+		
+		// nenašel ani jeden volný směr
+		if (stack.length > 0) {
+			let prev = stack.pop();
+			x = prev.x;
+			y = prev.y;
+			return -1;
+		}
+		
+		done = true;
+		console.log("done");
+		
+		if (infill)
+			for (let mx = 0; mx < pw; mx++)
+				for (let my = 0; my < pw; my++)
+					if (validateCell(mx, my)) {
+						hue = Math.floor(Math.random() * 360);
+						ctx.fillStyle = mx == 0 || my == 0 || mx == pw - 1 || my == ph - 1 ? "black" : "hsl(" + hue + ", 100%, 50%)";
+						fillCells(mx, my);
+					}				
+	};
+	
+	let fillCells = function(mx, my) {		
+		if (validateCell(mx, my)) {
+			ctx.fillStyle = mx == 0 || my == 0 || mx == pw - 1 || my == ph - 1 ? "black" : "hsl(" + hue + ", 100%, 50%)";
+			ctx.fillRect(mx * pointSize, my * pointSize, pointSize, pointSize);
+			map[mx][my] = true;
+			fillCells(mx - 1, my);
+			fillCells(mx, my - 1);
+			fillCells(mx + 1, my);
+			fillCells(mx, my + 1);
+		}
+	};
+	
+	let draw = function() {	
+		let rx = x * pointSize;
+		let ry = y * pointSize;
+		if (!(map[x][y])) {
+			ctx.fillRect(rx, ry, pointSize, pointSize);
+			map[x][y] = true;
+			stack.push({x: x, y: y});		
+		}
+		move();
+	};
+	
+	let step = function() {
+		if (!done)
+			draw();
+	}
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};
+
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	let init = function() {	
+		let pointsParam = validate("Invalid points", "pointsInput", 2, 20);					
+		let speedParam = validate("Invalid speed", "speedInput", 1, 50);	
+		let spreadParam = validate("Invalid spread", "spreadInput", 1, 5);			
+		if (speedParam && pointsParam && spreadParam) {						
+			pointSize = pointsParam;			
+			pw = Math.floor(width / pointSize);
+			ph = Math.floor(height / pointSize);			
+			done = false;
+			
+			validateAlgorithm = spreadParam;
+			
+			map = [];
+			for (let mx = 0; mx < pw; mx++)
+				map[mx] = [];	
+				
+			x = Math.floor(Math.random() * pw);
+			y = Math.floor(Math.random() * ph);
+			
+			ctx.clearRect(0, 0, width, height);
+			ctx.strokeStyle = "black";	
+			ctx.strokeRect(0, 0, width, height);
+			
+			hue = 0;
+			updateColor();
+			innnerChangeInterval(speedParam);				
+		}
+	};	
+		
+	return {
+		start: function() {					
+			init();		
+		},
+		rainbow: function(value) {
+			colors = value;
+		},
+		infill: function(value) {
+			infill = value;
+		},
+	};
+
+})();
+
+$.fingerprint.start();</script>

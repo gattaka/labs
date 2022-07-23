@@ -1,0 +1,51 @@
+<div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="600"></canvas>
+</div>
+<script>var $ = $ || {};
+$.magnet = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;	
+	
+	let lastNow = performance.now();
+	
+	let space = 50;
+	let wNum = Math.floor(width / space);
+	let hNum = Math.floor(height / space);
+	
+	let init = function() {				
+		ctx.clearRect(0, 0, width, height);				
+		ctx.lineWidth = 1;			
+	};	
+	
+	canvas.addEventListener("mousemove", function (e) {
+		let now = performance.now();		
+		if (now - lastNow < 10) 
+			return;
+		lastNow = now;
+		ctx.clearRect(0, 0, width, height);	
+		for (let xs = 0; xs < wNum; xs++) {
+			for (let ys = 0; ys < hNum; ys++) {	
+				let xCntr = (xs + 0.5) * space; 
+				let yCntr = (ys + 0.5) * space; 
+				let d = (e.clientX - xCntr) / (e.clientY - yCntr);
+				let c = space / 2;
+				let x = Math.sqrt(c * c / (1 + 1 / (d * d)));
+				let y = x / d; 
+				ctx.beginPath();
+				ctx.moveTo(xCntr + x, yCntr + y);
+				ctx.lineTo(xCntr - x, yCntr - y);
+				ctx.stroke();
+			}
+		}	
+	}, false);
+	
+	return {
+		start: function() {	
+			init();						
+		},
+	};
+})();
+$.magnet.start();</script>
