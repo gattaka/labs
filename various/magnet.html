@@ -1,0 +1,92 @@
+<div>
+	<table>
+		<tbody>
+			<tr>
+				<td>Needle size <2, 300></td>
+				<td>Refresh delay <1, 50></td>				
+			</tr>
+			<tr>
+				<td><input id="needleSizeInput" style="width: 110px;" value="50"></td>				
+				<td><input id="refreshDelayInput" style="width: 110px;" value="10"></td>
+				<td><button type="button" onclick="$.magnet.start()">Run!</button></td>				
+			</tr>
+		</tbody>
+	</table>
+</div>
+<div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="600"></canvas>
+</div>
+<script>var $ = $ || {};
+$.magnet = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;	
+	
+	let lastNow = performance.now();
+	
+	let refreshDelay = 10;
+	let space = 50;
+	
+	let wNum;
+	let hNum;
+	
+	let init = function() {				
+		ctx.clearRect(0, 0, width, height);				
+		ctx.lineWidth = 1;			
+		
+		wNum = Math.floor(width / space);
+		hNum = Math.floor(height / space);
+	};	
+	
+	canvas.addEventListener("mousemove", function (e) {
+		let now = performance.now();		
+		if (now - lastNow < refreshDelay) 
+			return;
+		lastNow = now;
+		ctx.clearRect(0, 0, width, height);	
+		
+		let bound = canvas.getBoundingClientRect();
+		let mx = e.clientX - bound.x;
+		let my = e.clientY - bound.y;
+		
+		for (let xs = 0; xs < wNum; xs++) {
+			for (let ys = 0; ys < hNum; ys++) {	
+				let xCntr = (xs + 0.5) * space; 
+				let yCntr = (ys + 0.5) * space; 
+				let d = (mx - xCntr) / (my - yCntr);
+				let c = space / 2;
+				let x = Math.sqrt(c * c / (1 + 1 / (d * d)));
+				let y = x / d; 
+				ctx.beginPath();
+				ctx.moveTo(xCntr + x, yCntr + y);
+				ctx.lineTo(xCntr - x, yCntr - y);
+				ctx.stroke();
+			}
+		}	
+	}, false);
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	return {
+		start: function() {	
+			space = validate("Invalid needle size", "needleSizeInput", 2, 300);
+			refreshDelay = validate("Invalid refresh delay", "refreshDelayInput", 1, 50);
+			init();						
+		},		
+	};
+})();
+$.magnet.start();</script>
