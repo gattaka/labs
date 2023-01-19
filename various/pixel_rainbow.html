@@ -1,0 +1,266 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Point size <2-20></td>			
+			<td>Speed (ms) <1-50></td>
+			<td>Lights count <1-20></td>	
+			<td>Lights power <1-1000></td>
+			<td></td>	
+			<td></td>
+		</tr>
+		<tr>				
+			<td><input id="pointsInput" style="width: 120px;" value="10">	
+			<td><input id="speedInput" style="width: 100px;" value="10"></td>				
+			<td><input id="lightsCountInput" style="width: 100px;" value="5"></td>
+			<td><input id="lightsPowerInput" style="width: 100px;" value="700"></td>							
+			<td><input id="averageColorBorderInput" type="checkbox" onclick="$.rainbow.averageColorBorder(this.checked)" >Average color border?</input></td>
+			<td><button type="button" onclick="$.rainbow.start()">Run!</button></td>			
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.rainbow = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let hWidth = width / 2; 
+	let hHeight = height / 2;	
+	let maxResult = Math.pow(Math.max(width, height), 2) / 2;
+	
+	let interval;
+	let innerIntervalCallback;
+	
+	let pointSize;
+
+	let pixels = [];
+	let pixels2 = [];
+	let wp;
+	let hp;
+	
+	//let lightsCount = 0;
+	let lightsCount;
+	let lightBoost;
+	let lights = [];
+	
+	let colorAvg = 0;
+	let border = false;
+			
+	let draw = function() {				
+	
+		colorAvg = 0;
+	
+		for (let x = 0; x < wp; x++) {
+			for (let y = 0; y < hp; y++) {
+				let pixel = pixels[x][y];							
+				ctx.fillStyle = `hsl(
+					${pixel.h},
+					${normalizeSaturation(pixel.s)}%,										
+					${normalizeLightness(pixel.l)}%)`;
+				ctx.fillRect(x * pointSize + 1, y * pointSize + 1, pointSize - 2, pointSize - 2);
+						
+				if (border)
+					colorAvg += pixel.h;
+						
+				let n = 0;
+				let lightness = 0;
+				let hue = 0;
+				for (let sx = -1; sx <= 1; sx++) {				
+					for (let sy = -1; sy <= 1; sy++) {
+						let px = x + sx;
+						let py = y + sy;
+						if (px < 0 || py < 0 || px == wp || py == hp) 
+							continue;						
+						n++;
+						let pp = pixels[px][py];						
+						lightness += pp.l;
+
+						// 350 a 100 mají sice rozdíl 250, ale barevná vzdálenost je 110
+						// 350 a 460 už mají 110
+						// aby se dalo průměrovat, musí mít barvy svoji maximální číselnou hodnotu
+						// 180 -> 180
+						// 10 -> 370
+						
+						// Je třeba přepočítat hodnotu na vzdálenost od počátku se znaménkem
+						// 360 -> 0
+						// 180 -> 180
+						// 270 -> 270 - 360 = -90				
+						// 190 -> 190 - 360 = -170						
+						hue += pp.h <= 180 ? pp.h : pp.h - 360;					
+					}
+				}
+				lightness = lightness / n;
+				
+				hue = (hue / n);
+				// zpětný převod na -10 -> 350
+				hue = hue > 0 ? hue : hue + 360;
+
+				pixels2[x][y] = {
+					h:		hue,
+					s:		pixel.s,
+					l:		lightness - 1,
+					dx:  	pixel.dx,
+					dy:		pixel.dy
+				};
+			}
+		}
+		
+		if (border) {
+			colorAvg /= wp * hp; 
+			canvas.style.border = pointSize + "px solid hsl(" + Math.floor(colorAvg) + ", 100%, 50%)";
+			//console.log("Průměrná barva: " + colorAvg);
+		}
+		
+		let tmpPixel = pixels2;
+		pixels2 = pixels;
+		pixels = tmpPixel;
+		
+		for (let i = 0; i < lightsCount; i++) {
+			let light = lights[i];
+			if (Math.random() > light.r) {
+				let newdx = generateNewDirection();
+				let newdy = generateNewDirection();
+				if (newdx != 0 && newdy != 0) {
+					light.dx = newdx;
+					light.dy = newdy;
+				}
+			}
+			
+			if (light.x + light.dx == -1) light.dx = 1;
+			if (light.x + light.dx == wp) light.dx = -1;
+			if (light.y + light.dy == -1) light.dy = 1;
+			if (light.y + light.dy == hp) light.dy = -1;
+					
+			light.x += light.dx;
+			light.y += light.dy;
+			
+			let pixel = pixels[light.x][light.y];
+			pixel.h = light.h;
+			pixel.l = lightBoost;
+		}						
+	};
+	
+	let normalizeSaturation = function(value) {
+		return normalize(value, 0, 100);	
+	};
+	
+	let normalizeLightness = function(value) {
+		return normalize(value, 0, 50);
+	};
+	
+	let normalize = function(value, min, max) {
+		return Math.min(max, Math.max(min, value));
+	};
+	
+	let generateNewDirection = function() {
+		return Math.floor(Math.random() * 3) - 1;
+	};
+		
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);
+	};
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	let init = function() {	
+		let pointsParam = validate("Invalid points", "pointsInput", 2, 20);
+		let speedParam = validate("Invalid speed", "speedInput", 1, 50);	
+		let lightsCountParam = validate("Invalid lights count", "lightsCountInput", 1, 20);			
+		let lightsPowerParam = validate("Invalid lights power", "lightsPowerInput", 1, 1000);			
+		if (speedParam && pointsParam && lightsCountParam && lightsPowerParam) {		
+	
+			pointSize = pointsParam;
+
+			wp = Math.ceil(width / pointSize);
+			hp = Math.ceil(height / pointSize);
+			
+			lightsCount = lightsCountParam;
+			lightBoost = lightsPowerParam;
+					
+			htdx = generateNewDirection();
+			htdy = generateNewDirection();
+			
+			ctx.lineWidth = 2;						
+			
+			ctx.fillStyle = "black";
+			ctx.fillRect(0,0, width, height);
+			
+			for (let i = 0; i < lightsCount; i++) {
+				lights[i] = {
+					h:	Math.floor(360 / lightsCount * i),
+					x:	Math.floor(Math.random() * wp),
+					y:	Math.floor(Math.random() * hp),
+					dx: generateNewDirection(),
+					dy: generateNewDirection(),
+					r:	Math.random()
+				}
+			}
+			
+			// Hue
+			// 0/360	červená
+			// 180		tyrkys
+			
+			for (let x = 0; x < wp; x++) {
+				let col = [];
+				pixels[x] = col;
+				let col2 = [];
+				pixels2[x] = col2;
+				for (let y = 0; y < hp; y++) {							
+					col[y] = {
+						h:		Math.floor(Math.random() * 360),					
+						s:		50,
+						l:		50,
+						dx:  	generateNewDirection(),
+						dy:		generateNewDirection()
+					};
+					col2[y] = {h:0,s:0,l:0,dx:0,dy:0};
+				}
+			}
+			
+			innnerChangeInterval(speedParam);
+		}
+	};	
+		
+	return {
+		start: function() {					
+			init();						
+		},
+		
+		averageColorBorder: function(value) {
+			border = value;
+		},
+
+	};
+
+})();
+
+$.rainbow.start();</script>
