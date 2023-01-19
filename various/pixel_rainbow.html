@@ -2,7 +2,7 @@
 [HTML]<table>
 	<tbody>
 		<tr>
-			<td>Point size <2-20></td>			
+			<td>Point size <5-100></td>			
 			<td>Speed (ms) <1-50></td>
 			<td>Lights count <1-20></td>	
 			<td>Lights power <1-1000></td>
@@ -11,7 +11,7 @@
 		</tr>
 		<tr>				
 			<td><input id="pointsInput" style="width: 120px;" value="10">	
-			<td><input id="speedInput" style="width: 100px;" value="10"></td>				
+			<td><input id="speedInput" style="width: 100px;" value="20"></td>				
 			<td><input id="lightsCountInput" style="width: 100px;" value="5"></td>
 			<td><input id="lightsPowerInput" style="width: 100px;" value="700"></td>							
 			<td><input id="averageColorBorderInput" type="checkbox" onclick="$.rainbow.averageColorBorder(this.checked)" >Average color border?</input></td>
@@ -19,18 +19,17 @@
 		</tr>
 	</tbody>
 </table><div style="margin: 10px 0;">
-	<canvas id="canvas" width="700" height="400"></canvas>
+	<canvas id="canvas" width="700" height="400" ondblclick="$.rainbow.fullscreen()"></canvas>
 </div>[/HTML]
 <script>var $ = $ || {};
 $.rainbow = (function() {
 
 	let canvas = document.getElementById("canvas");
 	let ctx = canvas.getContext("2d");
-	let width = canvas.width;
-	let height = canvas.height;
-	let hWidth = width / 2; 
-	let hHeight = height / 2;	
-	let maxResult = Math.pow(Math.max(width, height), 2) / 2;
+	let width;
+	let height;
+	let hWidth;
+	let hHeight;
 	
 	let interval;
 	let innerIntervalCallback;
@@ -192,11 +191,16 @@ $.rainbow = (function() {
 	};
 	
 	let init = function() {	
-		let pointsParam = validate("Invalid points", "pointsInput", 2, 20);
+		let pointsParam = validate("Invalid points", "pointsInput", 2, 100);
 		let speedParam = validate("Invalid speed", "speedInput", 1, 50);	
 		let lightsCountParam = validate("Invalid lights count", "lightsCountInput", 1, 20);			
 		let lightsPowerParam = validate("Invalid lights power", "lightsPowerInput", 1, 1000);			
 		if (speedParam && pointsParam && lightsCountParam && lightsPowerParam) {		
+	
+			width = canvas.width;
+			height = canvas.height;
+			hWidth = width / 2; 
+			hHeight = height / 2;
 	
 			pointSize = pointsParam;
 
@@ -253,6 +257,40 @@ $.rainbow = (function() {
 	return {
 		start: function() {					
 			init();						
+		},
+		
+		fullscreen: function() {
+			if (canvas.width > 700) {
+				canvas.width = 700;
+				canvas.height = 400;
+				canvas.style.position = "relative";
+				if (document.exitFullscreen) {
+					document.exitFullscreen();
+				} else if (document.mozCancelFullScreen) { /* Firefox */
+					document.mozCancelFullScreen();
+				} else if (document.webkitExitFullscreen) { /* Chrome, Safari and Opera */
+					document.webkitExitFullscreen();
+				} else if (document.msExitFullscreen) { /* IE/Edge */
+					document.msExitFullscreen();
+				}
+			} else {
+				canvas.width = screen.width;
+				canvas.height = screen.height;
+				canvas.style.position = "absolute";
+				canvas.style.left = "0";
+				canvas.style.top = "0";
+				canvas.style.zIndex = "999";
+				if (canvas.requestFullscreen) {
+					canvas.requestFullscreen();
+				} else if (canvas.mozRequestFullScreen) { /* Firefox */
+					canvas.mozRequestFullScreen();
+				} else if (canvas.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+					canvas.webkitRequestFullscreen();
+				} else if (elem.msRequestFullscreen) { /* IE/Edge */
+					canvas.msRequestFullscreen();
+				}
+			}
+			init();
 		},
 		
 		averageColorBorder: function(value) {
