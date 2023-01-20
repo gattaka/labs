@@ -6,16 +6,28 @@
 			<td>Speed (ms) <1-50></td>
 			<td>Lights count <1-20></td>	
 			<td>Lights power <1-1000></td>
-			<td></td>	
-			<td></td>
+			<td>Mix delay <1-50></td>
 		</tr>
 		<tr>				
 			<td><input id="pointsInput" style="width: 120px;" value="10">	
 			<td><input id="speedInput" style="width: 100px;" value="20"></td>				
 			<td><input id="lightsCountInput" style="width: 100px;" value="5"></td>
-			<td><input id="lightsPowerInput" style="width: 100px;" value="700"></td>							
+			<td><input id="lightsPowerInput" style="width: 100px;" value="700"></td>
+			<td><input id="mixDelayInput" style="width: 100px;" value="1"></td>		
+		</tr>
+		<tr>
+			<td></td>	
+			<td></td>	
+			<td></td>	
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>				
 			<td><input id="averageColorBorderInput" type="checkbox" onclick="$.rainbow.averageColorBorder(this.checked)" >Average color border?</input></td>
+			<td><input id="colorOffsetInput" type="checkbox" onclick="$.rainbow.colorOffset(this.checked)" >Color offset?</input></td>
 			<td><button type="button" onclick="$.rainbow.start()">Run!</button></td>			
+			<td></td>	
+			<td></td>
 		</tr>
 	</tbody>
 </table><div style="margin: 10px 0;">
@@ -48,23 +60,33 @@ $.rainbow = (function() {
 	
 	let colorAvg = 0;
 	let border = false;
+	
+	let colorOffsetOn = false;
+	let colorOffset = 0;
+	
+	let mixDelay;
+	let mixStep = 0;
 			
 	let draw = function() {				
 	
 		colorAvg = 0;
 	
+		if (colorOffsetOn)
+			colorOffset = (colorOffset + 1) % 360;
+	
 		for (let x = 0; x < wp; x++) {
 			for (let y = 0; y < hp; y++) {
-				let pixel = pixels[x][y];							
+				let pixel = pixels[x][y];	
+				let color = colorOffsetOn ? (pixel.h + colorOffset) % 360 : pixel.h;
 				ctx.fillStyle = `hsl(
-					${pixel.h},
+					${color},
 					${normalizeSaturation(pixel.s)}%,										
 					${normalizeLightness(pixel.l)}%)`;
 				ctx.fillRect(x * pointSize + 1, y * pointSize + 1, pointSize - 2, pointSize - 2);
 						
 				if (border)
 					colorAvg += pixel.h;
-						
+										
 				let n = 0;
 				let lightness = 0;
 				let hue = 0;
@@ -77,26 +99,26 @@ $.rainbow = (function() {
 						n++;
 						let pp = pixels[px][py];						
 						lightness += pp.l;
-
-						// 350 a 100 mají sice rozdíl 250, ale barevná vzdálenost je 110
-						// 350 a 460 už mají 110
-						// aby se dalo průměrovat, musí mít barvy svoji maximální číselnou hodnotu
-						// 180 -> 180
-						// 10 -> 370
 						
-						// Je třeba přepočítat hodnotu na vzdálenost od počátku se znaménkem
-						// 360 -> 0
-						// 180 -> 180
-						// 270 -> 270 - 360 = -90				
-						// 190 -> 190 - 360 = -170						
-						hue += pp.h <= 180 ? pp.h : pp.h - 360;					
+						if (mixStep == 0) {
+							// Je třeba přepočítat hodnotu na vzdálenost od počátku se znaménkem
+							// 360 -> 0
+							// 180 -> 180
+							// 270 -> 270 - 360 = -90				
+							// 190 -> 190 - 360 = -170						
+							hue += pp.h <= 180 ? pp.h : pp.h - 360;
+						}
 					}
 				}
 				lightness = lightness / n;
 				
-				hue = (hue / n);
-				// zpětný převod na -10 -> 350
-				hue = hue > 0 ? hue : hue + 360;
+				if (mixStep == 0) {
+					hue = (hue / n);
+					// zpětný převod na -10 -> 350
+					hue = hue > 0 ? hue : hue + 360;					
+				} else {
+					hue = pixel.h;					
+				}
 
 				pixels2[x][y] = {
 					h:		hue,
@@ -107,7 +129,9 @@ $.rainbow = (function() {
 				};
 			}
 		}
-		
+				
+		mixStep = mixStep == 0 ? mixDelay : mixStep - 1;		
+				
 		if (border) {
 			colorAvg /= wp * hp; 
 			canvas.style.border = pointSize + "px solid hsl(" + Math.floor(colorAvg) + ", 100%, 50%)";
@@ -194,13 +218,16 @@ $.rainbow = (function() {
 		let pointsParam = validate("Invalid points", "pointsInput", 2, 100);
 		let speedParam = validate("Invalid speed", "speedInput", 1, 50);	
 		let lightsCountParam = validate("Invalid lights count", "lightsCountInput", 1, 20);			
-		let lightsPowerParam = validate("Invalid lights power", "lightsPowerInput", 1, 1000);			
-		if (speedParam && pointsParam && lightsCountParam && lightsPowerParam) {		
+		let lightsPowerParam = validate("Invalid lights power", "lightsPowerInput", 1, 1000);	
+		let mixDelayParam = validate("Invalid mix delay", "mixDelayInput", 1, 50);			
+		if (speedParam && pointsParam && lightsCountParam && lightsPowerParam && mixDelayParam) {		
 	
 			width = canvas.width;
 			height = canvas.height;
 			hWidth = width / 2; 
 			hHeight = height / 2;
+	
+			mixDelay = mixDelayParam;
 	
 			pointSize = pointsParam;
 
@@ -295,6 +322,10 @@ $.rainbow = (function() {
 		
 		averageColorBorder: function(value) {
 			border = value;
+		},
+		
+		colorOffset: function(value) {
+			colorOffsetOn = value;
 		},
 
 	};
