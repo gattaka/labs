@@ -7,16 +7,16 @@
     </tr>
     <tr>
         <td><input id="speedInput" style="width: 160px;" value="5"></td>
-        <td><input id="starsInput" style="width: 80px;" value="1000">
+        <td><input id="starsInput" style="width: 80px;" value="5000">
         <td>
-            <button type="button" onclick="$.stars.start()">Run!</button>
+            <button type="button" onclick="$.space.start()">Run!</button>
         </td>
     </tr>
     </tbody>
 </table>
 <div style="margin: 10px 0;">
     <div style="display: inline-block;">
-        <canvas id="myCanvas" width="800" height="600" ondblclick="$.space.fullscreen()"></canvas>
+        <canvas id="myCanvas" width="700" height="500" ondblclick="$.space.fullscreen()"></canvas>
     </div>
     <div style="display: inline-block;">
         <div>XY plane:</div>
@@ -41,7 +41,7 @@
         let halfWidth;
         let halfHeight;
 
-        let spaceSize = 4000;
+        let spaceSize = 20000;
         let spaceHalfSize = spaceSize / 2;
 
         let step = 2;
@@ -52,13 +52,13 @@
 
         let yawSpeed = 0; // otočení na pohled do strany
         let pitchSpeed = 0; // otočení na pohled nahoru/dolů
-        let rollSpeed = 0; // otočení na pohled hlavou na stranu
+        let rollSpeed = 0; // otočení na pohled hlavou na stranu (nepoužívá se)
         let yaw = 0; // otočení na pohled do strany
         let pitch = 0; // otočení na pohled nahoru/dolů
-        let roll = 0; // otočení na pohled hlavou na stranu
+        let roll = 0; // otočení na pohled hlavou na stranu (nepoužívá se)
 
-        let mouseHSensitivity = 0.5;
-        let mouseVSensitivity = 0.5;
+        let mouseHSensitivity = -0.005;
+        let mouseVSensitivity = -0.005;
 
         let idSequence = 1;
         let stars = [];
@@ -74,8 +74,10 @@
         // Bod kamery C
         let camera = {x: 0, y: 0, z: -700};
         // Bod focusu F (střed promítací roviny ve 3D, na který je zaměřena kamera)
-        let focalLength = 600;
+        let focalLength = 900;
         let focus = {x: 0, y: 0, z: camera.z + focalLength};
+        let focusChanged = false;
+
         // ViewX a ViewY jsou pomocné body, u kterých vektory VxF a VyF slouží jako osy x a y ve 2D zobrazení
         // VxF a VyF jsou tedy na sebe vždy kolmé a zároveň jsou kolmé na vektor CF
         // Zároveň vektory VxF a VyF slouží pro posuny nahoru a do strany
@@ -83,6 +85,12 @@
         let viewWidth = 200;
         let viewUp = {x: focus.x, y: focus.y + viewHeight, z: focus.z};
         let viewSide = {x: focus.x + viewWidth, y: focus.y, z: focus.z};
+
+        let viewToScreenWidth;
+        let viewToScreenHeight;
+
+        let upZoom = 2;
+        let sideZoom = 2;
 
         // Roviny promítání
         // https://www2.karlin.mff.cuni.cz/~portal/analyticka_geometrie/prostor.php?kapitola=obecnaRovniceRoviny
@@ -93,6 +101,13 @@
         // d se dopočítá dosazením nějakého bodu z roviny jako d = -(ax + by + cz)
         // ax + by + cz + d = 0
         let plane;
+
+        let toScreenCoord = function (x, y) {
+            return {
+                x: x,
+                y: y
+            };
+        }
 
         let addVectors = function (a, b, mult) {
             return {
@@ -269,17 +284,17 @@
         // yzAngle -- otočení v rámci roviny YZ
         let rotatePoint = function (point, xyAngle, xzAngle, yzAngle) {
             if (xyAngle != 0) {
-                planePoint = rotatePoint2D(point.x, point.y, xyAngle)
+                let planePoint = rotatePoint2D(point.x, point.y, xyAngle)
                 point.x = planePoint.x;
                 point.y = planePoint.y;
             }
             if (xzAngle != 0) {
-                planePoint = rotatePoint2D(point.x, point.z, xzAngle)
+                let planePoint = rotatePoint2D(point.x, point.z, xzAngle)
                 point.x = planePoint.x;
                 point.z = planePoint.y;
             }
             if (yzAngle != 0) {
-                planePoint = rotatePoint2D(point.y, point.z, yzAngle)
+                let planePoint = rotatePoint2D(point.y, point.z, yzAngle)
                 point.y = planePoint.x;
                 point.z = planePoint.y;
             }
@@ -297,7 +312,7 @@
             ctx.fillStyle = "black";
             ctx.fillRect(0, 0, width, height);
 
-            if (walkSpeed != 0 || strifeSpeed != 0 || elevateSpeed != 0 || yawSpeed != 0 || pitchSpeed != 0)
+            if (walkSpeed != 0 || strifeSpeed != 0 || elevateSpeed != 0 || yawSpeed != 0 || pitchSpeed != 0 || focusChanged)
                 processCamera();
 
             let C = camera;
@@ -314,7 +329,7 @@
                 // https://www2.karlin.mff.cuni.cz/~portal/analyticka_geometrie/prostor.php?kapitola=parametrickeVyjadreniPrimky
                 // vektor BC:
                 // vBC = B - C
-                let vBC = {x: B.x - C.x, y: B.y - C.y, z: B.z - C.z};
+                let vBC = addVectors(B, C, -1);
                 // parametrické vyjádření přímky pBC:
                 // pBC.x = B.x - vBC.x * t
                 // pBC.y = B.y - vBC.y * t
@@ -341,6 +356,7 @@
                     continue;
 
                 // Průsečík přímky paprsku a roviny (dosazení do roviny přímky)
+                // Q = B - vBC * t
                 let Q = addVectors(B, vBC, -t);
 
                 // Průsečík má souřadnice vůči prostoru, takže potřebuje převést na souřadnice vůči rovině
@@ -352,12 +368,13 @@
 
                 // Protože je teď rovina kamery natočená rovnoběžně s rovinou XY, lze použít Q.x a Q.y
                 // rovnou jako vykreslovací souřadnice 2D plochy
-                let size = spaceSize / Math.sqrt(Math.pow(B.x - C.x, 2) + Math.pow(B.y - C.y, 2) + Math.pow(B.z - C.z, 2));
+                let size = focalLength * 10 / Math.sqrt(Math.pow(B.x - C.x, 2) + Math.pow(B.y - C.y, 2) + Math.pow(B.z - C.z, 2));
                 ctx.fillStyle = B.c;
                 ctx.strokeStyle = B.c;
                 Q.x += halfWidth;
                 Q.y += halfHeight;
-                ctx.fillRect(Q.x - size / 2, Q.y - size / 2, size, size);
+                let Qs = toScreenCoord(Q.x, Q.y);
+                ctx.fillRect(Qs.x - size / 2, Qs.y - size / 2, size, size);
 
                 if (B.edges.length > 0) {
                     // Procházej hrany bodu
@@ -412,7 +429,7 @@
             return value;
         };
 
-        let lockChangeAlert = function() {
+        let lockChangeAlert = function () {
             if (document.pointerLockElement === canvas ||
                 document.mozPointerLockElement === canvas) {
                 document.addEventListener("mousemove", updatePosition, false);
@@ -421,15 +438,14 @@
             }
         };
 
-        let updatePosition = function(e) {
-            yawSpeed = -0.005 * e.movementX;
-            pitchSpeed = -0.005 * e.movementY;
-            console.log("yaw: " + yaw + " pitch: " + pitch);
+        let updatePosition = function (e) {
+            yawSpeed = mouseHSensitivity * e.movementX;
+            pitchSpeed = mouseVSensitivity * e.movementY;
         };
 
         let init = function () {
             let speedParam = validate("Invalid speed", "speedInput", 1, 50);
-            let starsParam = validate("Invalid stars", "starsInput", 1, 5000);
+            let starsParam = validate("Invalid stars", "starsInput", 1, 10000);
 
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 1;
@@ -439,7 +455,9 @@
                 height = canvas.height;
                 halfWidth = width / 2;
                 halfHeight = height / 2;
-                radius = Math.sqrt(halfWidth * halfWidth + halfHeight * halfHeight);
+
+                viewToScreenWidth = width / viewWidth;
+                viewToScreenHeight = height / viewHeight;
 
                 processCamera();
 
@@ -448,41 +466,34 @@
                 for (let i = 0; i < starsParam; i++)
                     addRandomStar();
 
-                let connect = function (pointA, pointB) {
-                    pointA.edges.push(pointB.id);
-                    pointB.edges.push(pointA.id);
+                let connect = function (...tuples) {
+                    for (let i = 0; i < tuples.length; i++) {
+                        let tuple = tuples[i];
+                        tuple[0].edges.push(tuple[1].id);
+                        tuple[1].edges.push(tuple[0].id);
+                    }
                 };
 
                 // Test krychle
                 // horní čtverec (y < 0)
-                let st1 = addStar(-50, -50, 150, "yellow");
-                let st2 = addStar(-50, -50, 50, "orange");
-                let st3 = addStar(50, -50, 50, "red");
-                let st4 = addStar(50, -50, 150, "brown");
+                let st1 = addStar(-50, -50, 50, "yellow");
+                let st2 = addStar(-50, -50, -50, "orange");
+                let st3 = addStar(50, -50, -50, "red");
+                let st4 = addStar(50, -50, 50, "brown");
 
                 // spodní čtverec (y > 0)
-                let st5 = addStar(-50, 50, 150, "cyan");
-                let st6 = addStar(-50, 50, 50, "blue");
-                let st7 = addStar(50, 50, 50, "green");
-                let st8 = addStar(50, 50, 150, "purple");
+                let st5 = addStar(-50, 50, 50, "cyan");
+                let st6 = addStar(-50, 50, -50, "blue");
+                let st7 = addStar(50, 50, -50, "green");
+                let st8 = addStar(50, 50, 50, "purple");
 
-                connect(st1, st2);
-                connect(st2, st3);
-                connect(st3, st4);
-                connect(st4, st1);
-
-                connect(st1, st5);
-                connect(st2, st6);
-                connect(st3, st7);
-                connect(st4, st8);
-
-                connect(st5, st6);
-                connect(st6, st7);
-                connect(st7, st8);
-                connect(st8, st5);
+                connect([st1, st2], [st2, st3], [st3, st4], [st4, st1]);
+                connect([st1, st5], [st2, st6], [st3, st7], [st4, st8]);
+                connect([st5, st6], [st6, st7], [st7, st8], [st8, st5]);
 
                 // střed
-                let id9 = addStar(0, 0, 100, "white");
+                let st9 = addStar(0, 0, 0, "white");
+                connect([st1, st9], [st2, st9], [st3, st9], [st4, st9], [st5, st9], [st6, st9], [st7, st9], [st8, st9]);
 
                 innnerChangeInterval(speedParam);
             }
@@ -492,11 +503,23 @@
 
             canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
             document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
-            canvas.onclick = function() {
+            canvas.onclick = function () {
                 canvas.requestPointerLock();
             };
             document.addEventListener('pointerlockchange', lockChangeAlert, false);
             document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
+
+            canvas.addEventListener("wheel", function (e) {
+                e.preventDefault();
+                let step = 0.1;
+                let CF = addVectors(focus, camera, -1);
+                if (e.deltaY > 0) {
+                    camera = addVectors(camera, CF, step);
+                } else {
+                    camera = addVectors(camera, CF, -step);
+                }
+                focusChanged = true;
+            });
         };
 
         return {
@@ -508,7 +531,7 @@
             fullscreen: function () {
                 if (canvas.width > 700) {
                     canvas.width = 700;
-                    canvas.height = 600;
+                    canvas.height = 500;
                     canvas.style.position = "relative";
                     if (document.exitFullscreen) {
                         document.exitFullscreen();
