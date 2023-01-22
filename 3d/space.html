@@ -15,11 +15,24 @@
     </tbody>
 </table>
 <div style="margin: 10px 0;">
-    <canvas id="myCanvas" width="700" height="600" ondblclick="$.stars.fullscreen()"></canvas>
+    <div style="display: inline-block;">
+        <canvas id="myCanvas" width="800" height="600" ondblclick="$.space.fullscreen()"></canvas>
+    </div>
+    <div style="display: inline-block;">
+        <div>XY plane:</div>
+        <canvas id="xzCanvas" style="border: 1px solid black" width="350" height="300"></canvas>
+    </div>
 </div>
 <script>
     var $ = $ || {};
-    $.stars = (function () {
+    $.space = (function () {
+
+        let xzCanvas = document.getElementById("xzCanvas");
+        let xzCtx = xzCanvas.getContext("2d");
+        let xzWidth = xzCanvas.width;
+        let xzHeight = xzCanvas.height;
+        let xzHalfWidth = xzWidth / 2;
+        let xzHalfHeight = xzHeight / 2;
 
         let canvas = document.getElementById("myCanvas");
         let ctx = canvas.getContext("2d");
@@ -28,23 +41,27 @@
         let halfWidth;
         let halfHeight;
 
-        let spaceSize = 2000;
+        let spaceSize = 4000;
         let spaceHalfSize = spaceSize / 2;
 
         let step = 2;
         let walkSpeed = 0;
         let strifeSpeed = 0;
         let elevateSpeed = 0;
+        let angleStep = Math.PI / 200;
 
-        let playerHOrient = 0; // 0-360
-        let playerVOrient = 0; // 0-360
+        let yawSpeed = 0; // otočení na pohled do strany
+        let pitchSpeed = 0; // otočení na pohled nahoru/dolů
+        let rollSpeed = 0; // otočení na pohled hlavou na stranu
+        let yaw = 0; // otočení na pohled do strany
+        let pitch = 0; // otočení na pohled nahoru/dolů
+        let roll = 0; // otočení na pohled hlavou na stranu
 
         let mouseHSensitivity = 0.5;
         let mouseVSensitivity = 0.5;
 
         let idSequence = 1;
         let stars = [];
-        let lines = [];
 
         let interval = 20;
         let innerIntervalCallback;
@@ -54,14 +71,18 @@
         // Z - hloubka (za mnou je záporná, přede mnou kladná)
 
         // Natočení kamery
-        let xyAngle = 0;
-        let xzAngle = 0;
-        let yzAngle = 0;
-
         // Bod kamery C
         let camera = {x: 0, y: 0, z: -700};
         // Bod focusu F (střed promítací roviny ve 3D, na který je zaměřena kamera)
-        let focus = {x: 0, y: 0, z: -100};
+        let focalLength = 600;
+        let focus = {x: 0, y: 0, z: camera.z + focalLength};
+        // ViewX a ViewY jsou pomocné body, u kterých vektory VxF a VyF slouží jako osy x a y ve 2D zobrazení
+        // VxF a VyF jsou tedy na sebe vždy kolmé a zároveň jsou kolmé na vektor CF
+        // Zároveň vektory VxF a VyF slouží pro posuny nahoru a do strany
+        let viewHeight = 150;
+        let viewWidth = 200;
+        let viewUp = {x: focus.x, y: focus.y + viewHeight, z: focus.z};
+        let viewSide = {x: focus.x + viewWidth, y: focus.y, z: focus.z};
 
         // Roviny promítání
         // https://www2.karlin.mff.cuni.cz/~portal/analyticka_geometrie/prostor.php?kapitola=obecnaRovniceRoviny
@@ -73,31 +94,105 @@
         // ax + by + cz + d = 0
         let plane;
 
-        let processCamera = function () {
-            // TODO posuny dle úhlu kamery
-            camera.x += strifeSpeed;
-            focus.x += strifeSpeed;
-            camera.y += elevateSpeed;
-            focus.y += elevateSpeed;
-            camera.z += walkSpeed;
-            focus.z += walkSpeed;
+        let addVectors = function (a, b, mult) {
+            return {
+                x: a.x + b.x * mult,
+                y: a.y + b.y * mult,
+                z: a.z + b.z * mult,
+            }
+        }
 
+        let processCamera = function () {
             // Přesun C do počátku a přepočet F
-            focus.x -= camera.x;
-            focus.y -= camera.y;
-            focus.z -= camera.z;
+            focus = addVectors(focus, camera, -1);
+            viewUp = addVectors(viewUp, camera, -1);
+            viewSide = addVectors(viewSide, camera, -1);
 
             // Otočení dle nastavení kamery
-            focus = rotatePoint(focus, xyAngle, xzAngle, yzAngle);
+            if (pitchSpeed != 0) {
+                // Pokud je yaw != 0 je potřeba dočasně vrátit otočení v téhle ose
+                if (yaw != 0) {
+                    focus = rotatePoint(focus, 0, -yaw, 0);
+                    viewUp = rotatePoint(viewUp, 0, -yaw, 0);
+                    viewSide = rotatePoint(viewSide, 0, -yaw, 0);
+                }
+                // Při vynulovaném yaw je možné udělat pitch, protože odpovídá rovině zy
+                focus = rotatePoint(focus, 0, 0, pitchSpeed);
+                viewUp = rotatePoint(viewUp, 0, 0, pitchSpeed);
+                viewSide = rotatePoint(viewSide, 0, 0, pitchSpeed);
+                if (yaw != 0) {
+                    focus = rotatePoint(focus, 0, yaw, 0);
+                    viewUp = rotatePoint(viewUp, 0, yaw, 0);
+                    viewSide = rotatePoint(viewSide, 0, yaw, 0);
+                }
+                pitch += pitchSpeed % Math.PI;
+            }
+
+            if (yawSpeed != 0) {
+                focus = rotatePoint(focus, 0, yawSpeed, 0);
+                viewUp = rotatePoint(viewUp, 0, yawSpeed, 0);
+                viewSide = rotatePoint(viewSide, 0, yawSpeed, 0);
+                yaw += yawSpeed % Math.PI;
+            }
 
             // Přesun zpět
-            focus.x += camera.x;
-            focus.y += camera.y;
-            focus.z += camera.z;
+            focus = addVectors(focus, camera, 1);
+            viewUp = addVectors(viewUp, camera, 1);
+            viewSide = addVectors(viewSide, camera, 1);
 
-            planeNormal = {x: camera.x - focus.x, y: camera.y - focus.y, z: camera.z - focus.z};
-            let d = -(planeNormal.x * focus.x + planeNormal.y * focus.y + planeNormal.z * focus.z);
-            plane = {a: planeNormal.x, b: planeNormal.y, c: planeNormal.z, d: d};
+            // CF funguje nejen jako normálový vektor promítací roviny, ale vlastně i jako směrový vektor pohledu,
+            // takže ho lze použít pro posuvy dle směru natočení
+            let CF = addVectors(focus, camera, -1);
+            let coefWalk = walkSpeed / focalLength;
+            camera = addVectors(camera, CF, coefWalk);
+            focus = addVectors(focus, CF, coefWalk);
+            viewUp = addVectors(viewUp, CF, coefWalk);
+            viewSide = addVectors(viewSide, CF, coefWalk);
+
+            let VxF = addVectors(viewSide, focus, -1);
+            let coefStrife = strifeSpeed / viewWidth;
+            camera = addVectors(camera, VxF, coefStrife);
+            focus = addVectors(focus, VxF, coefStrife);
+            viewUp = addVectors(viewUp, VxF, coefStrife);
+            viewSide = addVectors(viewSide, VxF, coefStrife);
+
+            let VyF = addVectors(viewUp, focus, -1);
+            let coefElevate = elevateSpeed / viewHeight;
+            camera = addVectors(camera, VyF, coefElevate);
+            focus = addVectors(focus, VyF, coefElevate);
+            viewUp = addVectors(viewUp, VyF, coefElevate);
+            viewSide = addVectors(viewSide, VyF, coefElevate);
+
+            // Přepočet promítací roviny
+            let d = -(CF.x * focus.x + CF.y * focus.y + CF.z * focus.z);
+            plane = {a: CF.x, b: CF.y, c: CF.z, d: d};
+
+            xzCtx.fillStyle = "white";
+            xzCtx.fillRect(0, 0, xzWidth, xzHeight);
+
+            xzCtx.strokeStyle = "gray";
+            xzCtx.beginPath();
+            xzCtx.moveTo(xzHalfWidth, 0);
+            xzCtx.lineTo(xzHalfWidth, xzHeight);
+            xzCtx.moveTo(0, xzHalfHeight);
+            xzCtx.lineTo(xzWidth, xzHalfHeight);
+            xzCtx.stroke();
+
+            xzCtx.fillStyle = "red";
+            let cx = camera.x * xzWidth / spaceSize + xzHalfWidth;
+            let cy = xzHalfHeight - camera.z * xzHeight / spaceSize;
+            xzCtx.fillRect(cx - 4, cy - 4, 8, 8);
+
+            xzCtx.fillStyle = "green";
+            let fx = focus.x * xzWidth / spaceSize + xzHalfWidth;
+            let fy = xzHalfHeight - focus.z * xzHeight / spaceSize;
+            xzCtx.fillRect(fx - 3, fy - 3, 6, 6);
+
+            xzCtx.strokeStyle = "red";
+            xzCtx.beginPath();
+            xzCtx.moveTo(cx, cy);
+            xzCtx.lineTo(fx, fy);
+            xzCtx.stroke();
         }
 
         let onKeyDown = function (event) {
@@ -114,11 +209,23 @@
                 case 68:
                     strifeSpeed = step;
                     break;
-                case 81:
+                case 70:
                     elevateSpeed = step;
                     break;
-                case 69:
+                case 82:
                     elevateSpeed = -step;
+                    break;
+                case 81:
+                    yawSpeed = angleStep;
+                    break;
+                case 69:
+                    yawSpeed = -angleStep;
+                    break;
+                case 89:
+                    pitchSpeed = angleStep;
+                    break;
+                case 67:
+                    pitchSpeed = -angleStep;
                     break;
             }
         };
@@ -133,14 +240,22 @@
                 case 68:
                     strifeSpeed = 0;
                     break;
+                case 82:
+                case 70:
+                    elevateSpeed = 0;
+                    break;
                 case 81:
                 case 69:
-                    elevateSpeed = 0;
+                    yawSpeed = 0;
+                    break;
+                case 89:
+                case 67:
+                    pitchSpeed = 0;
                     break;
             }
         };
 
-        let addRandomStar = function (x, y, z, color) {
+        let addRandomStar = function () {
             return addStar(Math.random() * spaceSize - spaceHalfSize,
                 Math.random() * spaceSize - spaceHalfSize,
                 Math.random() * spaceSize - spaceHalfSize,
@@ -182,8 +297,8 @@
             }
             if (yzAngle != 0) {
                 planePoint = rotatePoint2D(point.y, point.z, yzAngle)
-                point.y = planePoint.y;
-                point.z = planePoint.z;
+                point.y = planePoint.x;
+                point.z = planePoint.y;
             }
             return point;
         };
@@ -199,7 +314,7 @@
             ctx.fillStyle = "black";
             ctx.fillRect(0, 0, width, height);
 
-            if (walkSpeed != 0 || strifeSpeed != 0 || elevateSpeed != 0)
+            if (walkSpeed != 0 || strifeSpeed != 0 || elevateSpeed != 0 || yawSpeed != 0 || pitchSpeed != 0)
                 processCamera();
 
             let C = camera;
@@ -243,20 +358,14 @@
                     continue;
 
                 // Průsečík přímky paprsku a roviny (dosazení do roviny přímky)
-                let Q = {
-                    x: B.x - vBC.x * t,
-                    y: B.y - vBC.y * t,
-                    z: B.z - vBC.z * t
-                }
+                let Q = addVectors(B, vBC, -t);
 
                 // Průsečík má souřadnice vůči prostoru, takže potřebuje převést na souřadnice vůči rovině
                 // 1. přesunu kameru C na počátek a dle toho přepočítám bod
-                Q.x -= C.x;
-                Q.y -= C.y;
-                Q.z -= C.z;
+                Q = addVectors(Q, C, -1);
 
                 // Otočím bod, dle natočení kamery
-                Q = rotatePoint(Q, xyAngle, xzAngle, yzAngle);
+                Q = rotatePoint(Q, 0, -yaw, -pitch);
 
                 // Protože je teď rovina kamery natočená rovnoběžně s rovinou XY, lze použít Q.x a Q.y
                 // rovnou jako vykreslovací souřadnice 2D plochy
@@ -384,9 +493,8 @@
             document.addEventListener("keyup", onKeyUp);
 
             canvas.addEventListener("mousemove", function (e) {
-                //xzAngle = mouseHSensitivity * (e.clientX - width / 2) / (Math.PI * 2);
-                //playerVOrient = mouseVSensitivity * (e.clientY - height / 2);
-                //processCamera();
+                //yawSpeed = mouseHSensitivity * (e.clientX - width / 2);
+                //pitchSpeed = mouseVSensitivity * (e.clientY - height / 2);
             }, false);
         };
 
@@ -433,5 +541,5 @@
 
     })();
 
-    $.stars.start();
+    $.space.start();
 </script>
