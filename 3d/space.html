@@ -31,7 +31,7 @@
         let spaceSize = 2000;
         let spaceHalfSize = spaceSize / 2;
 
-        let step = 0.5;
+        let step = 2;
         let walkSpeed = 0;
         let strifeSpeed = 0;
         let elevateSpeed = 0;
@@ -42,7 +42,9 @@
         let mouseHSensitivity = 0.5;
         let mouseVSensitivity = 0.5;
 
-        let stars;
+        let idSequence = 1;
+        let stars = [];
+        let lines = [];
 
         let interval = 20;
         let innerIntervalCallback;
@@ -57,7 +59,7 @@
         let yzAngle = 0;
 
         // Bod kamery C
-        let camera = {x: 0, y: 0, z: -500};
+        let camera = {x: 0, y: 0, z: -700};
         // Bod focusu F (střed promítací roviny ve 3D, na který je zaměřena kamera)
         let focus = {x: 0, y: 0, z: -100};
 
@@ -138,15 +140,25 @@
             }
         };
 
-        let createStar = function () {
+        let addRandomStar = function (x, y, z, color) {
+            return addStar(Math.random() * spaceSize - spaceHalfSize,
+                Math.random() * spaceSize - spaceHalfSize,
+                Math.random() * spaceSize - spaceHalfSize,
+                "white");
+        }
+
+        let addStar = function (x, y, z, color) {
             // 3d souřadnice prostoru
-            let st = {
-                x: Math.random() * spaceSize - spaceHalfSize,
-                y: Math.random() * spaceSize - spaceHalfSize,
-                z: Math.random() * spaceSize - spaceHalfSize,
-                c: "white"
+            let star = {
+                x: x,
+                y: y,
+                z: z,
+                c: color,
+                id: idSequence++,
+                edges: []
             };
-            return st;
+            stars.push(star);
+            return star;
         }
 
         let toRad = function (angle) {
@@ -193,7 +205,7 @@
             let C = camera;
             let P = plane;
 
-            let lines = [];
+            let qMap = [];
 
             for (let i = 0; i < stars.length; i++) {
                 // Bod hvězdy B
@@ -224,9 +236,9 @@
                 // t = (a * B.x + b * B.y + c * B.z + d) / (a * vBC.x + b * vBC.y + c * vBC.z)
                 let t = (P.a * B.x + P.b * B.y + P.c * B.z + P.d) / (P.a * vBC.x + P.b * vBC.y + P.c * vBC.z)
 
-                // B má Bt = 0
-                // C má Ct = 1
-                // Q by mělo mít |Qt| < 1
+                // B má t = 0
+                // C má t = 1
+                // Q musí být mezi B a C (jinak prochází do promítací roviny zezadu) -- mělo by tedy mít |t| < 1
                 if (Math.abs(t) > 1)
                     continue;
 
@@ -241,37 +253,40 @@
                 // 1. přesunu kameru C na počátek a dle toho přepočítám bod
                 Q.x -= C.x;
                 Q.y -= C.y;
-
                 Q.z -= C.z;
+
                 // Otočím bod, dle natočení kamery
-
                 Q = rotatePoint(Q, xyAngle, xzAngle, yzAngle);
+
                 // Protože je teď rovina kamery natočená rovnoběžně s rovinou XY, lze použít Q.x a Q.y
-
                 // rovnou jako vykreslovací souřadnice 2D plochy
-
                 let size = spaceSize / Math.sqrt(Math.pow(B.x - C.x, 2) + Math.pow(B.y - C.y, 2) + Math.pow(B.z - C.z, 2));
-                //let size = 4;
                 ctx.fillStyle = B.c;
                 ctx.strokeStyle = B.c;
-                let x = Q.x + halfWidth - size / 2;
-                let y = Q.y + halfHeight - size / 2;
-                ctx.fillRect(x, y, size, size);
+                Q.x += halfWidth;
+                Q.y += halfHeight;
+                ctx.fillRect(Q.x - size / 2, Q.y - size / 2, size, size);
 
-                if (B.c != "white")
-                    lines.push({x, y});
-            }
-
-            ctx.beginPath();
-            for (let i = 0; i < lines.length; i++) {
-                let line = lines[i];
-                if (i == 0) {
-                    ctx.moveTo(line.x, line.y);
-                } else {
-                    ctx.lineTo(line.x, line.y);
+                if (B.edges.length > 0) {
+                    // Procházej hrany bodu
+                    let edgesLeft = B.edges.length;
+                    for (let i = 0; i < B.edges.length; i++) {
+                        let Q2 = qMap[B.edges[i]];
+                        if (Q2 !== undefined) {
+                            // pokud už cílový bod existuje vykresli hranu
+                            ctx.strokeStyle = "white";
+                            ctx.beginPath();
+                            ctx.moveTo(Q.x, Q.y);
+                            ctx.lineTo(Q2.x, Q2.y);
+                            ctx.stroke();
+                            edgesLeft--;
+                        }
+                    }
+                    // Pokud existují ještě nějaké hrany, u kterých nebyl vykreslen párový bod, přidej se do čekání
+                    if (edgesLeft > 0)
+                        qMap[B.id] = Q;
                 }
             }
-            ctx.stroke();
         };
 
         let innnerChangeInterval = function (value) {
@@ -324,22 +339,43 @@
                 stars = [];
 
                 for (let i = 0; i < starsParam; i++)
-                    stars[i] = createStar();
+                    addRandomStar();
+
+                let connect = function (pointA, pointB) {
+                    pointA.edges.push(pointB.id);
+                    pointB.edges.push(pointA.id);
+                };
 
                 // Test krychle
-                // horní čtverec (y = -1)
-                stars.push({x: -50, y: -50, z: 150, c: "yellow"});
-                stars.push({x: -50, y: -50, z: 50, c: "orange"});
-                stars.push({x: 50, y: -50, z: 150, c: "brown"});
-                stars.push({x: 50, y: -50, z: 50, c: "red"});
-                // spodní čtverec (y = 1)
-                stars.push({x: -50, y: 50, z: 150, c: "cyan"});
-                stars.push({x: -50, y: 50, z: 50, c: "blue"});
-                stars.push({x: 50, y: 50, z: 150, c: "purple"});
-                stars.push({x: 50, y: 50, z: 50, c: "green"});
+                // horní čtverec (y < 0)
+                let st1 = addStar(-50, -50, 150, "yellow");
+                let st2 = addStar(-50, -50, 50, "orange");
+                let st3 = addStar(50, -50, 50, "red");
+                let st4 = addStar(50, -50, 150, "brown");
+
+                // spodní čtverec (y > 0)
+                let st5 = addStar(-50, 50, 150, "cyan");
+                let st6 = addStar(-50, 50, 50, "blue");
+                let st7 = addStar(50, 50, 50, "green");
+                let st8 = addStar(50, 50, 150, "purple");
+
+                connect(st1, st2);
+                connect(st2, st3);
+                connect(st3, st4);
+                connect(st4, st1);
+
+                connect(st1, st5);
+                connect(st2, st6);
+                connect(st3, st7);
+                connect(st4, st8);
+
+                connect(st5, st6);
+                connect(st6, st7);
+                connect(st7, st8);
+                connect(st8, st5);
 
                 // střed
-                stars.push({x: 0, y: 0, z: 100, c: "white"});
+                let id9 = addStar(0, 0, 100, "white");
 
                 innnerChangeInterval(speedParam);
             }
@@ -358,15 +394,6 @@
 
             start: function () {
                 init();
-            },
-
-            centerRespawn: function (value) {
-                centerRespawn = value;
-            },
-
-            falcon: function (value) {
-                falcon = value;
-                falconLineEnlargement = 1;
             },
 
             fullscreen: function () {
