@@ -135,6 +135,9 @@
                 yaw += yawSpeed % Math.PI;
             }
 
+            pitchSpeed = 0;
+            yawSpeed = 0;
+
             // Přesun zpět
             focus = addVectors(focus, camera, 1);
             viewUp = addVectors(viewUp, camera, 1);
@@ -215,18 +218,6 @@
                 case 82:
                     elevateSpeed = -step;
                     break;
-                case 81:
-                    yawSpeed = angleStep;
-                    break;
-                case 69:
-                    yawSpeed = -angleStep;
-                    break;
-                case 89:
-                    pitchSpeed = angleStep;
-                    break;
-                case 67:
-                    pitchSpeed = -angleStep;
-                    break;
             }
         };
 
@@ -243,14 +234,6 @@
                 case 82:
                 case 70:
                     elevateSpeed = 0;
-                    break;
-                case 81:
-                case 69:
-                    yawSpeed = 0;
-                    break;
-                case 89:
-                case 67:
-                    pitchSpeed = 0;
                     break;
             }
         };
@@ -429,6 +412,21 @@
             return value;
         };
 
+        let lockChangeAlert = function() {
+            if (document.pointerLockElement === canvas ||
+                document.mozPointerLockElement === canvas) {
+                document.addEventListener("mousemove", updatePosition, false);
+            } else {
+                document.removeEventListener("mousemove", updatePosition, false);
+            }
+        };
+
+        let updatePosition = function(e) {
+            yawSpeed = -0.005 * e.movementX;
+            pitchSpeed = -0.005 * e.movementY;
+            console.log("yaw: " + yaw + " pitch: " + pitch);
+        };
+
         let init = function () {
             let speedParam = validate("Invalid speed", "speedInput", 1, 50);
             let starsParam = validate("Invalid stars", "starsInput", 1, 5000);
@@ -492,10 +490,13 @@
             document.addEventListener("keydown", onKeyDown);
             document.addEventListener("keyup", onKeyUp);
 
-            canvas.addEventListener("mousemove", function (e) {
-                //yawSpeed = mouseHSensitivity * (e.clientX - width / 2);
-                //pitchSpeed = mouseVSensitivity * (e.clientY - height / 2);
-            }, false);
+            canvas.requestPointerLock = canvas.requestPointerLock || canvas.mozRequestPointerLock;
+            document.exitPointerLock = document.exitPointerLock || document.mozExitPointerLock;
+            canvas.onclick = function() {
+                canvas.requestPointerLock();
+            };
+            document.addEventListener('pointerlockchange', lockChangeAlert, false);
+            document.addEventListener('mozpointerlockchange', lockChangeAlert, false);
         };
 
         return {
