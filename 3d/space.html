@@ -57,7 +57,7 @@
         let yzAngle = 0;
 
         // Bod kamery C
-        let camera = {x: 0, y: 0, z: -200};
+        let camera = {x: 0, y: 0, z: -500};
         // Bod focusu F (střed promítací roviny ve 3D, na který je zaměřena kamera)
         let focus = {x: 0, y: 0, z: -100};
 
@@ -193,6 +193,8 @@
             let C = camera;
             let P = plane;
 
+            let lines = [];
+
             for (let i = 0; i < stars.length; i++) {
                 // Bod hvězdy B
 
@@ -247,12 +249,29 @@
                 // Protože je teď rovina kamery natočená rovnoběžně s rovinou XY, lze použít Q.x a Q.y
 
                 // rovnou jako vykreslovací souřadnice 2D plochy
+
                 let size = spaceSize / Math.sqrt(Math.pow(B.x - C.x, 2) + Math.pow(B.y - C.y, 2) + Math.pow(B.z - C.z, 2));
                 //let size = 4;
                 ctx.fillStyle = B.c;
                 ctx.strokeStyle = B.c;
-                ctx.fillRect(Q.x + halfWidth - size / 2, Q.y + halfHeight - size / 2, size, size);
+                let x = Q.x + halfWidth - size / 2;
+                let y = Q.y + halfHeight - size / 2;
+                ctx.fillRect(x, y, size, size);
+
+                if (B.c != "white")
+                    lines.push({x, y});
             }
+
+            ctx.beginPath();
+            for (let i = 0; i < lines.length; i++) {
+                let line = lines[i];
+                if (i == 0) {
+                    ctx.moveTo(line.x, line.y);
+                } else {
+                    ctx.lineTo(line.x, line.y);
+                }
+            }
+            ctx.stroke();
         };
 
         let innnerChangeInterval = function (value) {
@@ -289,6 +308,9 @@
         let init = function () {
             let speedParam = validate("Invalid speed", "speedInput", 1, 50);
             let starsParam = validate("Invalid stars", "starsInput", 1, 5000);
+
+            ctx.strokeStyle = 'white';
+            ctx.lineWidth = 1;
 
             if (speedParam && starsParam) {
                 width = canvas.width;
