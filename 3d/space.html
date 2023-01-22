@@ -1,0 +1,388 @@
+<table>
+    <tbody>
+    <tr>
+        <td>Speed (ms) <1-50></td>
+        <td>Stars <1-5000></td>
+        <td></td>
+    </tr>
+    <tr>
+        <td><input id="speedInput" style="width: 160px;" value="5"></td>
+        <td><input id="starsInput" style="width: 80px;" value="1000">
+        <td>
+            <button type="button" onclick="$.stars.start()">Run!</button>
+        </td>
+    </tr>
+    </tbody>
+</table>
+<div style="margin: 10px 0;">
+    <canvas id="myCanvas" width="700" height="600" ondblclick="$.stars.fullscreen()"></canvas>
+</div>
+<script>
+    var $ = $ || {};
+    $.stars = (function () {
+
+        let canvas = document.getElementById("myCanvas");
+        let ctx = canvas.getContext("2d");
+        let width;
+        let height;
+        let halfWidth;
+        let halfHeight;
+
+        let spaceSize = 2000;
+        let spaceHalfSize = spaceSize / 2;
+
+        let step = 0.5;
+        let walkSpeed = 0;
+        let strifeSpeed = 0;
+        let elevateSpeed = 0;
+
+        let playerHOrient = 0; // 0-360
+        let playerVOrient = 0; // 0-360
+
+        let mouseHSensitivity = 0.5;
+        let mouseVSensitivity = 0.5;
+
+        let stars;
+
+        let interval = 20;
+        let innerIntervalCallback;
+
+        // X - šířka (vlevo je záporná, vpravo kladná)
+        // Y - výška (dole je záporná, nahoře kladná)
+        // Z - hloubka (za mnou je záporná, přede mnou kladná)
+
+        // Natočení kamery
+        let xyAngle = 0;
+        let xzAngle = 0;
+        let yzAngle = 0;
+
+        // Bod kamery C
+        let camera = {x: 0, y: 0, z: -200};
+        // Bod focusu F (střed promítací roviny ve 3D, na který je zaměřena kamera)
+        let focus = {x: 0, y: 0, z: -100};
+
+        // Roviny promítání
+        // https://www2.karlin.mff.cuni.cz/~portal/analyticka_geometrie/prostor.php?kapitola=obecnaRovniceRoviny
+        // Normála promítací roviny (kolmice na rovinu)
+        // jde tedy zároveň o vektor z bodů CF
+        let planeNormal;
+        // Rovnice promítací roviny -- a,b,c je z normálového vektoru,
+        // d se dopočítá dosazením nějakého bodu z roviny jako d = -(ax + by + cz)
+        // ax + by + cz + d = 0
+        let plane;
+
+        let processCamera = function () {
+            // TODO posuny dle úhlu kamery
+            camera.x += strifeSpeed;
+            focus.x += strifeSpeed;
+            camera.y += elevateSpeed;
+            focus.y += elevateSpeed;
+            camera.z += walkSpeed;
+            focus.z += walkSpeed;
+
+            // Přesun C do počátku a přepočet F
+            focus.x -= camera.x;
+            focus.y -= camera.y;
+            focus.z -= camera.z;
+
+            // Otočení dle nastavení kamery
+            focus = rotatePoint(focus, xyAngle, xzAngle, yzAngle);
+
+            // Přesun zpět
+            focus.x += camera.x;
+            focus.y += camera.y;
+            focus.z += camera.z;
+
+            planeNormal = {x: camera.x - focus.x, y: camera.y - focus.y, z: camera.z - focus.z};
+            let d = -(planeNormal.x * focus.x + planeNormal.y * focus.y + planeNormal.z * focus.z);
+            plane = {a: planeNormal.x, b: planeNormal.y, c: planeNormal.z, d: d};
+        }
+
+        let onKeyDown = function (event) {
+            switch (event.keyCode) {
+                case 87:
+                    walkSpeed = step;
+                    break;
+                case 83:
+                    walkSpeed = -step;
+                    break;
+                case 65:
+                    strifeSpeed = -step;
+                    break;
+                case 68:
+                    strifeSpeed = step;
+                    break;
+                case 81:
+                    elevateSpeed = step;
+                    break;
+                case 69:
+                    elevateSpeed = -step;
+                    break;
+            }
+        };
+
+        let onKeyUp = function (event) {
+            switch (event.keyCode) {
+                case 87:
+                case 83:
+                    walkSpeed = 0;
+                    break;
+                case 65:
+                case 68:
+                    strifeSpeed = 0;
+                    break;
+                case 81:
+                case 69:
+                    elevateSpeed = 0;
+                    break;
+            }
+        };
+
+        let createStar = function () {
+            // 3d souřadnice prostoru
+            let st = {
+                x: Math.random() * spaceSize - spaceHalfSize,
+                y: Math.random() * spaceSize - spaceHalfSize,
+                z: Math.random() * spaceSize - spaceHalfSize,
+                c: "white"
+            };
+            return st;
+        }
+
+        let toRad = function (angle) {
+            return Math.PI * angle / 180;
+        };
+
+        // otočí bod kolem počátku o úhel
+        // xyAngle -- otočení v rámci roviny XY
+        // xzAngle -- otočení v rámci roviny XZ
+        // yzAngle -- otočení v rámci roviny YZ
+        let rotatePoint = function (point, xyAngle, xzAngle, yzAngle) {
+            if (xyAngle != 0) {
+                planePoint = rotatePoint2D(point.x, point.y, xyAngle)
+                point.x = planePoint.x;
+                point.y = planePoint.y;
+            }
+            if (xzAngle != 0) {
+                planePoint = rotatePoint2D(point.x, point.z, xzAngle)
+                point.x = planePoint.x;
+                point.z = planePoint.y;
+            }
+            if (yzAngle != 0) {
+                planePoint = rotatePoint2D(point.y, point.z, yzAngle)
+                point.y = planePoint.y;
+                point.z = planePoint.z;
+            }
+            return point;
+        };
+
+        let rotatePoint2D = function (x, y, angle) {
+            return {
+                x: x * Math.cos(angle) - y * Math.sin(angle),
+                y: y * Math.cos(angle) + x * Math.sin(angle),
+            }
+        };
+
+        let draw = function () {
+            ctx.fillStyle = "black";
+            ctx.fillRect(0, 0, width, height);
+
+            if (walkSpeed != 0 || strifeSpeed != 0 || elevateSpeed != 0)
+                processCamera();
+
+            let C = camera;
+            let P = plane;
+
+            for (let i = 0; i < stars.length; i++) {
+                // Bod hvězdy B
+
+                let B = stars[i];
+
+                // Přímka z BC je dána bodem C kamery a vykreslovaným bodem B (např. hvězdy)
+                // https://www2.karlin.mff.cuni.cz/~portal/analyticka_geometrie/prostor.php?kapitola=parametrickeVyjadreniPrimky
+                // vektor BC:
+                // vBC = B - C
+                let vBC = {x: B.x - C.x, y: B.y - C.y, z: B.z - C.z};
+                // parametrické vyjádření přímky pBC:
+                // pBC.x = B.x - vBC.x * t
+                // pBC.y = B.y - vBC.y * t
+                // pBC.z = B.z - vBC.z * t
+
+                // Vzájemná poloha přímky a roviny
+                // https://www2.karlin.mff.cuni.cz/~portal/analyticka_geometrie/prostor.php?kapitola=vzajemnaPoloha
+                // dosazení parametrického vyjádření přímky do rovnice promítací roviny
+
+                // rovnice promítací roviny P:
+                // ax + by + cz + d = 0
+
+                // a * pBC.x + b * pBC.y + c * pBC.z + d = 0
+                // a * (B.x - vBC.x * t)     + b * (B.y - vBC.y * t)     + c * (B.z - vBC.z * t)     + d = 0
+                // a * B.x + b * B.y + c * B.z + d     - t * (a * vBC.x + b * vBC.y + c * vBC.z) = 0
+                // a * B.x + b * B.y + c * B.z + d     =     t * (a * vBC.x + b * vBC.y + c * vBC.z)
+                // t = (a * B.x + b * B.y + c * B.z + d) / (a * vBC.x + b * vBC.y + c * vBC.z)
+                let t = (P.a * B.x + P.b * B.y + P.c * B.z + P.d) / (P.a * vBC.x + P.b * vBC.y + P.c * vBC.z)
+
+                // B má Bt = 0
+                // C má Ct = 1
+                // Q by mělo mít |Qt| < 1
+                if (Math.abs(t) > 1)
+                    continue;
+
+                // Průsečík přímky paprsku a roviny (dosazení do roviny přímky)
+                let Q = {
+                    x: B.x - vBC.x * t,
+                    y: B.y - vBC.y * t,
+                    z: B.z - vBC.z * t
+                }
+
+                // Průsečík má souřadnice vůči prostoru, takže potřebuje převést na souřadnice vůči rovině
+                // 1. přesunu kameru C na počátek a dle toho přepočítám bod
+                Q.x -= C.x;
+                Q.y -= C.y;
+
+                Q.z -= C.z;
+                // Otočím bod, dle natočení kamery
+
+                Q = rotatePoint(Q, xyAngle, xzAngle, yzAngle);
+                // Protože je teď rovina kamery natočená rovnoběžně s rovinou XY, lze použít Q.x a Q.y
+
+                // rovnou jako vykreslovací souřadnice 2D plochy
+                let size = spaceSize / Math.sqrt(Math.pow(B.x - C.x, 2) + Math.pow(B.y - C.y, 2) + Math.pow(B.z - C.z, 2));
+                //let size = 4;
+                ctx.fillStyle = B.c;
+                ctx.strokeStyle = B.c;
+                ctx.fillRect(Q.x + halfWidth - size / 2, Q.y + halfHeight - size / 2, size, size);
+            }
+        };
+
+        let innnerChangeInterval = function (value) {
+            if (isNaN(value))
+                return;
+            let newValue = Number(value);
+            if (newValue < 1)
+                return;
+            console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+            interval = newValue;
+
+            if (innerIntervalCallback)
+                clearInterval(innerIntervalCallback);
+
+            innerIntervalCallback = setInterval(function () {
+                draw();
+            }, interval);
+        };
+
+        let validate = function (msg, field, min, max) {
+            let value = document.getElementById(field).value;
+            if (isNaN(value)) {
+                alert(msg);
+                return false;
+            }
+            value = Number(value);
+            if (value < min || value > max) {
+                alert(msg);
+                return false;
+            }
+            return value;
+        };
+
+        let init = function () {
+            let speedParam = validate("Invalid speed", "speedInput", 1, 50);
+            let starsParam = validate("Invalid stars", "starsInput", 1, 5000);
+
+            if (speedParam && starsParam) {
+                width = canvas.width;
+                height = canvas.height;
+                halfWidth = width / 2;
+                halfHeight = height / 2;
+                radius = Math.sqrt(halfWidth * halfWidth + halfHeight * halfHeight);
+
+                processCamera();
+
+                stars = [];
+
+                for (let i = 0; i < starsParam; i++)
+                    stars[i] = createStar();
+
+                // Test krychle
+                // horní čtverec (y = -1)
+                stars.push({x: -50, y: -50, z: 150, c: "yellow"});
+                stars.push({x: -50, y: -50, z: 50, c: "orange"});
+                stars.push({x: 50, y: -50, z: 150, c: "brown"});
+                stars.push({x: 50, y: -50, z: 50, c: "red"});
+                // spodní čtverec (y = 1)
+                stars.push({x: -50, y: 50, z: 150, c: "cyan"});
+                stars.push({x: -50, y: 50, z: 50, c: "blue"});
+                stars.push({x: 50, y: 50, z: 150, c: "purple"});
+                stars.push({x: 50, y: 50, z: 50, c: "green"});
+
+                // střed
+                stars.push({x: 0, y: 0, z: 100, c: "white"});
+
+                innnerChangeInterval(speedParam);
+            }
+
+            document.addEventListener("keydown", onKeyDown);
+            document.addEventListener("keyup", onKeyUp);
+
+            canvas.addEventListener("mousemove", function (e) {
+                //xzAngle = mouseHSensitivity * (e.clientX - width / 2) / (Math.PI * 2);
+                //playerVOrient = mouseVSensitivity * (e.clientY - height / 2);
+                //processCamera();
+            }, false);
+        };
+
+        return {
+
+            start: function () {
+                init();
+            },
+
+            centerRespawn: function (value) {
+                centerRespawn = value;
+            },
+
+            falcon: function (value) {
+                falcon = value;
+                falconLineEnlargement = 1;
+            },
+
+            fullscreen: function () {
+                if (canvas.width > 700) {
+                    canvas.width = 700;
+                    canvas.height = 600;
+                    canvas.style.position = "relative";
+                    if (document.exitFullscreen) {
+                        document.exitFullscreen();
+                    } else if (document.mozCancelFullScreen) { /* Firefox */
+                        document.mozCancelFullScreen();
+                    } else if (document.webkitExitFullscreen) { /* Chrome, Safari and Opera */
+                        document.webkitExitFullscreen();
+                    } else if (document.msExitFullscreen) { /* IE/Edge */
+                        document.msExitFullscreen();
+                    }
+                } else {
+                    canvas.width = screen.width;
+                    canvas.height = screen.height;
+                    canvas.style.position = "absolute";
+                    canvas.style.left = "0";
+                    canvas.style.top = "0";
+                    canvas.style.zIndex = "999";
+                    if (canvas.requestFullscreen) {
+                        canvas.requestFullscreen();
+                    } else if (canvas.mozRequestFullScreen) { /* Firefox */
+                        canvas.mozRequestFullScreen();
+                    } else if (canvas.webkitRequestFullscreen) { /* Chrome, Safari and Opera */
+                        canvas.webkitRequestFullscreen();
+                    } else if (elem.msRequestFullscreen) { /* IE/Edge */
+                        canvas.msRequestFullscreen();
+                    }
+                }
+                init();
+            }
+        };
+
+    })();
+
+    $.stars.start();
+</script>
