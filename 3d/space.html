@@ -2,7 +2,7 @@
     <tbody>
     <tr>
         <td>Speed (ms) <1-50></td>
-        <td>Stars <1-5000></td>
+        <td>Stars <1-50000></td>
         <td></td>
     </tr>
     <tr>
@@ -41,7 +41,7 @@
         let halfWidth;
         let halfHeight;
 
-        let spaceSize = 20000;
+        let spaceSize = 50000;
         let spaceHalfSize = spaceSize / 2;
 
         let step = 2;
@@ -445,7 +445,7 @@
 
         let init = function () {
             let speedParam = validate("Invalid speed", "speedInput", 1, 50);
-            let starsParam = validate("Invalid stars", "starsInput", 1, 10000);
+            let starsParam = validate("Invalid stars", "starsInput", 1, 500000);
 
             ctx.strokeStyle = 'white';
             ctx.lineWidth = 1;
