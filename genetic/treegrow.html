@@ -1,0 +1,399 @@
+[N1]Parametry[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Výkon listu <1-1000></td>
+			<td>Pravděpodobnost listu <0-100></td>
+			<td>Životnost uzlu <1-100></td>			
+			<td>Rozlišení <10-20></td>
+			<td>Delay (ms) <1-1000></td>
+			<td></td>
+		</tr>
+		<tr>
+			<td><input id="leafPowerInput" style="width: 130px;" value="30"/></td>
+			<td><input id="leafToBranchProbInput" style="width: 130px;" value="5"/></td>
+			<td><input id="nodeHealthInput" style="width: 160px;" value="5"/></td>
+			<td><input id="cellSizeInput" style="width: 160px;" value="10"/></td>
+			<td><input id="delayInput" style="width: 120px;" value="30"/></td>
+			<td><button type="button" onclick="$.treegrow.start()">Run!</button></td>
+		</tr>		
+	</tbody>
+</table>
+<div style="margin-top: 10px;">
+	<canvas id="canvas" width="800" height="600"></canvas>
+</div>[/HTML]
+<script>
+var $ = $ || {};
+$.treegrow = (() => {
+
+	/*
+	- Stromy
+		- gen-rand = pravděpodobnost, že se něco bude dít, dána genem jedince
+		- gen-stat = hodnota, dána genem jedince
+	- Dvě fáze
+		- fáze růstu
+			- zakládají se listy nebo se z listů tvoří větve
+				- větev ani list nesmí narazit do obsazeného čtverce
+				- list nemůže růst tam, kde nad ním je jiný list (větev nevadí)
+			- zakládání stojí energii, kterou musí mít strom v "banku"
+			- gen-rand určuje, zda se bude měnit list na větev nebo se bude tvořit nový list
+			- místo ze kterého může vyrůst nový list se vybírá náhodně
+				- bere se ale v potaz vzdálenost od nějakého jiného listu
+				- gen-rand určuje je velký prostor je umožněn pro růst 
+					- jestli smí list vyrůst jen na 2 dílky vzdálené větvi od jiného listu, nebo může i na kmení		
+		- fáze sbírání energie
+			- všem větvím a listům se nastaví stav--
+			- prochází se postupně všechny listy a ty posílají "energii" přes předky zpět ke koření
+			- přes koho projde energie, dá si stav++
+			- ty větve nebo listy, které mají stav = 0 jsou suché a mízí
+			- zbytek, co dojde do kořene se přičte k banku
+	*/
+
+	// gen prostředí
+	let cells;
+	let lights;
+	let cellSize;
+	let trees;
+	let cWidth;
+	let cHeight;
+	
+	// simulátor
+	let delay;
+	let innerIntervalCallback;
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;	
+	
+	let getCell = (cx, cy) => {
+		if (!isValidPosition(cx, cy))
+			return null;
+		return cells[cy * cWidth + cx];
+	};
+	
+	let isValidPosition = (cx, cy) => {
+		return cx < cWidth && cx >= 0 && cy < cHeight && cy >= 0		
+	};
+	
+	let isCellEmptyOrNode = (node, cx, cy) => {
+		if (!isValidPosition(cx, cy))
+			return false;
+		let val = getCell(cx, cy);
+		return val == node || !val;
+	};
+	
+	let isFree = (cx, cy) => {
+		if (getCell(cx, cy) || !isValidPosition(cx, cy))
+			return false;
+		return true;
+			/*
+		return isCellEmptyOrNode(node, cx - 1, cy - 1) && 
+			   isCellEmptyOrNode(node, cx, cy - 1) &&
+			   isCellEmptyOrNode(node, cx + 1, cy - 1) &&
+			   isCellEmptyOrNode(node, cx - 1, cy) && 
+			   ! &&
+			   isCellEmptyOrNode(node, cx + 1, cy) &&
+			   isCellEmptyOrNode(node, cx - 1, cy + 1) && 
+			   isCellEmptyOrNode(node, cx, cy + 1) &&
+			   isCellEmptyOrNode(node, cx + 1, cy + 1);
+			   */
+	};
+
+	let grow = () => {		
+		for (let i = 0; i < trees.length; i++) {
+			let tree = trees[i];
+			tree.age++;
+			while (tree.energy >= tree.dna.nodeHealth) {
+				let creatingLeaf;
+				if (tree.energy < tree.dna.nodeHealth + tree.dna.leafPower) {
+					// je lepší přeskočit toto kolo, protože jinak strom bude stále stavět jen větve a žádné listy
+					break;		
+				} else {
+					creatingLeaf = Math.random() <= tree.dna.leafToBranchProb;
+				}
+				let success = false;
+				let offset = Math.floor(Math.random() * tree.nodes.length);
+				for (let j = 0; j < tree.nodes.length; j++) {					
+					let node = tree.nodes[(j + offset) % tree.nodes.length];												
+					if (!node.leaf) {
+						// TODO DNA preference směru růstu 
+						offset = Math.floor(Math.random() * 8);
+						for (let k = 0; k < 8; k++) {
+							let dir = Math.floor((k + offset) % 8);
+							let ncx = node.cx;
+							let ncy = node.cy;
+							switch (dir) {
+								case 0:
+									ncy = node.cy + 1;
+									break;
+								case 1:
+									ncy = node.cy - 1;
+									break;
+								case 2:
+									ncx = node.cx + 1;
+									break;
+								case 3:
+									ncx = node.cx - 1;
+									break;
+								case 4:
+									ncx = node.cx + 1;
+									ncy = node.cy + 1;
+									break;
+								case 5:
+									ncx = node.cx + 1;
+									ncy = node.cy - 1;
+									break;
+								case 6:
+									ncx = node.cx - 1;
+									ncy = node.cy + 1;
+									break;
+								case 7:
+									ncx = node.cx - 1;
+									ncy = node.cy - 1;
+									break;
+							}
+							if (isFree(ncx, ncy)) {
+								if (creatingLeaf) {
+									if (!lights[ncx] || ncy > lights[ncx].cy) {
+										let newLeaf = {
+											cx: ncx,
+											cy: ncy,
+											parent: node,
+											nodes: [],
+											tree: tree,
+											leaf: true,
+											health: tree.dna.nodeHealth
+										}
+										node.nodes.push(newLeaf);
+										tree.nodes.push(newLeaf);
+										lights[ncx] = newLeaf;
+										cells[ncy * cWidth + ncx] = newLeaf;
+										success = true;
+										break;
+									}
+								} else {
+									let newBranch ={
+										cx: ncx,
+										cy: ncy,
+										parent: node,
+										nodes: [],
+										tree: tree,
+										leaf: false,
+										health: tree.dna.nodeHealth
+									}
+									node.nodes.push(newBranch);
+									tree.nodes.push(newBranch);
+									cells[ncy * cWidth + ncx] = newBranch;
+									success = true;
+									break;
+								}
+							}
+						}
+					}
+					if (success)
+						break;
+				}
+				if (success) {
+					tree.energy -= tree.dna.nodeHealth;
+					if (creatingLeaf)
+						tree.energy -= tree.dna.leafPower;
+				} else {
+					// energie je, ale není co kam dát
+					break;
+				}
+			}
+		}
+	};
+	
+	let gatherRec = (node, energy) => {
+		node.health++;
+		if (node.parent) {
+			gatherRec(node.parent, energy - 1);
+		} else {
+			node.tree.energy += energy;
+		}
+	};
+	
+	let killNode = (node) => {
+		node.health = 0;
+		// nesmí se dělat splice, protože pozice v poli je cx-cy vypočtený index
+		// splice by elementy posunul a byly by tak najednou na jiném indexu, než
+		// udává jejich cx-cy
+		cells[node.cy * cWidth + node.cx] = null;
+		// TODO lights by měl být stack
+		//if (lights[node.cx] == node)
+		//	lights		
+
+		// pokud uschnula větev, uschne vše na ní
+		for (let i = 0; i < node.nodes.length; i++) 
+			killNode(node.nodes[i]);					
+	};
+	
+	let spliceDeadSubNode = (node) => {
+		for (let i = 0; i < node.nodes.length; i++) {
+			let subnode = node.nodes[i];
+			spliceDeadSubNode(subnode);
+			if (subnode.health == 0) {
+				node.nodes.splice(i, 1);
+				i--; // korekce, aby se nepřeskočili elementy (upravuji pole, přes které právě iteruji)
+			}
+		}
+	};
+	
+	let gather = () => {		
+		for (let i = 0; i < trees.length; i++) {
+			let tree = trees[i];
+			tree.age++;
+			for (let j = 0; j < tree.nodes.length; j++) {
+				let node = tree.nodes[j];
+				// tímhle se zajistí, že časem věci bez světla uschnou
+				node.health--;								
+				// pokud jsi list a svítí na tebe světlo
+				if (node.leaf && lights[node.cx] == node) 
+					gatherRec(node, tree.dna.leafPower);									
+			}
+			for (let j = 0; j < tree.nodes.length; j++) {
+				// uschlé větve opadávají
+				let node = tree.nodes[j];
+				if (node.health == 0) {		
+					killNode(node);
+					
+					// pokud uschnul kmen, strom je mrtev
+					if (!node.parent) {					
+						trees.splice(i, 1);
+						break;
+					}
+				}
+			}
+			// TODO odstranění suchých větví z přehledu tree je děláno lazy během grow fáze
+			// TODO odstranění suchých větví z přehledu node.parent je děláno v killNode
+						
+			for (let j = 0; j < tree.nodes.length; j++) {
+				let node = tree.nodes[j];
+				if (node.health == 0) {
+					tree.nodes.splice(j, 1);
+					j--; // korekce, aby se nepřeskočili elementy (upravuji pole, přes které právě iteruji)
+				}
+			}
+			
+			spliceDeadSubNode(tree.nodes[0]);			
+		}
+	};
+
+	let paintTrees = () => {	
+		ctx.clearRect(0, 0, width, height);
+		ctx.strokeStyle = "black";
+		ctx.strokeRect(0, 0, width, height);		
+				
+		for (let i = 0; i < trees.length; i++) {
+			let tree = trees[i];
+			for (let j = 0; j < tree.nodes.length; j++) {
+				let node = tree.nodes[j];		
+				if (node.parent) {
+					ctx.beginPath();
+					ctx.moveTo(node.cx * cellSize + cellSize * 0.5, height - cellSize * 0.5 - node.cy * cellSize);
+					ctx.lineTo(node.parent.cx * cellSize + cellSize * 0.5, height - cellSize * 0.5 - node.parent.cy * cellSize);
+					ctx.stroke();
+				}
+					
+				ctx.fillStyle = node.leaf ? "green" : "black";
+				ctx.fillRect(node.cx * cellSize + cellSize * 0.25, height - cellSize * 0.75 - node.cy * cellSize, cellSize / 2, cellSize / 2);
+			}
+		}
+	};
+
+	let run = () => {
+		paintTrees();
+		grow();
+		gather();
+		
+		setTimeout(function() {
+			run();
+		}, delay);			
+	};
+	
+	let validate = (msg, field, min, max) => {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+
+	return {
+		start: () => {
+					
+			let leafPowerParam = validate("Invalid leafPower", "leafPowerInput", 1, 1000);
+			let leafToBranchProbParam = validate("Invalid leafToBranchProb", "leafToBranchProbInput", 0, 100);		
+			let nodeHealthInputParam = validate("Invalid nodeHealth", "nodeHealthInput", 1, 100);			
+			let cellSizeInputParam = validate("Invalid cellSize", "cellSizeInput", 10, 20);
+			let delayParam = validate("Invalid delay", "delayInput", 1, 50);
+
+			if (leafPowerParam && leafToBranchProbParam && nodeHealthInputParam && cellSizeInputParam && delayParam) {
+				delay = delayParam;
+
+				cellSize = cellSizeInputParam;
+				
+				trees = [];
+				lights = [];
+				cells = [];
+				
+				cWidth = Math.floor(width / cellSize);
+				cHeight = Math.floor(height / cellSize);
+
+				// test
+				let tree = {
+					cx: Math.floor(width / cellSize / 2), // pozice
+					dna: {
+						leafPower: leafPowerParam, // výkon listu -- energie, kterou dodává každý list
+						leafToBranchProb: leafToBranchProbParam / 100, // pravděpodobnost, že z dané větve vyroste nový list
+						nodeHealth: nodeHealthInputParam, // kolik energie/zdraví bude stát/mít nová větev nebo list (u listu je to ještě navíc jeho výkon			
+					},
+					age: 0, // stáří stromu
+					energy: 10, // aktuální energie	(startovací energie je zároveň energie potřebná pro založení semínka)
+					nodes: [] // struktura	
+				};
+				trees.push(tree);
+				tree.nodes.push({
+					cx: Math.floor(cWidth / 2),
+					cy: 0,
+					parent: null,
+					nodes: [],
+					tree: tree,
+					leaf: false,
+					health: tree.dna.nodeHealth
+				});
+				tree.nodes.push({
+					cx: tree.nodes[0].cx + 1,
+					cy: 0,
+					parent: tree.nodes[0],
+					nodes: [],
+					tree: tree,
+					leaf: true,
+					health: tree.dna.nodeHealth
+				});
+				tree.nodes[0].nodes.push(tree.nodes[1]);
+				lights[tree.nodes[1].cx] = tree.nodes[1];
+				
+				cells[tree.nodes[0].cy * cWidth + tree.nodes[0].cx] = tree.nodes[0];
+				cells[tree.nodes[1].cy * cWidth + tree.nodes[1].cx] = tree.nodes[1];
+								
+				ctx.clearRect(0, 0, width, height);				
+				run();
+			}
+		},
+
+		paint: () => {
+			paintTrees();
+		}
+	};
+})();
+
+$.treegrow.start();
+</script>
