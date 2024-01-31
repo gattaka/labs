@@ -36,11 +36,8 @@ $.treegrow = (() => {
 				- větev ani list nesmí narazit do obsazeného čtverce
 				- list nemůže růst tam, kde nad ním je jiný list (větev nevadí)
 			- zakládání stojí energii, kterou musí mít strom v "banku"
-			- gen-rand určuje, zda se bude měnit list na větev nebo se bude tvořit nový list
-			- místo ze kterého může vyrůst nový list se vybírá náhodně
-				- bere se ale v potaz vzdálenost od nějakého jiného listu
-				- gen-rand určuje je velký prostor je umožněn pro růst 
-					- jestli smí list vyrůst jen na 2 dílky vzdálené větvi od jiného listu, nebo může i na kmení		
+			- gen-rand určuje, zda se bude zakládat větev nebo se bude tvořit nový list
+			- místo ze kterého může vyrůst nový list se vybírá náhodně	
 		- fáze sbírání energie
 			- všem větvím a listům se nastaví stav--
 			- prochází se postupně všechny listy a ty posílají "energii" přes předky zpět ke koření
@@ -86,17 +83,6 @@ $.treegrow = (() => {
 		if (getCell(cx, cy) || !isValidPosition(cx, cy))
 			return false;
 		return true;
-			/*
-		return isCellEmptyOrNode(node, cx - 1, cy - 1) && 
-			   isCellEmptyOrNode(node, cx, cy - 1) &&
-			   isCellEmptyOrNode(node, cx + 1, cy - 1) &&
-			   isCellEmptyOrNode(node, cx - 1, cy) && 
-			   ! &&
-			   isCellEmptyOrNode(node, cx + 1, cy) &&
-			   isCellEmptyOrNode(node, cx - 1, cy + 1) && 
-			   isCellEmptyOrNode(node, cx, cy + 1) &&
-			   isCellEmptyOrNode(node, cx + 1, cy + 1);
-			   */
 	};
 
 	let grow = () => {		
