@@ -1,0 +1,56 @@
+- skoro game demo https://playground.babylonjs.com/#L92PHY#217
+- GLB
+	- https://forum.babylonjs.com/t/how-to-interact-with-glb-parts-or-meshes/42167/3
+	- https://playground.babylonjs.com/#4I0CYN	
+	- https://doc.babylonjs.com/features/featuresDeepDive/Exporters/Blender
+	- https://doc.babylonjs.com/features/featuresDeepDive/importers/loadingFileTypes
+	- https://doc.babylonjs.com/features/featuresDeepDive/importers/glTF
+- STL
+	- https://doc.babylonjs.com/features/featuresDeepDive/importers/stl
+- copies
+	- https://doc.babylonjs.com/features/introductionToFeatures/chap2/copies
+- ground
+	- https://doc.babylonjs.com/features/introductionToFeatures/chap5/hills
+- skybox
+	- https://doc.babylonjs.com/features/introductionToFeatures/chap5/sky
+	- https://doc.babylonjs.com/features/featuresDeepDive/environment/skybox
+- sprites 
+	- https://doc.babylonjs.com/features/introductionToFeatures/chap5/trees
+- particles (déšť?)
+	- https://doc.babylonjs.com/features/introductionToFeatures/chap6/particlespray
+- interaktivita (mesh click)
+	- https://doc.babylonjs.com/features/introductionToFeatures/chap6/onoff		
+	- https://playground.babylonjs.com/#01U4D7#402
+- noc, světla
+	- https://doc.babylonjs.com/features/introductionToFeatures/chap7/lights
+	- https://doc.babylonjs.com/features/featuresDeepDive/lights
+	- https://playground.babylonjs.com/#PNQRY1#67
+	- https://playground.babylonjs.com/#FLCVX1#2
+	- https://playground.babylonjs.com/#E5URLZ#20
+	- https://doc.babylonjs.com/features/featuresDeepDive/lights/lights_introduction
+	- https://doc.babylonjs.com/features/featuresDeepDive/materials/using/introToPBR
+- stíny
+	- https://doc.babylonjs.com/features/introductionToFeatures/chap7/shadows
+- animace
+	- https://doc.babylonjs.com/features/featuresDeepDive/animation
+- kamera
+	- https://doc.babylonjs.com/features/featuresDeepDive/cameras/customizingCameraInputs
+- kolize a fyzika
+	- https://doc.babylonjs.com/legacy/physics#physics-v1 (typy fyzikálních engines)
+	- https://doc.babylonjs.com/features/featuresDeepDive/cameras/customizingCameraInputs
+	- https://doc.babylonjs.com/legacy/physics/usingPhysicsEngine
+	- https://doc.babylonjs.com/features/featuresDeepDive/physics/usingPhysicsEngine
+	- https://playground.babylonjs.com/#R66K4K#1
+	- https://playground.babylonjs.com/#E5URLZ#20 (rozdíl mezi aggregate, imposter apod.)
+		- https://babylonjs.medium.com/physics-v2-overview-ed36039ce1e7
+- NPC navigace, navmesh
+	- https://doc.babylonjs.com/features/featuresDeepDive/crowdNavigation/crowdAgents
+- mlha
+	- https://doc.babylonjs.com/features/featuresDeepDive/environment/environment_introduction
+- GUI
+	- https://doc.babylonjs.com/features/featuresDeepDive/gui
+- loader 
+	- https://doc.babylonjs.com/features/featuresDeepDive/importers/glTF/progressiveglTFLoad
+- bump map
+	- https://doc.babylonjs.com/features/featuresDeepDive/materials/using/moreMaterials
+	- parallax https://doc.babylonjs.com/features/featuresDeepDive/materials/using/parallaxMapping
