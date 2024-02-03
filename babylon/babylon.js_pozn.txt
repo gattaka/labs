@@ -11,6 +11,11 @@
 	- https://doc.babylonjs.com/features/introductionToFeatures/chap2/copies
 - ground
 	- https://doc.babylonjs.com/features/introductionToFeatures/chap5/hills
+- textury
+	- https://doc.babylonjs.com/features/featuresDeepDive/materials/using/materials_introduction
+	- https://doc.babylonjs.com/features/featuresDeepDive/materials/using/moreMaterials#tiling
+	- https://playground.babylonjs.com/#20OAV9#8623
+	- https://www.babylonjs-playground.com/#WUYDVT
 - skybox
 	- https://doc.babylonjs.com/features/introductionToFeatures/chap5/sky
 	- https://doc.babylonjs.com/features/featuresDeepDive/environment/skybox
@@ -43,6 +48,8 @@
 	- https://playground.babylonjs.com/#R66K4K#1
 	- https://playground.babylonjs.com/#E5URLZ#20 (rozdíl mezi aggregate, imposter apod.)
 		- https://babylonjs.medium.com/physics-v2-overview-ed36039ce1e7
+	- terén:
+		- https://playground.babylonjs.com/#Z8HTUN#460
 - NPC navigace, navmesh
 	- https://doc.babylonjs.com/features/featuresDeepDive/crowdNavigation/crowdAgents
 - mlha

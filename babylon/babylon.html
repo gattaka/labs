@@ -25,6 +25,8 @@
     <script src="https://cdn.babylonjs.com/havok/HavokPhysics_umd.js"></script>
     <script src="https://cdn.babylonjs.com/babylon.js"></script>
     <script src="https://cdn.babylonjs.com/gui/babylon.gui.min.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylon.glTFFileLoader.js"></script>
+    <script src="https://cdn.babylonjs.com/loaders/babylonjs.loaders.min.js"></script>
 
 </head>
 
@@ -40,8 +42,11 @@
         disableWebGL2Support: false
     });
 
-    const CAMERA_INVERSE_SENSITIVITY = 200;
-    const PLAYER_JUMP_SPEED = 2000;
+    const CAMERA_INVERSE_SENSITIVITY = 300;
+    const SPEED = 20;
+    const SPRINT_SPEED = 50;
+    //const PLAYER_JUMP_SPEED = 2000;
+    const PLAYER_JUMP_SPEED = 30000;
 
     const createSkybox = function (scene) {
         var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {size: 1000.0}, scene);
@@ -80,7 +85,12 @@
         hero.position.x = 0.0;
         hero.position.y = 1.0;
         hero.position.z = -5.0;
-        hero.physicsAggregate = new BABYLON.PhysicsAggregate(hero, BABYLON.PhysicsShapeType.CAPSULE, {mass: 10, startAsleep: false});
+        hero.physicsAggregate = new BABYLON.PhysicsAggregate(hero, BABYLON.PhysicsShapeType.CAPSULE, {
+            mass: 10,
+            startAsleep: false,
+            restitution: 0.2,
+            friction: 0.3
+        });
         /*
         hero.physicsAggregate = new BABYLON.PhysicsAggregate(hero, BABYLON.PhysicsShapeType.BOX, {
             mass: 200,
@@ -96,6 +106,7 @@
         pointer.position.z = 0.0;
         pointer.isPickable = false;
 
+        var sprint = false;
         var moveForward = false;
         var moveBackward = false;
         var moveRight = false;
@@ -124,6 +135,9 @@
                     hero.physicsAggregate.body.applyForce(new BABYLON.Vector3(0, PLAYER_JUMP_SPEED, 0), hero.getAbsolutePosition());
                     moveUp = true;
                     break;
+                case 16: // shift
+                    sprint = true;
+                    break;
             }
         };
 
@@ -148,6 +162,9 @@
                 case 32: // space
                     moveUp = false;
                     break;
+                case 16: // shift
+                    sprint = false;
+                    break;
             }
         };
 
@@ -166,23 +183,25 @@
             right.y = 0;
 
             // rychlost chůze hráče
-            var SPEED = 20;
             let f_speed = 0;
             var s_speed = 0;
             var u_speed = 0;
 
-            if (moveForward) f_speed = SPEED;
-            if (moveBackward) f_speed = -SPEED;
-            if (moveRight) s_speed = SPEED;
-            if (moveLeft) s_speed = -SPEED;
+            var speed = sprint ? SPRINT_SPEED : SPEED;
+            if (moveForward) f_speed = speed;
+            if (moveBackward) f_speed = -speed;
+            if (moveRight) s_speed = -speed;
+            if (moveLeft) s_speed = speed;
 
             // jetpack nebo plavání
             // if (moveUp) u_speed = SPEED;
 
             var move = (forward.scale(f_speed)).subtract((right.scale(s_speed))).subtract(camera.upVector.scale(u_speed));
 
+            hero.physicsAggregate.body.setGravityFactor(20);
             let y = hero.physicsAggregate.body.getLinearVelocity().y;
             hero.physicsAggregate.body.setLinearVelocity(new BABYLON.Vector3(move.x, y, move.z));
+            //hero.physicsAggregate.body.setGravityFactor(1);
         });
 
         //Mouse
@@ -230,6 +249,7 @@
         scene.ambientColor = new BABYLON.Color3(1, 1, 1);
         scene.gravity = new BABYLON.Vector3(0, 0, 10);
         scene.collisionsEnabled = true;
+        scene.useRightHandedSystem = true; // kvůli GLB importům
 
         // initialize plugin
         const havokInstance = await HavokPhysics();
@@ -252,22 +272,72 @@
         // Built-in 'sphere' shape.
         const sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 4}, scene);
         sphere.position.y = 10;
-        sphere.physicsAggregate = new BABYLON.PhysicsAggregate(sphere, BABYLON.PhysicsShapeType.CAPSULE, {mass: 100, startAsleep: false});
+        sphere.physicsAggregate = new BABYLON.PhysicsAggregate(sphere, BABYLON.PhysicsShapeType.CAPSULE, {
+            mass: 100,
+            startAsleep: false
+        });
 
         const box = BABYLON.MeshBuilder.CreateBox("box", {}, scene);
         box.position.x = 5;
         box.position.y = 10;
-        box.physicsAggregate = new BABYLON.PhysicsAggregate(box, BABYLON.PhysicsShapeType.BOX, {mass: 100, startAsleep: false});
+        box.physicsAggregate = new BABYLON.PhysicsAggregate(box, BABYLON.PhysicsShapeType.BOX, {
+            mass: 100,
+            startAsleep: false
+        });
 
         // Built-in 'ground' shape.
-        const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 60, height: 60}, scene);
-        new BABYLON.PhysicsAggregate(ground, BABYLON.PhysicsShapeType.BOX, {mass: 0}, scene);
+        //const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 60, height: 60}, scene);
+        //new BABYLON.PhysicsAggregate(ground, BABYLON.PhysicsShapeType.BOX, {mass: 0}, scene);
 
-        const groundMat = new BABYLON.StandardMaterial("roofMat");
-        groundMat.diffuseTexture = new BABYLON.Texture("textures/trava_seamless.jpg", scene);
-        ground.material = groundMat;
+        var setQuads = function (mesh) {
+            quadsReady = true;
+            var groundAggregate = new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH, {mass: 0}, scene);
+        };
+        var options = {width: 300, height: 300, subdivisions: 200, minHeight: 0, maxHeight: 40, onReady: setQuads, updatable: false};
+        var ground = BABYLON.MeshBuilder.CreateGroundFromHeightMap("ground", "textures/heightMap.png", options, scene);
+        ground.position.y = -50;
+
+        // https://opengameart.org/content/3-seamless-grass-textures
+        let groundMaterialUVScale = 100;
+        var groundMaterial = new BABYLON.StandardMaterial("ground", scene);
+        groundMaterial.diffuseTexture = new BABYLON.Texture("textures/grass/grass01.jpg", scene);
+        groundMaterial.diffuseTexture.uScale = groundMaterialUVScale;
+        groundMaterial.diffuseTexture.vScale = groundMaterialUVScale;
+        groundMaterial.bumpTexture = new BABYLON.Texture("textures/grass/grass01_n.jpg", scene);
+        groundMaterial.bumpTexture.uScale = groundMaterialUVScale;
+        groundMaterial.bumpTexture.vScale = groundMaterialUVScale;
+        groundMaterial.specularTexture = new BABYLON.Texture("textures/grass/grass01_s.jpg", scene);
+        groundMaterial.specularTexture.uScale = groundMaterialUVScale;
+        groundMaterial.specularTexture.vScale = groundMaterialUVScale;
+        // emissiveTexture ?
+        // ambientTexture ?
+        ground.material = groundMaterial;
 
         createSkybox(scene);
+
+        var zidle;
+
+        BABYLON.SceneLoader.ImportMesh("", "models/", "zidle_cervena.glb", scene, (meshes, particleSystems, skeletons) => {
+            // do something with the meshes and skeletons
+            // particleSystems are always null for glTF assets
+            let mainMesh = meshes[0];
+            mainMesh.position.y = -2;
+            mainMesh.position.z = 0.8;
+            mainMesh.position.x = 7.5;
+
+            zidle = BABYLON.MeshBuilder.CreateBox("zidle_cervena.glb_dummyPhysicsRoot", {height: 2}, scene);
+            BABYLON.zidle = zidle;
+            zidle.addChild(mainMesh);
+            // DummyPhysicsRoot Visibility Change to 0 to Hide
+            zidle.visibility = 0.7;
+            zidle.position.y = -24;
+            zidle.position.z = 10;
+
+            zidle.physicsAggregate = new BABYLON.PhysicsAggregate(zidle, BABYLON.PhysicsShapeType.BOX, {
+                mass: 100,
+                startAsleep: false
+            });
+        });
 
         return scene;
     };
