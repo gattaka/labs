@@ -42,11 +42,10 @@
         disableWebGL2Support: false
     });
 
-    const CAMERA_INVERSE_SENSITIVITY = 300;
-    const SPEED = 20;
-    const SPRINT_SPEED = 50;
-    //const PLAYER_JUMP_SPEED = 2000;
-    const PLAYER_JUMP_SPEED = 30000;
+    const CAMERA_INVERSE_SENSITIVITY = 400;
+    const SPEED = 10;
+    const SPRINT_SPEED = 20;
+    const PLAYER_JUMP_SPEED = 100000;
 
     const createSkybox = function (scene) {
         var skybox = BABYLON.MeshBuilder.CreateBox("skyBox", {size: 1000.0}, scene);
@@ -81,23 +80,16 @@
     };
 
     const createPlayer = function (scene, camera) {
-        let hero = BABYLON.MeshBuilder.CreateBox('hero', {size: 2}, scene);
-        hero.position.x = 0.0;
-        hero.position.y = 1.0;
-        hero.position.z = -5.0;
-        hero.physicsAggregate = new BABYLON.PhysicsAggregate(hero, BABYLON.PhysicsShapeType.CAPSULE, {
-            mass: 10,
+        let player = BABYLON.MeshBuilder.CreateBox('player', {size: 2}, scene);
+        player.position.x = 0.5;
+        player.position.y = -23.0;
+        player.position.z = 5.0;
+        player.physicsAggregate = new BABYLON.PhysicsAggregate(player, BABYLON.PhysicsShapeType.CAPSULE, {
+            mass: 60,
             startAsleep: false,
-            restitution: 0.2,
-            friction: 0.3
+            restitution: 0, // no bouncing
+            friction: 100
         });
-        /*
-        hero.physicsAggregate = new BABYLON.PhysicsAggregate(hero, BABYLON.PhysicsShapeType.BOX, {
-            mass: 200,
-            restitution: 0.2,
-            friction: 0.3
-        }, scene);
-         */
 
         // pointer
         var pointer = BABYLON.MeshBuilder.CreateSphere("Sphere", {segments: 16.0, diameter: 0.01}, scene);
@@ -132,7 +124,7 @@
                     moveRight = true;
                     break;
                 case 32: // space
-                    hero.physicsAggregate.body.applyForce(new BABYLON.Vector3(0, PLAYER_JUMP_SPEED, 0), hero.getAbsolutePosition());
+                    player.physicsAggregate.body.applyForce(new BABYLON.Vector3(0, PLAYER_JUMP_SPEED, 0), player.getAbsolutePosition());
                     moveUp = true;
                     break;
                 case 16: // shift
@@ -172,9 +164,9 @@
         document.addEventListener('keyup', onKeyUp, false);
 
         scene.registerBeforeRender(function () {
-            camera.position.x = hero.position.x;
-            camera.position.y = hero.position.y + 1.0;
-            camera.position.z = hero.position.z;
+            camera.position.x = player.position.x;
+            camera.position.y = player.position.y + 1.0;
+            camera.position.z = player.position.z;
             pointer.position = camera.getTarget();
 
             var forward = camera.getTarget().subtract(camera.position).normalize();
@@ -198,17 +190,13 @@
 
             var move = (forward.scale(f_speed)).subtract((right.scale(s_speed))).subtract(camera.upVector.scale(u_speed));
 
-            hero.physicsAggregate.body.setGravityFactor(20);
-            let y = hero.physicsAggregate.body.getLinearVelocity().y;
-            hero.physicsAggregate.body.setLinearVelocity(new BABYLON.Vector3(move.x, y, move.z));
+            player.physicsAggregate.body.setGravityFactor(20);
+            let y = player.physicsAggregate.body.getLinearVelocity().y;
+            player.physicsAggregate.body.setLinearVelocity(new BABYLON.Vector3(move.x, y, move.z));
             //hero.physicsAggregate.body.setGravityFactor(1);
         });
 
-        //Mouse
-        //We start without being locked.
         var isLocked = false;
-
-        // On click event, request pointer lock
         scene.onPointerDown = function (evt) {
             //true/false check if we're locked, faster than checking pointerlock on each single click.
             if (!isLocked) {
@@ -216,10 +204,6 @@
                 if (canvas.requestPointerLock)
                     canvas.requestPointerLock();
             }
-
-            //continue with shooting requests or whatever :P
-            //evt === 1 (mouse wheel click (not scrolling))
-            //evt === 2 (right mouse click)
         };
 
         // Event listener when the pointerlock is updated (or removed by pressing ESC for example).
@@ -241,6 +225,8 @@
         document.addEventListener("mspointerlockchange", pointerlockchange, false);
         document.addEventListener("mozpointerlockchange", pointerlockchange, false);
         document.addEventListener("webkitpointerlockchange", pointerlockchange, false);
+
+        return player;
     };
 
     const createScene = async function () {
@@ -262,12 +248,17 @@
 
         let camera = createCamera(scene);
 
-        createPlayer(scene, camera);
+        let player = createPlayer(scene, camera);
 
-        // Creates a light, aiming 0,1,0 - to the sky
-        const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0, 1, 0), scene);
-        // Dim the light a small amount - 0 to 1
-        light.intensity = 0.7;
+        // This creates a light, aiming 0,1,0 - to the sky (non-mesh)
+        var hLight = new BABYLON.HemisphericLight("HemisphericLight", new BABYLON.Vector3(0, 1, 0), scene);
+        hLight.intensity = 0.4;
+
+        var light = new BABYLON.DirectionalLight("DirectionalLight", new BABYLON.Vector3(0, -1, 0), scene);
+        light.position = new BABYLON.Vector3(20, 40, 20);
+        // Default intensity is 1. Let's dim the light a small amount
+        light.intensity = 0.4;
+        light.specular = new BABYLON.Color3(1, 0.76, 0.76);
 
         // Built-in 'sphere' shape.
         const sphere = BABYLON.MeshBuilder.CreateSphere("sphere", {diameter: 2, segments: 4}, scene);
@@ -285,15 +276,23 @@
             startAsleep: false
         });
 
-        // Built-in 'ground' shape.
-        //const ground = BABYLON.MeshBuilder.CreateGround("ground", {width: 60, height: 60}, scene);
-        //new BABYLON.PhysicsAggregate(ground, BABYLON.PhysicsShapeType.BOX, {mass: 0}, scene);
-
         var setQuads = function (mesh) {
             quadsReady = true;
-            var groundAggregate = new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH, {mass: 0}, scene);
+            var groundAggregate = new BABYLON.PhysicsAggregate(mesh, BABYLON.PhysicsShapeType.MESH, {
+                mass: 0,
+                restitution: 0,
+                friction: 100
+            }, scene);
         };
-        var options = {width: 300, height: 300, subdivisions: 200, minHeight: 0, maxHeight: 40, onReady: setQuads, updatable: false};
+        var options = {
+            width: 300,
+            height: 300,
+            subdivisions: 200,
+            minHeight: 0,
+            maxHeight: 40,
+            onReady: setQuads,
+            updatable: false
+        };
         var ground = BABYLON.MeshBuilder.CreateGroundFromHeightMap("ground", "textures/heightMap.png", options, scene);
         ground.position.y = -50;
 
@@ -315,29 +314,36 @@
 
         createSkybox(scene);
 
+        let shadowGenerator = new BABYLON.ShadowGenerator(1024, light);
+        shadowGenerator.usePoissonSampling = true;
+        shadowGenerator.bias = 0.000001;
+
+        ground.receiveShadows = true;
+
         var zidle;
 
-        BABYLON.SceneLoader.ImportMesh("", "models/", "zidle_cervena.glb", scene, (meshes, particleSystems, skeletons) => {
-            // do something with the meshes and skeletons
-            // particleSystems are always null for glTF assets
-            let mainMesh = meshes[0];
-            mainMesh.position.y = -2;
-            mainMesh.position.z = 0.8;
-            mainMesh.position.x = 7.5;
-
-            zidle = BABYLON.MeshBuilder.CreateBox("zidle_cervena.glb_dummyPhysicsRoot", {height: 2}, scene);
-            BABYLON.zidle = zidle;
-            zidle.addChild(mainMesh);
-            // DummyPhysicsRoot Visibility Change to 0 to Hide
-            zidle.visibility = 0.7;
-            zidle.position.y = -24;
-            zidle.position.z = 10;
-
-            zidle.physicsAggregate = new BABYLON.PhysicsAggregate(zidle, BABYLON.PhysicsShapeType.BOX, {
-                mass: 100,
-                startAsleep: false
+        BABYLON.SceneLoader.ImportMesh("", "models/", "zidle.glb", scene, (meshes, particleSystems, skeletons, animationGroup) => {
+            meshes.forEach(zidle => {
+                //mesh.showBoundingBox = true;
+                zidle.setParent(null);
+                zidle.position.y = -23;
+                zidle.position.z = 10;
+                shadowGenerator.getShadowMap().renderList.push(zidle);
+                zidle.physicsAggregate = new BABYLON.PhysicsAggregate(zidle, BABYLON.PhysicsShapeType.BOX, {
+                    mass: 100,
+                    restitution: 0,
+                    friction: 50,
+                    startAsleep: false
+                });
             });
         });
+
+        /*
+        var physicsViewer = new BABYLON.Debug.PhysicsViewer(scene);
+        for (let mesh of scene.meshes)
+            if (mesh.physicsBody)
+                physicsViewer.showBody(mesh.physicsBody);
+         */
 
         return scene;
     };
@@ -345,6 +351,10 @@
     const scene = createScene();
 
     createScene().then((scene) => {
+        scene.debugLayer.show({
+            embedMode: true
+        });
+
         engine.runRenderLoop(function () {
             if (scene)
                 scene.render();

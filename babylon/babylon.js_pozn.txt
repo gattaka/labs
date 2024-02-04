@@ -1,4 +1,14 @@
-- skoro game demo https://playground.babylonjs.com/#L92PHY#217
+Game demos 
+- https://playground.babylonjs.com/#L92PHY#217
+- https://doc.babylonjs.com/guidedLearning/createAGame/characterMovePt1#raycasts
+- https://playground.babylonjs.com/#UP84Y8#10
+- https://playground.babylonjs.com/#Z8HTUN#460
+- https://www.patreon.com/posts/35207209
+- 3rd person CharacterController (není řízen fyzikou) https://ssatguru.github.io/BabylonJS-CharacterController-Samples/demo/
+
+Materiály (včetně mix materiálu)
+- https://doc.babylonjs.com/toolsAndResources/assetLibraries/materialsLibrary
+
 - GLB
 	- https://forum.babylonjs.com/t/how-to-interact-with-glb-parts-or-meshes/42167/3
 	- https://playground.babylonjs.com/#4I0CYN	
@@ -48,8 +58,6 @@
 	- https://playground.babylonjs.com/#R66K4K#1
 	- https://playground.babylonjs.com/#E5URLZ#20 (rozdíl mezi aggregate, imposter apod.)
 		- https://babylonjs.medium.com/physics-v2-overview-ed36039ce1e7
-	- terén:
-		- https://playground.babylonjs.com/#Z8HTUN#460
 - NPC navigace, navmesh
 	- https://doc.babylonjs.com/features/featuresDeepDive/crowdNavigation/crowdAgents
 - mlha
