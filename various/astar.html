@@ -1,0 +1,289 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Point size <5-100></td>			
+			<td>Speed (ms) <1-50></td>
+			<td></td>	
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>				
+			<td><input id="pointsInput" style="width: 120px;" value="20">	
+			<td><input id="speedInput" style="width: 100px;" value="20"></td>				
+			<td><button type="button" onclick="$.astar.start()">Run!</button></td>			
+			<td></td>	
+			<td></td>
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.astar = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width;
+	let height;
+	let hWidth;
+	let hHeight;
+	
+	let interval;
+	let innerIntervalCallback;
+	
+	let pointSize;
+
+	let pixels = [];
+	let mapW;
+	let mapH;
+	let wp;
+	let hp;
+		
+	let aStarHeur = function(aMx, aMy, bMx, bMy) {
+		return Math.sqrt(Math.pow(aMx - bMx, 2) + Math.pow(aMy - bMy, 2));
+	};
+	
+	let aStar = function(fromMx, fromMy, toMx, toMy) {
+		fromMx = Math.floor(fromMx);
+		fromMy = Math.floor(fromMy);
+		toMx = Math.floor(toMx);
+		toMy = Math.floor(toMy);
+		let startIndex = fromMx + fromMy * mapW;
+		let endIndex = toMx + toMy * mapW;
+		
+		let openCount = 1;
+		let visited = [];
+		visited[startIndex] = true;
+		
+		let open = {
+			val: startIndex,
+			next: -1,
+			prev: -1,
+		};		
+		
+		let cameFrom = [];
+		
+		let constructList = function(finalIndex) {
+			let path = [];
+			let current = finalIndex;
+			while (current != startIndex) {
+				current = cameFrom[current];
+				path.push(current);
+			}
+			return path;
+		};		
+		
+		let gScore = [];
+		gScore[startIndex] = 0; 
+		
+		let fScore = [];
+		fScore[startIndex] = aStarHeur(fromMx, fromMy, toMx, toMy); 
+		
+		while (openCount > 0) {			
+			let min = {};
+			let minfScore = -1;
+			let openItem = open;
+			for (let o = 0; o < openCount; o++) {
+				let score = fScore[openItem.val];
+				if (minfScore == -1 || score < minfScore) {
+					min = openItem;
+					minfScore = score;
+				}
+				openItem = openItem.next;
+			}
+			
+			let cIndex = min.val;			
+			if (cIndex == endIndex)
+				return constructList(endIndex);
+
+			openCount--;
+			if (min.prev == -1) {
+				// byl první
+				open = min.next;
+				open.prev = -1;
+			} else if (min.next == -1) {
+				// byl poslední
+				min.prev.next = -1;
+			} else {
+				// byl uprostřed
+				min.prev.next = min.next;
+				min.next.prev = min.prev;
+			}
+			
+			let neighbors = [];
+			let openItemMx = cIndex % mapW;
+			let openItemMy = Math.floor(cIndex / mapW);
+			if (openItemMx > 0) {
+				neighbors.push(cIndex - 1) // left				
+				if (openItemMy > 0) neighbors.push(cIndex - mapW - 1); // top left
+				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW - 1); // bottom left
+			}
+			if (openItemMx < mapW - 1) {
+				neighbors.push(cIndex + 1) // right
+				if (openItemMy > 0) neighbors.push(cIndex - mapW + 1); // top right
+				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW + 1); // bottom right
+			}
+			if (openItemMy > 0) neighbors.push(cIndex - mapW); // top
+			if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW); // bottom
+			
+			for (let n = 0; n < neighbors.length; n++) {
+				let nIndex = neighbors[n];
+				if (!isCollision(nIndex)) {
+					let nMx = nIndex % mapW;
+					let nMy = Math.floor(nIndex / mapW);
+					let d = 1; //(nMx != openItemMx && nMy != openItemMy) ? 1.5 : 1;
+					let tScore = gScore[cIndex] + d; 
+					if (typeof gScore[nIndex] === "undefined" || tScore < gScore[nIndex]) {				
+						cameFrom[nIndex] = cIndex;
+						gScore[nIndex] = tScore;
+						fScore[nIndex] = gScore[nIndex] + aStarHeur(nMx, nMy, toMx, toMy); ;						
+						if (typeof visited[nIndex] === "undefined") {
+							visited[nIndex] = true;
+							open = {
+								val: nIndex,
+								next: open,
+								prev: -1,
+							};	
+							open.next.prev = open;
+							openCount++;
+						}
+					}
+				}
+			}						
+		}
+		
+		// cesta neexistuje
+		return [];
+	};
+	
+	let isCollision = function(index) {
+		return typeof pixels[index] !== "undefined" && pixels[index].length > 0;
+	};
+	
+	let navigate = function(mx, my, ix, iy) {
+		for (let x = 0; x < wp; x++) 
+				for (let y = 0; y < hp; y++) 
+					if (pixels[x + y * wp] != 1)
+						pixels[x + y * wp] = 0;				
+	
+		// krok v pořadí od cíle k počátku
+		target.steps = aStar(hero.mx, hero.my, mx, my);		
+		//console.log("A* steps: " + target.steps);
+
+		// 0. cílový doplňuji sám, protože z A* vypadnou středové
+		// souřadnice a já chci dojít přímo k offsetovým hodnotám
+		// dle toho, jak se na počátku nezaokrouhleně zadalo
+		target.mxSteps = [mx];
+		target.mySteps = [my];
+		target.vixSteps = [ix];
+		target.viySteps = [iy];
+		
+		// poslední krok nechci, protože na něm už stojím
+		for (let i = 0; i < target.steps.length - 1; i++) {
+			let smx = target.steps[i] % mapW + 0.5;
+			let smy = Math.floor(target.steps[i] / mapW) + 0.5;
+			let siso = toIso(smx, smy);
+			target.mxSteps.push(smx);
+			target.mySteps.push(smy);
+			target.vixSteps.push(siso.ix);
+			target.viySteps.push(siso.iy);
+		}
+		
+		target.currentStep = target.mxSteps.length - 1;
+		nextTargetStep();
+	};
+	
+	canvas.addEventListener("click", function (e) {		
+		let bound = canvas.getBoundingClientRect();
+		let x = e.clientX - bound.x;
+		let y = e.clientY - bound.y;
+		navigate(x, y);
+	}, false);
+			
+	let draw = function() {					
+		for (let x = 0; x < wp; x++) {
+			for (let y = 0; y < hp; y++) {
+				let value = pixels[x + y * wp];	
+				if (typeof value === "undefined") {
+					ctx.fillStyle = "white";
+				} else if (value == 1) {
+					ctx.fillStyle = "black";
+				} else {
+					ctx.fillStyle = `hsl(${value},50%,50%)`;
+				}
+				ctx.fillRect(x * pointSize + 1, y * pointSize + 1, pointSize - 2, pointSize - 2);					
+			}		
+		}						
+	};
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);
+	};
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	let init = function() {	
+		let pointsParam = validate("Invalid points", "pointsInput", 20, 50);
+		let speedParam = validate("Invalid speed", "speedInput", 1, 50);			
+		if (speedParam && pointsParam) {		
+	
+			width = canvas.width;
+			height = canvas.height;
+			hWidth = width / 2; 
+			hHeight = height / 2;
+	
+			pointSize = pointsParam;
+
+			wp = Math.ceil(width / pointSize);
+			hp = Math.ceil(height / pointSize);
+						
+			ctx.lineWidth = 2;						
+			
+			ctx.fillStyle = "black";
+			ctx.fillRect(0,0, width, height);
+			
+			pixels = [];
+			
+			for (let x = 0; x < wp; x++) 
+				for (let y = 0; y < hp; y++) 					
+						pixels[x + y * wp] = Math.random() > 0.8 ? 1 : 0;				
+			
+			innnerChangeInterval(speedParam);
+		}
+	};	
+		
+	return {
+		start: function() {					
+			init();						
+		},		
+	};
+
+})();
+
+$.astar.start();</script>
