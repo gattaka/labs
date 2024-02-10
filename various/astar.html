@@ -17,7 +17,7 @@
 		</tr>
 	</tbody>
 </table><div style="margin: 10px 0;">
-	<canvas id="canvas" width="700" height="400"></canvas>
+	<canvas id="canvas" width="700" height="400" style="cursor: pointer"></canvas>
 </div>[/HTML]
 <script>var $ = $ || {};
 $.astar = (function() {
@@ -35,10 +35,15 @@ $.astar = (function() {
 	let pointSize;
 
 	let pixels = [];
-	let mapW;
-	let mapH;
-	let wp;
-	let hp;
+	let mapW;	// počet polí na šířku
+	let mapH;	// počet polí na výšku	
+
+	let startMapX;
+	let startMapY;
+	let endMapX;
+	let endMapY;
+	let hLightMapX;
+	let hLightMapY;
 		
 	let aStarHeur = function(aMx, aMy, bMx, bMy) {
 		return Math.sqrt(Math.pow(aMx - bMx, 2) + Math.pow(aMy - bMy, 2));
@@ -129,7 +134,7 @@ $.astar = (function() {
 			
 			for (let n = 0; n < neighbors.length; n++) {
 				let nIndex = neighbors[n];
-				if (!isCollision(nIndex)) {
+				if (pixels[nIndex] != 1) {
 					let nMx = nIndex % mapW;
 					let nMy = Math.floor(nIndex / mapW);
 					let d = 1; //(nMx != openItemMx && nMy != openItemMy) ? 1.5 : 1;
@@ -155,64 +160,84 @@ $.astar = (function() {
 		
 		// cesta neexistuje
 		return [];
-	};
+	};	
 	
-	let isCollision = function(index) {
-		return typeof pixels[index] !== "undefined" && pixels[index].length > 0;
-	};
-	
-	let navigate = function(mx, my, ix, iy) {
-		for (let x = 0; x < wp; x++) 
-				for (let y = 0; y < hp; y++) 
-					if (pixels[x + y * wp] != 1)
-						pixels[x + y * wp] = 0;				
-	
-		// krok v pořadí od cíle k počátku
-		target.steps = aStar(hero.mx, hero.my, mx, my);		
-		//console.log("A* steps: " + target.steps);
-
-		// 0. cílový doplňuji sám, protože z A* vypadnou středové
-		// souřadnice a já chci dojít přímo k offsetovým hodnotám
-		// dle toho, jak se na počátku nezaokrouhleně zadalo
-		target.mxSteps = [mx];
-		target.mySteps = [my];
-		target.vixSteps = [ix];
-		target.viySteps = [iy];
-		
-		// poslední krok nechci, protože na něm už stojím
-		for (let i = 0; i < target.steps.length - 1; i++) {
-			let smx = target.steps[i] % mapW + 0.5;
-			let smy = Math.floor(target.steps[i] / mapW) + 0.5;
-			let siso = toIso(smx, smy);
-			target.mxSteps.push(smx);
-			target.mySteps.push(smy);
-			target.vixSteps.push(siso.ix);
-			target.viySteps.push(siso.iy);
-		}
-		
-		target.currentStep = target.mxSteps.length - 1;
-		nextTargetStep();
-	};
-	
-	canvas.addEventListener("click", function (e) {		
+	let getMapCoords = function(e) {
 		let bound = canvas.getBoundingClientRect();
 		let x = e.clientX - bound.x;
 		let y = e.clientY - bound.y;
-		navigate(x, y);
+		let mx = Math.floor(x / pointSize);
+		let my = Math.floor(y / pointSize);
+		
+		return {mx: mx, my: my};
+	};
+	
+	canvas.addEventListener("mousemove", function (e) {		
+		let coords = getMapCoords(e);
+		let mx = coords.mx;
+		let my = coords.my;
+		
+		// nelze navigovat do zdi
+		if (pixels[mx + my * mapW] == 1)
+			return;
+		
+		hLightMapX = mx;
+		hLightMapY = my;
+	}, false);
+	
+	canvas.addEventListener("click", function (e) {		
+		let coords = getMapCoords(e);
+		let mx = coords.mx;
+		let my = coords.my;
+		
+		// nelze navigovat do zdi
+		if (pixels[mx + my * mapW] == 1)
+			return;
+		
+		if (startMapX == -1) {
+			startMapX = mx;
+			startMapY = my;
+		} else {
+			if (endMapX != -1) {
+				startMapX = endMapX;
+				startMapY = endMapY;
+			}
+			endMapX = mx;
+			endMapY = my;
+			
+			// vymaž poslední cestu, nech zdi
+			for (let x = 0; x < mapW; x++) 
+				for (let y = 0; y < mapH; y++) 					
+						pixels[x + y * mapW] = pixels[x + y * mapW] == 1 ? 1 : 0;
+			
+			let steps = aStar(startMapX, startMapY, endMapX, endMapY);
+			
+			for (let i = 0; i < steps.length; i++) {
+				pixels[steps[i]] = 100;
+			}
+			
+		}		
 	}, false);
 			
 	let draw = function() {					
-		for (let x = 0; x < wp; x++) {
-			for (let y = 0; y < hp; y++) {
-				let value = pixels[x + y * wp];	
-				if (typeof value === "undefined") {
-					ctx.fillStyle = "white";
+		ctx.fillStyle = "black";
+		ctx.fillRect(0,0, width, height);
+		for (let x = 0; x < mapW; x++) {
+			for (let y = 0; y < mapH; y++) {				
+				let value = pixels[x + y * mapW];	
+				if (x == startMapX && y == startMapY || x == endMapX && y == endMapY) {
+					ctx.fillStyle = "purple";
 				} else if (value == 1) {
 					ctx.fillStyle = "black";
 				} else {
 					ctx.fillStyle = `hsl(${value},50%,50%)`;
 				}
-				ctx.fillRect(x * pointSize + 1, y * pointSize + 1, pointSize - 2, pointSize - 2);					
+				ctx.fillRect(x * pointSize + 1, y * pointSize + 1, pointSize - 2, pointSize - 2);	
+				
+				if (x == hLightMapX && y == hLightMapY) {
+					ctx.strokeStyle = "white";
+					ctx.strokeRect(x * pointSize + 1, y * pointSize + 1, pointSize - 2, pointSize - 2);
+				}
 			}		
 		}						
 	};
@@ -260,19 +285,22 @@ $.astar = (function() {
 	
 			pointSize = pointsParam;
 
-			wp = Math.ceil(width / pointSize);
-			hp = Math.ceil(height / pointSize);
+			mapW = Math.ceil(width / pointSize);
+			mapH = Math.ceil(height / pointSize);
 						
 			ctx.lineWidth = 2;						
 			
-			ctx.fillStyle = "black";
-			ctx.fillRect(0,0, width, height);
-			
 			pixels = [];
+			startMapX = -1;
+			startMapY = -1;
+			endMapX = -1;
+			endMapY = -1;
+			hLightMapX = -1;
+			hLightMapY = -1;
 			
-			for (let x = 0; x < wp; x++) 
-				for (let y = 0; y < hp; y++) 					
-						pixels[x + y * wp] = Math.random() > 0.8 ? 1 : 0;				
+			for (let x = 0; x < mapW; x++) 
+				for (let y = 0; y < mapH; y++) 					
+						pixels[x + y * mapW] = Math.random() > 0.8 ? 1 : 0;
 			
 			innnerChangeInterval(speedParam);
 		}
