@@ -1,0 +1,196 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Point size <1-20></td>			
+			<td>Speed (ms) <1-50></td>
+			<td></td>	
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>				
+			<td><input id="pointsInput" style="width: 120px;" value="5">	
+			<td><input id="speedInput" style="width: 100px;" value="10"></td>				
+			<td><button type="button" onclick="$.negadraw.start()">Run!</button></td>			
+			<td></td>	
+			<td></td>
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.negadraw = (function() {
+
+	let canvas = document.getElementById("canvas");	
+	let ctx = canvas.getContext("2d");
+	ctx.imageSmoothingEnabled = false;
+	
+	let width;
+	let height;
+	let hWidth;
+	let hHeight;
+	
+	let interval;
+	let innerIntervalCallback;
+	
+	let pointSize;
+
+	let pixels = [];
+	let mapW;
+	let mapH;
+	let wp;
+	let hp;
+		
+	let pointA;
+	let pointB;
+	
+	let axDiff = 1;
+	let ayDiff = 1;
+	let bxDiff = 1;
+	let byDiff = 1;
+				
+	let draw = function() {
+
+		pointA.x += axDiff;
+		pointA.y += ayDiff;
+		pointB.x += bxDiff;
+		pointB.y += byDiff;
+		
+		if (Math.random() > 0.8) axDiff *= -1;
+		if (Math.random() > 0.8) ayDiff *= -1;
+		if (Math.random() > 0.8) bxDiff *= -1;
+		if (Math.random() > 0.8) byDiff *= -1;
+		
+		if (pointA.x < 0) axDiff = 1;
+		if (pointA.y < 0) ayDiff = 1;
+		if (pointA.x >= wp) axDiff = -1;
+		if (pointA.y >= hp) ayDiff = -1;
+		if (pointB.x < 0) bxDiff = 1;
+		if (pointB.y < 0) byDiff = 1;
+		if (pointB.x >= wp) bxDiff = -1;
+		if (pointB.y >= hp) byDiff = -1;
+				
+		let fromX = Math.min(pointA.x, pointB.x);
+		let toX = Math.max(pointA.x, pointB.x);
+		fromX = Math.max(fromX, 0);
+		toX = Math.min(toX, wp);
+	
+		let vecAB = { 
+			x: pointA.x - pointB.x, 
+			y: pointA.y - pointB.y
+		};			
+	
+		let inRange = false;
+		for (let x = 0; x < wp; x++) {			
+			inRange = x >= fromX && x <= toX;				
+				
+			for (let y = 0; y < hp; y++) {
+				if (inRange) {
+					let vecAP = {
+						x: pointA.x - x, 
+						y: pointA.y - y
+					};
+					let k;
+					let match;
+					if (vecAP.x != 0) {
+						k = vecAB.x / vecAP.x;
+						match = k * vecAP.y == vecAB.y;
+					} else {
+						if (vecAB.x == 0) {
+							match = vecAP.y == vecAB.y;
+						} else {
+							match = false;
+						}
+					}
+				
+					if (match)
+						pixels[x + y * wp] = pixels[x + y * wp] == 1 ? 0 : 1;
+				}			
+			}		
+		}			
+		let pixelData = ctx.createImageData(width, height);
+		let i = 0;
+		let dat32 = new Uint32Array(pixelData.data.buffer);
+		for (let y = 0; y < hp; y++) {			
+			for (let x = 0; x < wp; x++) {
+				let pixel = pixels[x + y * wp] ? 0xff000000 : 0xffffffff;
+				for (ph = 0; ph < pointSize; ph++) 
+					for (pw = 0; pw < pointSize; pw++)
+						dat32[(y * pointSize + ph) * width + x * pointSize + pw] = pixel;
+			}
+		}
+		ctx.putImageData(pixelData, 0, 0);
+	};
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);
+	};
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	let init = function() {	
+		let pointsParam = validate("Invalid points", "pointsInput", 1, 20);
+		let speedParam = validate("Invalid speed", "speedInput", 1, 50);			
+		if (speedParam && pointsParam) {		
+	
+			width = canvas.width;
+			height = canvas.height;
+			hWidth = width / 2; 
+			hHeight = height / 2;
+	
+			pointSize = pointsParam;
+
+			wp = Math.floor(width / pointSize);
+			hp = Math.floor(height / pointSize);			
+			
+			ctx.fillStyle = "black";
+			ctx.fillRect(0, 0, width, height);
+			
+			pointA = {x: 0, y: 0};
+			pointB = {x: 0, y: 0};	
+			
+			pixels = [];
+			
+			for (let x = 0; x < wp; x++) 
+				for (let y = 0; y < hp; y++) 					
+						pixels[x + y * wp] = Math.random() > 0.5;
+			
+			innnerChangeInterval(speedParam);
+		}
+	};	
+		
+	return {
+		start: function() {					
+			init();						
+		},		
+	};
+
+})();
+
+$.negadraw.start();</script>
