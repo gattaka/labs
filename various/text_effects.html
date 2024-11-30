@@ -1,0 +1,206 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Point size <1-20></td>	
+			<td>Shift step <1-20></td>	
+			<td>Angle step <1-90></td>	
+			<td>Point size <1-20></td>	
+			<td>Speed (ms) <1-50></td>			
+			<td></td>			
+		</tr>
+		<tr>				
+			<td><input id="pointsInput" style="width: 120px;" value="10">	
+			<td><input id="shiftStepInput" style="width: 120px;" value="5">	
+			<td><input id="angleStepInput" style="width: 120px;" value="4">	
+			<td><input id="speedInput" style="width: 100px;" value="20"></td>		
+			<td><button type="button" onclick="$.texteffects.start()">Run!</button></td>			
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0">
+	<canvas id="canvas" style="border: 1px solid black" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.texteffects = (function() {
+
+	let canvas = document.getElementById("canvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let hWidth = width / 2; 
+	let hHeight = height / 2;		
+	
+	let interval = 1;
+	let innerIntervalCallback;
+		
+	let pointSize;
+	let hPointSize;
+	let matrixDimension = 5;	
+	let hMatrixDimension = Math.floor(matrixDimension / 2); // zaokrouhleno, protože vykreslování už je nastavné na střed
+	
+	let offsetByChar = true;		
+	
+	let angleInterOffset = 15;
+	
+	let angleStep = 4;
+	let angleOffset = 0;
+	
+	let shiftStep = 4;
+	let shiftOffset = 0;
+	
+	let amplitude;
+				
+	/* 
+	10001
+	10001
+	10001
+	01010
+	00100
+	*/
+	// 5x5
+	let matrixFromByChar = function(character) {
+		switch (character) {
+		case 'H': return '1000110001111111000110001';
+		case 'E': return '1111110000111111000011111';
+		case 'L': return '1000010000100001000011111';
+		case 'O': return '0111010001100011000101110';
+		case '!': return '0010000100001000000000100';
+		case 'G': return '1111110000101111000111111';
+		case 'A': return '1111110001111111000110001';
+		case 'T': return '1111100100001000010000100';
+		case 'S': return '0111110000011100000111110';
+		case 'R': return '1111110001111111001010001';
+		case 'V': return '1000110001100010101000100';
+		case ' ': return '0000000000000000000000000';
+		}	
+	};
+	
+	let trim = function(val, maxVal) {
+		let t = val % maxVal;
+		if (t >= 0) return t;
+		return maxVal + t;
+	};
+
+	let trimX = function(x) {
+		return trim(x, width);
+	};
+	
+	let trimY = function(y) {
+		return trim(y, height);
+	};
+				
+	let drawPoint = function(x, y) {
+		for (let py = -hPointSize; py < hPointSize; py++)
+			for (let px = -hPointSize; px < hPointSize; px++) 
+				ctx.fillRect(
+					Math.floor(trimX(hWidth + x * pointSize + px - shiftOffset)), 
+					Math.floor(trimY(hHeight + y * pointSize + py)), 
+					1, 1);			
+	};
+	
+	let toRad = function(angle) {
+		return angle * Math.PI / 180;
+	};
+	
+	let processYOffset = function(angle) {
+		return Math.sin(toRad(angle)) * amplitude;
+	};
+				
+	let draw = function() {	
+		let msg = "GATTSERVER!"
+				
+		ctx.fillStyle = "black";
+		ctx.fillRect(0, 0, width, height);
+		
+		/*
+		ctx.fillStyle = "grey";
+		ctx.fillRect(0, hHeight, width, 1);
+		ctx.fillRect(hWidth, 0, 1, height);
+		*/	
+		
+		let yOffset;
+			
+		for (let i = 0; i < msg.length; i++) {
+			let mat = matrixFromByChar(msg.charAt(i));
+			if (offsetByChar)				
+				yOffset = processYOffset(angleOffset + angleInterOffset * i);	
+			ctx.fillStyle = "hsl(" + ((angleOffset + i * angleInterOffset) % 360) + ", 100%, 50%)";
+			for (let x = 0; x < matrixDimension; x++) {
+				if (!offsetByChar) 
+					yOffset = processYOffset(angleOffset + (x + i * matrixDimension) * angleInterOffset);
+				for (let y = 0; y < matrixDimension; y++) {	
+					if (mat.charAt(y * matrixDimension + x) == '1') {												
+						let drawX = - hMatrixDimension // střed glyphu
+									+ (matrixDimension + 1) * i // odstup dle pořadí znaku
+									+ x; // odstup dle pointu glyphu
+						let drawY = - hMatrixDimension // střed glyphu
+									+ yOffset // animační posuv
+									+ y; // odstup dle pointu glyphu
+						drawPoint(drawX, drawY);
+					}
+				}
+			}
+		}
+		
+		angleOffset = (angleOffset - angleStep) % 360;
+		shiftOffset	= (shiftOffset + shiftStep) % width;
+	};
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);
+	};
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	let init = function() {	
+		let pointsParam = validate("Invalid points", "pointsInput", 1, 20);	
+		let shiftStepParam = validate("Invalid shift step", "shiftStepInput", 1, 20);			
+		let angleStepParam = validate("Invalid angle step", "angleStepInput", 1, 90);			
+		let speedParam = validate("Invalid speed", "speedInput", 1, 50);			
+		if (speedParam && shiftStepParam && angleStepParam && pointsParam) {						
+			pointSize = pointsParam;	
+			shiftStep = shiftStepParam;
+			angleStep = angleStepParam;
+			hPointSize = pointSize / 2;
+			amplitude = hHeight / pointSize - matrixDimension; 
+			innnerChangeInterval(speedParam);
+		}
+	};	
+		
+	return {
+		start: function() {					
+			init();		
+		},
+		rainbow: function(value) {
+			colors = value;
+		},
+	};
+
+})();
+
+$.texteffects.start();</script>
