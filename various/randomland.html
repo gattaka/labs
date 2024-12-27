@@ -35,14 +35,17 @@ $.gfx = (function() {
 	let dragged = false;
 	let xDraggedStart;
 	let yDraggedStart;
-	let xPxOffset = 0;
-	let yPxOffset = 0;
+	let pxOffset = 0;
+	let pyOffset = 0;
 		
-	let pSize;
+	let isoCellBaseOrig;
+		
+	let zoom;
+	let pwCell;
+	let phCell;
+	let pwCell05;
+	let phCell05;
 	
-	let isoSize;
-	let isoSize05;
-		
 	let data;
 		
 	class Map {
@@ -88,24 +91,35 @@ $.gfx = (function() {
 			return this.#height;
 		}
 	}
-		
-	class Pixel {
-	  constructor(x, y, color) {
-		this.x = x;
-		this.y = y;
-		this.color = color; // např. 0xff000000
-	  }
+	
+	let toIso = function(mx, my) {
+		let w = pwCell05;
+		let h = phCell05;
+		return {
+			ix: mx * w + my * w,  
+			iy: my * h - mx * h
+		};
+	};
+	
+	let toMap = function(ix, iy) {
+		let w = pwCell05;
+		let h = phCell05;
+		let my = iy / (2 * h) + ix / (2 * w);		
+		return {
+			mx: (ix - my * w) / w,
+			my: my
+		};
 	};	
 	
 	let drawPixels = function(data) {
 		let pixelData = ctx.createImageData(width, height);
 		let dat32 = new Uint32Array(pixelData.data.buffer);
 		for (let y = 0; y < data.getHeight(); y++) {
-			let screenBaseY = y * pSize;
+			let screenBaseY = y * zoom;
 			if (screenBaseY >= height || screenBaseY < 0)
 				break;
 			for (let x = 0; x < data.getWidth(); x++) {
-				let screenBaseX = x * pSize;
+				let screenBaseX = x * zoom;
 				if (screenBaseX >= width || screenBaseX < 0)
 					break;
 					
@@ -113,11 +127,11 @@ $.gfx = (function() {
 				let val = 0xff000000 | data.get(x, y);
 				//dat32[y * data.getWidth() + x] = val;									
 		
-				for (let sy = 0; sy < pSize; sy++) {
+				for (let sy = 0; sy < zoom; sy++) {
 					let screenY = screenBaseY + sy;
 					if (screenY >= height || screenY < 0)
 						break;
-					for (let sx = 0; sx < pSize; sx++) {
+					for (let sx = 0; sx < zoom; sx++) {
 						let screenX = screenBaseX + sx;
 						if (screenX >= width || screenX < 0)
 							break;
@@ -129,97 +143,97 @@ $.gfx = (function() {
 		ctx.putImageData(pixelData, 0, 0);
 	};
 	
-	let drawIsometric = function(data) {	
-		let pixelData = ctx.createImageData(width, height);
-		let dat32 = new Uint32Array(pixelData.data.buffer);
-			
-		let isoCenter = toIso(data.getWidth() / 2 , data.getHeight() / 2);
-			
-		// TODO Lepší by asi bylo vykreslovat mapu dle obrazovky, tím se omezí procházení
-		// otázkou je, jestli by přepočet iso -> map nebyl nakonec nákladnější
-				
-		// by nebyly přesahující části vynechané, protože souřadnicově jsou už mimo záběr
-		let borderTolerance = 2 * isoSize * pSize;
-			
-		// isometrika se vykresluje řádkově odzadu kvůli překrývání
-		for (let my = 0; my < data.getHeight(); my++) {
-			for (let mx = data.getWidth() - 1; mx >= 0; mx--) {
-				let val = data.get(mx, my);
-				let isoPos = toIso(mx, my);	
-				let posX = isoPos.ix - isoCenter.ix + width05;
-				let posY = isoPos.iy - isoCenter.iy + height05;
-				let fromX = posX - isoSize;
-				let fromY = posY - isoSize;
-				let toX = posX + isoSize;
-				let toY = posY + isoSize;
-				for (let y = fromY; y < toY; y++) {
-					let screenBaseY = y * pSize + yPxOffset + val;
-					if (screenBaseY >= height || screenBaseY < -borderTolerance)
-						break;
-					for (let x = fromX; x < toX; x++) {
-						let screenBaseX = x * pSize + xPxOffset;
-						if (screenBaseX >= width || screenBaseX < -borderTolerance)
-							break;
-						let d = Math.abs(posX - x) + Math.abs(posY - y) * 2;
-						let drawVal;
-						if (d < isoSize) {
-							drawVal = val | 0xff000000;
-						} else if (d == isoSize) {
-							drawVal = 0xff000000;
-						} else if (y > posY) {
-							if (x == fromX || x == toX - 1) {
-								drawVal = 0xff000000;
-							} else {
-								drawVal = val | 0xff000000;
-							}
-						} else {
-							continue;
-						}
-							
-						// Zoom
-						for (let sy = 0; sy < pSize; sy++) {
-							let screenY = screenBaseY + sy;
-							if (screenY >= height || screenY < 0)
-								break;
-							for (let sx = 0; sx < pSize; sx++) {
-								let screenX = screenBaseX + sx;
-								if (screenX >= width || screenX < 0)
-									break;
-								dat32[screenY * width + screenX] = drawVal;
-							}
-						}
+	let drawIsometricCell = function(pxCenter, pyCenter, val, dat32) {
+		let range = pwCell05;
+		let pyStart = Math.max(pyCenter - phCell05, 0);
+		let phColumn = phCell * 2; // kvůli "sloupku" pod buňkou
+		let pyEnd = Math.min(pyCenter + phColumn, height);
+		let pxStart = Math.max(pxCenter - pwCell05, 0);
+		let pxEnd = Math.min(pxCenter + pwCell05, width);
+		
+		for (let py = pyStart; py < pyEnd; py++) {
+			for (let px = pxStart; px < pxEnd; px++) {
+				let d = Math.abs(pxCenter - px) + Math.abs(pyCenter - py) * 2;
+				let drawVal;
+				if (d < range) {
+					drawVal = val | 0xff000000;
+				} else if (d == range) {
+					drawVal = 0xff000000;
+				} else if (py > pyCenter) {
+					if (px == pxStart || px == pxEnd - 1) {
+						drawVal = 0xff000000;
+					} else {
+						drawVal = val | 0xff000000;
+					}
+				} else {
+					continue;
+				}								
+				dat32[py * width + px] = drawVal;
+			}
+		}
+	};
+	
+	let drawIsometric = function(data, dat32) {						
+		let mCenterX = Math.floor(data.getWidth() / 2);
+		let mCenterY = Math.floor(data.getHeight() / 2);
+		let vCenter = toIso(mCenterX, mCenterY);
+		// pohled bude kosočtverec, jehož kolmice mezi středem a stranou je rovna výšce obrazovky
+		let pCellHeight = phCell;	
+		let pCellWidth = pwCell;
+		let maxVertCellCount = Math.floor(height / pCellHeight);
 						
-					}		
-				}
+		// by nebyly přesahující části vynechané, protože souřadnicově jsou už mimo záběr
+		let borderTolerance = 2 * pwCell;
+			
+		// isometrika se vykresluje řádkově odzadu kvůli překrývání		
+		let mFromY = Math.max(mCenterY - maxVertCellCount, 0);
+		let mToY = Math.min(mCenterY + maxVertCellCount, data.getHeight());
+		let mFromX = Math.min(mCenterX + maxVertCellCount, data.getWidth()) - 1;
+		let mToX = Math.max(mCenterX - maxVertCellCount, 0);
+		let iterations = 0;
+		for (let my = mFromY; my < mToY; my++) {
+			for (let mx = mFromX; mx >= mToX; mx--) {
+				if ((Math.abs(mCenterX - mx) + Math.abs(mCenterY - my)) > maxVertCellCount)
+					continue;
+				iterations++;
+				
+				let val = data.get(mx, my);
+				let vPos = toIso(mx, my);	
+				
+				let px = vPos.ix - vCenter.ix + width05 + pxOffset;
+				let py = vPos.iy - vCenter.iy + height05 + pyOffset;
+
+				drawIsometricCell(px, py, val, dat32); 
 			}
 		}
 		
-		ctx.putImageData(pixelData, 0, 0);
-	};
-	
-	let toIso = function(mx, my) {
-		let w = isoSize;
-		let h = isoSize05;
-		return {
-			ix: mx * w + my * w,  
-			iy: my * h - mx * h
-		};
-	};
-	
-	let toMap = function(ix, iy) {
-		let w = isoSize;
-		let h = isoSize05;
-		let my = iy / (2 * h) + ix / (2 * w);		
-		return {
-			mx: (ix - my * w) / w,
-			my: my
-		};
+		console.log("iterations: " + iterations);
 	};	
 				
+	let drawCross = function(dat32) {
+		for (let y = 0; y < height; y++) 
+			dat32[y * width + width05] = 0xff000000;
+		for (let x = 0; x < width; x++) 
+			dat32[height05 * width + x] = 0xff000000;	
+	};
+				
 	let draw = function() {
+		let pixelData = ctx.createImageData(width, height);
+		let dat32 = new Uint32Array(pixelData.data.buffer);
 		
-		drawIsometric(data);
+		/*
+		let pos = toIso(0, 0);
+		let pos2 = toIso(0, 1);
+		drawIsometricCell(pos.ix + width05, pos.iy + height05, 0xff0000ff, dat32);
+		drawIsometricCell(pos2.ix + width05, pos2.iy + height05, 0xff00ffff, dat32);
+		*/
+		
+		drawIsometric(data, dat32);
 		//drawPixels(data);
+		
+		drawCross(dat32);
+		
+		ctx.putImageData(pixelData, 0, 0);
 	};
 	
 	let innnerChangeInterval = function(value) {
@@ -253,6 +267,13 @@ $.gfx = (function() {
 		return value;
 	};
 	
+	let updateZoom = function() {
+		phCell05 = isoCellBaseOrig * zoom;
+		phCell = phCell05 * 2;
+		pwCell05 = phCell;
+		pwCell = phCell * 2;
+	};
+	
 	let init = function() {			
 		let speedParam = validate("Invalid speed", "speedInput", 1, 50);			
 		if (speedParam) {		
@@ -262,11 +283,15 @@ $.gfx = (function() {
 			width05 = Math.floor(width / 2);
 			height05 = Math.floor(height / 2);
 
-			pSize = 2;
+			isoCellBaseOrig = 4;
+
+			zoom = 1;
+			updateZoom();
 
 			canvas.addEventListener("wheel", (event) => {
-				pSize -= Math.sign(event.deltaY);
-				if (pSize < 1) pSize = 1;
+				zoom -= Math.sign(event.deltaY);
+				if (zoom < 1) zoom = 1;
+				updateZoom();
 			}, { passive: true });
 			
 			canvas.addEventListener("mousedown", function (e) {
@@ -286,22 +311,20 @@ $.gfx = (function() {
 			canvas.addEventListener("mousemove", function (e) {
 				if (!dragged) 
 					return;
-				xPxOffset -= (xDraggedStart - e.clientX);
-				yPxOffset -= (yDraggedStart - e.clientY);
+				pxOffset -= (xDraggedStart - e.clientX);
+				pyOffset -= (yDraggedStart - e.clientY);
 				xDraggedStart = e.clientX;
 				yDraggedStart = e.clientY;					
 			}, false);
 			
 			canvas.addEventListener("dblclick", function (e) {
 				e.preventDefault();
-				xPxOffset = 0;
-				yPxOffset = 0;
+				pxOffset = 0;
+				pyOffset = 0;
 			}, false);
 
-			isoSize05 = 8;
-			isoSize = isoSize05 * 2;
-	
-			data = new Map(100, 100);
+			//data = new Map(100, 100);
+			data = new Map(101, 101);
 
 			let max = 255;
 			let min = 0;
