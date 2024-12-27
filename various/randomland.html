@@ -41,7 +41,51 @@ $.gfx = (function() {
 	let isoSize;
 	let isoSize05;
 		
-	let data = [];
+	let data;
+		
+	class Map {
+		
+		#data = [];
+		#width;
+		#height;
+		
+		constructor(width, height) {
+			this.#width = width;
+			this.#height = height;
+		}
+		
+		#getIndex(x, y) {
+			return y * this.#width + x;
+		}
+		
+		get(x, y) {
+			return this.#data[this.#getIndex(x, y)];
+		}
+		
+		set(x, y, val) {
+			this.#data[this.#getIndex(x, y)] = val;
+		}
+		
+		getLength() {
+			return this.#data.length;
+		}
+		
+		getByIndex(i) {
+			return this.#data[i];
+		}
+		
+		setByIndex(i, val) {
+			return this.#data[i] = val;
+		}
+		
+		getWidth() {
+			return this.#width;
+		}
+		
+		getHeight() {
+			return this.#height;
+		}
+	}
 		
 	class Pixel {
 	  constructor(x, y, color) {
@@ -49,19 +93,35 @@ $.gfx = (function() {
 		this.y = y;
 		this.color = color; // např. 0xff000000
 	  }
-	};
+	};	
 	
 	let drawPixels = function(data) {
 		let pixelData = ctx.createImageData(width, height);
-		let i = 0;
 		let dat32 = new Uint32Array(pixelData.data.buffer);
-		for (let py = 0; py < pHeight; py++) {
-			for (let px = 0; px < pWidth; px++) {
+		for (let y = 0; y < data.getHeight(); y++) {
+			let screenBaseY = y * pSize;
+			if (screenBaseY >= height)
+				break;
+			for (let x = 0; x < data.getWidth(); x++) {
+				let screenBaseX = x * pSize;
+				if (screenBaseX >= width)
+					break;
+					
 				// opacity-blue-green-red = 8 x 4b = 32
-				let val = 0xff000000 | data[py * pWidth + px];
-				for (let y = 0; y < pSize; y++) 
-					for (let x = 0; x < pSize; x++) 
-						dat32[(py * pSize + y) * width + px * pSize + x] = val;
+				let val = 0xff000000 | data.get(x, y);
+				//dat32[y * data.getWidth() + x] = val;									
+		
+				for (let sy = 0; sy < pSize; sy++) {
+					let screenY = screenBaseY + sy;
+					if (screenY >= height)
+						break;
+					for (let sx = 0; sx < pSize; sx++) {
+						let screenX = screenBaseX + sx;
+						if (screenX >= width)
+							break;
+						dat32[screenY * width + screenX] = val;
+					}
+				}
 			}
 		}
 		ctx.putImageData(pixelData, 0, 0);
@@ -107,8 +167,15 @@ $.gfx = (function() {
 		}
 	};
 	
-	let drawIsometric = function(data) {
+	let drawIsometric = function(map) {
 		let isoData = [];
+		
+		// isometrika se vykresluje od prvního řádku, ale od posledního sloupce
+		for (let y = 0; y < map.getHeight(); y++) {
+			for (let x = map.getWidth() - 1; x >= 0; x--) {
+				
+			}
+		}
 		
 		drawIsoBlock(isoData, 0x000000ff, 0, 0);
 		drawIsoBlock(isoData, 0x00ff0000, -1, 0);
@@ -118,8 +185,8 @@ $.gfx = (function() {
 				
 	let draw = function() {
 		
-		let isoData = drawIsometric(data);
-		drawPixels(isoData);
+		//let isoData = drawIsometric(data);
+		drawPixels(data);
 	};
 	
 	let innnerChangeInterval = function(value) {
@@ -163,43 +230,46 @@ $.gfx = (function() {
 			height05 = Math.floor(height / 2);
 
 			pSize = 10;
-			pWidth = Math.floor(width / pSize);
-			pHeight = Math.floor(height / pSize);	
-			pWidth05 = Math.floor(pWidth / 2);
-			pHeight05 = Math.floor(pHeight / 2);			
+
+			canvas.addEventListener("wheel", (event) => {
+				pSize -= Math.sign(event.deltaY);
+				if (pSize < 1) pSize = 1;
+			}, { passive: true });
 
 			isoSize05 = 8;
 			isoSize = isoSize05 * 2;
+	
+			data = new Map(300, 200);
 
 			let max = 255;
 			let min = 0;
-			for (let py = 0; py < pHeight; py++) {
-				for (let px = 0; px < pWidth; px++) {										
-					data[py * pWidth + px] = 255;
+			for (let y = 0; y < data.getHeight(); y++) {
+				for (let x = 0; x < data.getWidth(); x++) {										
+					data.set(x, y, 255);
 				}
 			}
 			
 			// TODO okraj kráteru
 			let pitCount = 100;
 			for (let i = 0; i < pitCount; i++) {
-				let r = Math.floor(Math.random() * Math.min(pWidth, pHeight) / 2);
-				let posX = Math.floor(Math.random() * pWidth);
-				let posY = Math.floor(Math.random() * pHeight);
+				let r = Math.floor(Math.random() * Math.min(data.getWidth(), data.getHeight()) / 2);
+				let posX = Math.floor(Math.random() * data.getWidth());
+				let posY = Math.floor(Math.random() * data.getHeight());
 				let fromX = Math.max(posX - r, 0);
 				let fromY = Math.max(posY - r, 0);
-				let toX = Math.min(posX + r, pWidth);
-				let toY = Math.min(posY + r, pHeight);
-				for (let py = fromY; py < toY; py++) {
-					for (let px = fromX; px < toX; px++) {					
-						let dx = posX - px;
-						let dy = posY - py;
+				let toX = Math.min(posX + r, data.getWidth());
+				let toY = Math.min(posY + r, data.getHeight());
+				for (let y = fromY; y < toY; y++) {
+					for (let x = fromX; x < toX; x++) {					
+						let dx = posX - x;
+						let dy = posY - y;
 						let distFromCenter = Math.sqrt(dx * dx + dy * dy);
 						if (distFromCenter < r) {					
 							let depth = Math.sqrt(r * r - distFromCenter * distFromCenter);
-							let val = data[py * pWidth + px] - depth;
+							let val = data.get(x, y) - depth;
 							max = Math.max(val, max);
 							min = Math.min(val, min);
-							data[py * pWidth + px] = val;
+							data.set(x, y, val);
 						} else {				
 							// mimo kruh
 						}
@@ -210,8 +280,8 @@ $.gfx = (function() {
 			// normalizace
 			let scale = max - min;
 			let nKoef = 255 / scale;
-			for (let i = 0; i < data.length; i++) {					
-				data[i] = Math.floor((data[i] - min) * nKoef);
+			for (let i = 0; i < data.getLength(); i++) {					
+				data.setByIndex(i, Math.floor((data.getByIndex(i) - min) * nKoef));
 				//data[i] = Math.floor(data[i]);
 			}
 			
