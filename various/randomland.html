@@ -102,11 +102,11 @@ $.gfx = (function() {
 		let dat32 = new Uint32Array(pixelData.data.buffer);
 		for (let y = 0; y < data.getHeight(); y++) {
 			let screenBaseY = y * pSize;
-			if (screenBaseY >= height)
+			if (screenBaseY >= height || screenBaseY < 0)
 				break;
 			for (let x = 0; x < data.getWidth(); x++) {
 				let screenBaseX = x * pSize;
-				if (screenBaseX >= width)
+				if (screenBaseX >= width || screenBaseX < 0)
 					break;
 					
 				// opacity-blue-green-red = 8 x 4b = 32
@@ -115,11 +115,11 @@ $.gfx = (function() {
 		
 				for (let sy = 0; sy < pSize; sy++) {
 					let screenY = screenBaseY + sy;
-					if (screenY >= height)
+					if (screenY >= height || screenY < 0)
 						break;
 					for (let sx = 0; sx < pSize; sx++) {
 						let screenX = screenBaseX + sx;
-						if (screenX >= width)
+						if (screenX >= width || screenX < 0)
 							break;
 						dat32[screenY * width + screenX] = val;
 					}
@@ -135,6 +135,12 @@ $.gfx = (function() {
 			
 		let isoCenter = toIso(data.getWidth() / 2 , data.getHeight() / 2);
 			
+		// TODO Lepší by asi bylo vykreslovat mapu dle obrazovky, tím se omezí procházení
+		// otázkou je, jestli by přepočet iso -> map nebyl nakonec nákladnější
+				
+		// by nebyly přesahující části vynechané, protože souřadnicově jsou už mimo záběr
+		let borderTolerance = 2 * isoSize * pSize;
+			
 		// isometrika se vykresluje od prvního řádku, ale od posledního sloupce
 		for (let my = 0; my < data.getHeight(); my++) {
 			for (let mx = data.getWidth() - 1; mx >= 0; mx--) {
@@ -142,17 +148,17 @@ $.gfx = (function() {
 				let isoPos = toIso(mx, my);	
 				let posX = isoPos.ix - isoCenter.ix + width05;
 				let posY = isoPos.iy - isoCenter.iy + height05;
+				let fromX = posX - isoSize;
 				let fromY = posY - isoSize;
+				let toX = posX + isoSize;
 				let toY = posY + isoSize;
 				for (let y = fromY; y < toY; y++) {
 					let screenBaseY = y * pSize + yPxOffset;
-					if (screenBaseY >= height)
+					if (screenBaseY >= height || screenBaseY < -borderTolerance)
 						break;
-					let fromX = posX - isoSize;
-					let toX = posX + isoSize;
 					for (let x = fromX; x < toX; x++) {
 						let screenBaseX = x * pSize + xPxOffset;
-						if (screenBaseX >= width)
+						if (screenBaseX >= width || screenBaseX < -borderTolerance)
 							break;
 						let d = Math.abs(posX - x) + Math.abs(posY - y) * 2;
 						let index =  + x;
@@ -167,11 +173,11 @@ $.gfx = (function() {
 							
 						for (let sy = 0; sy < pSize; sy++) {
 							let screenY = screenBaseY + sy;
-							if (screenY >= height)
+							if (screenY >= height || screenY < 0)
 								break;
 							for (let sx = 0; sx < pSize; sx++) {
 								let screenX = screenBaseX + sx;
-								if (screenX >= width)
+								if (screenX >= width || screenX < 0)
 									break;
 								dat32[screenY * width + screenX] = drawVal;
 							}
@@ -289,7 +295,7 @@ $.gfx = (function() {
 			isoSize05 = 8;
 			isoSize = isoSize05 * 2;
 	
-			data = new Map(300, 200);
+			data = new Map(100, 100);
 
 			let max = 255;
 			let min = 0;
@@ -334,6 +340,12 @@ $.gfx = (function() {
 				data.setByIndex(i, Math.floor((data.getByIndex(i) - min) * nKoef));
 				//data[i] = Math.floor(data[i]);
 			}
+			
+			// Debug kotvy
+			data.set(0, 0, 0xff00ff00);
+			data.set(0, data.getHeight() - 1, 0xffff0000);
+			data.set(data.getWidth() - 1, 0, 0xffffff00);
+			data.set(data.getWidth() - 1, data.getHeight() - 1, 0xffffffff);
 			
 			innnerChangeInterval(speedParam);
 		}
