@@ -141,7 +141,7 @@ $.gfx = (function() {
 		// by nebyly přesahující části vynechané, protože souřadnicově jsou už mimo záběr
 		let borderTolerance = 2 * isoSize * pSize;
 			
-		// isometrika se vykresluje od prvního řádku, ale od posledního sloupce
+		// isometrika se vykresluje řádkově odzadu kvůli překrývání
 		for (let my = 0; my < data.getHeight(); my++) {
 			for (let mx = data.getWidth() - 1; mx >= 0; mx--) {
 				let val = data.get(mx, my);
@@ -153,7 +153,7 @@ $.gfx = (function() {
 				let toX = posX + isoSize;
 				let toY = posY + isoSize;
 				for (let y = fromY; y < toY; y++) {
-					let screenBaseY = y * pSize + yPxOffset;
+					let screenBaseY = y * pSize + yPxOffset + val;
 					if (screenBaseY >= height || screenBaseY < -borderTolerance)
 						break;
 					for (let x = fromX; x < toX; x++) {
@@ -161,16 +161,22 @@ $.gfx = (function() {
 						if (screenBaseX >= width || screenBaseX < -borderTolerance)
 							break;
 						let d = Math.abs(posX - x) + Math.abs(posY - y) * 2;
-						let index =  + x;
 						let drawVal;
 						if (d < isoSize) {
-							drawVal = val | 0xff000000;	
+							drawVal = val | 0xff000000;
 						} else if (d == isoSize) {
 							drawVal = 0xff000000;
+						} else if (y > posY) {
+							if (x == fromX || x == toX - 1) {
+								drawVal = 0xff000000;
+							} else {
+								drawVal = val | 0xff000000;
+							}
 						} else {
 							continue;
 						}
 							
+						// Zoom
 						for (let sy = 0; sy < pSize; sy++) {
 							let screenY = screenBaseY + sy;
 							if (screenY >= height || screenY < 0)
