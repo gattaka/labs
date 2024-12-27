@@ -1,0 +1,163 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Speed (ms) <1-50></td>
+			<td></td>	
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>				
+			<td><input id="speedInput" style="width: 100px;" value="10"></td>				
+			<td><button type="button" onclick="$.gfx.start()">Run!</button></td>			
+			<td></td>	
+			<td></td>
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0;">
+	<canvas id="canvas" width="800" height="800"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.gfx = (function() {
+
+	let canvas = document.getElementById("canvas");	
+	let ctx = canvas.getContext("2d");
+	ctx.imageSmoothingEnabled = false;
+	
+	let width;
+	let height;
+	let width05;
+	let height05;
+	
+	let interval;
+	let innerIntervalCallback;
+		
+	let data = [];
+		
+	class Pixel {
+	  constructor(x, y, color) {
+		this.x = x;
+		this.y = y;
+		this.color = color; // např. 0xff000000
+	  }
+	};
+	
+	let drawPixels = function() {
+		let pixelData = ctx.createImageData(width, height);
+		let i = 0;
+		let dat32 = new Uint32Array(pixelData.data.buffer);
+		for (let i = 0; i < data.length; i++) {	
+			// opacity-blue-green-red
+			dat32[i] = 0xff000000 | data[i];
+		}
+		ctx.putImageData(pixelData, 0, 0);
+	};
+				
+	let draw = function() {
+		
+		// test
+		
+	
+		// test
+		
+		drawPixels();
+	};
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);
+	};
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	let createPit = function() {
+		
+	};
+	
+	let init = function() {			
+		let speedParam = validate("Invalid speed", "speedInput", 1, 50);			
+		if (speedParam) {		
+	
+			width = canvas.width;
+			height = canvas.height;
+			width05 = width / 2; 
+			height05 = height / 2;		
+
+			let max = 255;
+			let min = 0;
+			for (let y = 0; y < height; y++) {
+				for (let x = 0; x < width; x++) {										
+					data[y * width + x] = 255;
+				}
+			}
+			
+			let r = Math.floor(Math.random() * Math.max(width, height));
+			let posX = Math.floor(Math.random() * width);
+			let posY = Math.floor(Math.random() * height);
+			
+			let fromX = Math.max(posX - r, 0);
+			let fromY = Math.max(posY - r, 0);
+			let toX = Math.min(posX + r, width);
+			let toY = Math.min(posY + r, height);
+			for (let y = fromY; y < toY; y++) {
+				for (let x = fromX; x < toX; x++) {					
+					let dx = posX - x;
+					let dy = posY - y;
+					let distFromCenter = Math.sqrt(dx * dx + dy * dy);
+					if (distFromCenter < r) {					
+						let depth = Math.sqrt(r * r - distFromCenter * distFromCenter);
+						let val = data[y * width + x] - depth;
+						max = Math.max(val, max);
+						min = Math.min(val, min);
+						data[y * width + x] = val;
+					} else {				
+						// mimo kruh
+					}
+				}
+			}
+			
+			// normalizace
+			let scale = max - min;
+			let nKoef = 255 / scale;
+			for (let i = 0; i < data.length; i++) {					
+				data[i] = Math.floor((data[i] - min) * nKoef);
+				//data[i] = Math.floor(data[i]);
+			}
+			
+			innnerChangeInterval(speedParam);
+		}
+	};	
+		
+	return {
+		start: function() {					
+			init();						
+		},		
+	};
+
+})();
+
+$.gfx.start();</script>
