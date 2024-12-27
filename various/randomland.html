@@ -14,7 +14,7 @@
 			<td></td>
 		</tr>
 	</tbody>
-</table><div style="margin: 10px 0;">
+</table><div style="margin: 10px 0; border: 1px solid black; display: inline-block;">
 	<canvas id="canvas" width="800" height="800"></canvas>
 </div>[/HTML]
 <script>var $ = $ || {};
@@ -127,6 +127,43 @@ $.gfx = (function() {
 		ctx.putImageData(pixelData, 0, 0);
 	};
 	
+	let drawIsometric = function(data) {	
+		let pixelData = ctx.createImageData(width, height);
+		let dat32 = new Uint32Array(pixelData.data.buffer);
+			
+		let isoCenter = toIso(data.getWidth() / 2 , data.getHeight() / 2);
+			
+		// isometrika se vykresluje od prvního řádku, ale od posledního sloupce
+		for (let my = 0; my < data.getHeight(); my++) {
+			for (let mx = data.getWidth() - 1; mx >= 0; mx--) {
+				let val = data.get(mx, my);
+				let isoPos = toIso(mx, my);	
+				let posX = isoPos.ix - isoCenter.ix + width05;
+				let posY = isoPos.iy - isoCenter.iy + height05;
+				let fromY = posY - isoSize;
+				let toY = posY + isoSize;
+				for (let y = fromY; y < toY; y++) {
+					if (y >= height) 
+						break;
+					let fromX = posX - isoSize;
+					let toX = posX + isoSize;
+					for (let x = fromX; x < toX; x++) {
+						if (x >= width)
+							break;
+						let d = Math.abs(posX - x) + Math.abs(posY - y) * 2;
+						let index = y * width + x;
+						if (d < isoSize) 
+							dat32[index] = val | 0xff000000;	
+						if (d == isoSize)
+							dat32[index] = 0xff000000;
+					}		
+				}
+			}
+		}
+		
+		ctx.putImageData(pixelData, 0, 0);
+	};
+	
 	let toIso = function(mx, my) {
 		let w = isoSize;
 		let h = isoSize05;
@@ -145,48 +182,11 @@ $.gfx = (function() {
 			my: my
 		};
 	};	
-	
-	let drawIsoBlock = function(isoData, color, mx, my) {			
-		let isoPos = toIso(mx, my);
-		let posX = isoPos.ix + pWidth05;
-		let posY = isoPos.iy + pHeight05;
-		let fromY = Math.max(posY - isoSize, 0);		
-		let toY = Math.min(posY + isoSize, pHeight);
-		for (let y = fromY; y < toY; y++) {
-			let lineSize = Math.abs();
-			let fromX = Math.max(posX - isoSize, 0);
-			let toX = Math.min(posX + isoSize, pWidth);
-			for (let x = fromX; x < toX; x++) {
-				let d = Math.abs(posX - x) + Math.abs(posY - y) * 2;
-				let index = y * pWidth + x;
-				if (d < isoSize) 
-					isoData[index] = color;
-				if (d == isoSize)
-					isoData[index] = 0xff000000;
-			}		
-		}
-	};
-	
-	let drawIsometric = function(map) {
-		let isoData = [];
-		
-		// isometrika se vykresluje od prvního řádku, ale od posledního sloupce
-		for (let y = 0; y < map.getHeight(); y++) {
-			for (let x = map.getWidth() - 1; x >= 0; x--) {
-				
-			}
-		}
-		
-		drawIsoBlock(isoData, 0x000000ff, 0, 0);
-		drawIsoBlock(isoData, 0x00ff0000, -1, 0);
-		
-		return isoData;
-	};
 				
 	let draw = function() {
 		
-		//let isoData = drawIsometric(data);
-		drawPixels(data);
+		drawIsometric(data);
+		//drawPixels(data);
 	};
 	
 	let innnerChangeInterval = function(value) {
