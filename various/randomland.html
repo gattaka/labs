@@ -32,6 +32,15 @@ $.gfx = (function() {
 	let interval;
 	let innerIntervalCallback;
 		
+	let pSize;
+	let pWidth;
+	let pHeight;
+	let pWidth05;
+	let pHeight05;
+	
+	let isoSize;
+	let isoSize05;
+		
 	let data = [];
 		
 	class Pixel {
@@ -42,25 +51,75 @@ $.gfx = (function() {
 	  }
 	};
 	
-	let drawPixels = function() {
+	let drawPixels = function(data) {
 		let pixelData = ctx.createImageData(width, height);
 		let i = 0;
 		let dat32 = new Uint32Array(pixelData.data.buffer);
-		for (let i = 0; i < data.length; i++) {	
-			// opacity-blue-green-red
-			dat32[i] = 0xff000000 | data[i];
+		for (let py = 0; py < pHeight; py++) {
+			for (let px = 0; px < pWidth; px++) {
+				// opacity-blue-green-red = 8 x 4b = 32
+				let val = 0xff000000 | data[py * pWidth + px];
+				for (let y = 0; y < pSize; y++) 
+					for (let x = 0; x < pSize; x++) 
+						dat32[(py * pSize + y) * width + px * pSize + x] = val;
+			}
 		}
 		ctx.putImageData(pixelData, 0, 0);
+	};
+	
+	let toIso = function(mx, my) {
+		let w = isoSize;
+		let h = isoSize05;
+		return {
+			ix: mx * w + my * w,  
+			iy: my * h - mx * h
+		};
+	};
+	
+	let toMap = function(ix, iy) {
+		let w = isoSize;
+		let h = isoSize05;
+		let my = iy / (2 * h) + ix / (2 * w);		
+		return {
+			mx: (ix - my * w) / w,
+			my: my
+		};
+	};	
+	
+	let drawIsoBlock = function(isoData, color, mx, my) {			
+		let isoPos = toIso(mx, my);
+		let posX = isoPos.ix + pWidth05;
+		let posY = isoPos.iy + pHeight05;
+		let fromY = Math.max(posY - isoSize, 0);		
+		let toY = Math.min(posY + isoSize, pHeight);
+		for (let y = fromY; y < toY; y++) {
+			let lineSize = Math.abs();
+			let fromX = Math.max(posX - isoSize, 0);
+			let toX = Math.min(posX + isoSize, pWidth);
+			for (let x = fromX; x < toX; x++) {
+				let d = Math.abs(posX - x) + Math.abs(posY - y) * 2;
+				let index = y * pWidth + x;
+				if (d < isoSize) 
+					isoData[index] = color;
+				if (d == isoSize)
+					isoData[index] = 0xff000000;
+			}		
+		}
+	};
+	
+	let drawIsometric = function(data) {
+		let isoData = [];
+		
+		drawIsoBlock(isoData, 0x000000ff, 0, 0);
+		drawIsoBlock(isoData, 0x00ff0000, -1, 0);
+		
+		return isoData;
 	};
 				
 	let draw = function() {
 		
-		// test
-		
-	
-		// test
-		
-		drawPixels();
+		let isoData = drawIsometric(data);
+		drawPixels(isoData);
 	};
 	
 	let innnerChangeInterval = function(value) {
@@ -94,48 +153,56 @@ $.gfx = (function() {
 		return value;
 	};
 	
-	let createPit = function() {
-		
-	};
-	
 	let init = function() {			
 		let speedParam = validate("Invalid speed", "speedInput", 1, 50);			
 		if (speedParam) {		
 	
 			width = canvas.width;
 			height = canvas.height;
-			width05 = width / 2; 
-			height05 = height / 2;		
+			width05 = Math.floor(width / 2);
+			height05 = Math.floor(height / 2);
+
+			pSize = 10;
+			pWidth = Math.floor(width / pSize);
+			pHeight = Math.floor(height / pSize);	
+			pWidth05 = Math.floor(pWidth / 2);
+			pHeight05 = Math.floor(pHeight / 2);			
+
+			isoSize05 = 8;
+			isoSize = isoSize05 * 2;
 
 			let max = 255;
 			let min = 0;
-			for (let y = 0; y < height; y++) {
-				for (let x = 0; x < width; x++) {										
-					data[y * width + x] = 255;
+			for (let py = 0; py < pHeight; py++) {
+				for (let px = 0; px < pWidth; px++) {										
+					data[py * pWidth + px] = 255;
 				}
 			}
 			
-			let r = Math.floor(Math.random() * Math.max(width, height));
-			let posX = Math.floor(Math.random() * width);
-			let posY = Math.floor(Math.random() * height);
-			
-			let fromX = Math.max(posX - r, 0);
-			let fromY = Math.max(posY - r, 0);
-			let toX = Math.min(posX + r, width);
-			let toY = Math.min(posY + r, height);
-			for (let y = fromY; y < toY; y++) {
-				for (let x = fromX; x < toX; x++) {					
-					let dx = posX - x;
-					let dy = posY - y;
-					let distFromCenter = Math.sqrt(dx * dx + dy * dy);
-					if (distFromCenter < r) {					
-						let depth = Math.sqrt(r * r - distFromCenter * distFromCenter);
-						let val = data[y * width + x] - depth;
-						max = Math.max(val, max);
-						min = Math.min(val, min);
-						data[y * width + x] = val;
-					} else {				
-						// mimo kruh
+			// TODO okraj kráteru
+			let pitCount = 100;
+			for (let i = 0; i < pitCount; i++) {
+				let r = Math.floor(Math.random() * Math.min(pWidth, pHeight) / 2);
+				let posX = Math.floor(Math.random() * pWidth);
+				let posY = Math.floor(Math.random() * pHeight);
+				let fromX = Math.max(posX - r, 0);
+				let fromY = Math.max(posY - r, 0);
+				let toX = Math.min(posX + r, pWidth);
+				let toY = Math.min(posY + r, pHeight);
+				for (let py = fromY; py < toY; py++) {
+					for (let px = fromX; px < toX; px++) {					
+						let dx = posX - px;
+						let dy = posY - py;
+						let distFromCenter = Math.sqrt(dx * dx + dy * dy);
+						if (distFromCenter < r) {					
+							let depth = Math.sqrt(r * r - distFromCenter * distFromCenter);
+							let val = data[py * pWidth + px] - depth;
+							max = Math.max(val, max);
+							min = Math.min(val, min);
+							data[py * pWidth + px] = val;
+						} else {				
+							// mimo kruh
+						}
 					}
 				}
 			}
