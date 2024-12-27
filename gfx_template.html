@@ -1,0 +1,131 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Speed (ms) <1-50></td>
+			<td></td>	
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>				
+			<td><input id="speedInput" style="width: 100px;" value="10"></td>				
+			<td><button type="button" onclick="$.gfx.start()">Run!</button></td>			
+			<td></td>	
+			<td></td>
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="400"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.gfx = (function() {
+
+	let canvas = document.getElementById("canvas");	
+	let ctx = canvas.getContext("2d");
+	ctx.imageSmoothingEnabled = false;
+	
+	let width;
+	let height;
+	let width05;
+	let height05;
+	
+	let interval;
+	let innerIntervalCallback;
+		
+	class Pixel {
+	  constructor(x, y, color) {
+		this.x = x;
+		this.y = y;
+		this.color = color; // např. 0xff000000
+	  }
+	};
+	
+	let drawPixels = function(pixels) {
+		let pixelData = ctx.createImageData(width, height);
+		let i = 0;
+		let dat32 = new Uint32Array(pixelData.data.buffer);
+		for (let i = 0; i < pixels.length; i++) {						
+			let pixel = pixels[i];
+			dat32[pixel.y * width + pixel.x] = pixel.color;
+		}
+		ctx.putImageData(pixelData, 0, 0);
+	};
+
+	let angle = 0;
+					
+	let draw = function() {
+		let pixels = [];
+		
+		// test
+		angle = (angle + 1) % 360;		
+		
+		for (let y = 0; y < height; y++)
+			pixels.push(new Pixel(width05, y, 0xff000000));
+		for (let x = 0; x < width; x++)
+			pixels.push(new Pixel(x, height05, 0xff000000));
+		
+		for (let s = 0; s < width; s += 0.1) {
+			let angleRad = (angle + s) * Math.PI / 180;		
+			let x = Math.floor(Math.sin(angleRad * 8) * width05);
+			let y = Math.floor(Math.sin(angleRad * 3) * height05);
+			pixels.push(new Pixel(x + width05, y + height05, 0xffff0000));
+		}
+				
+		// test
+		
+		drawPixels(pixels);
+	};
+	
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);
+	};
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	let init = function() {			
+		let speedParam = validate("Invalid speed", "speedInput", 1, 50);			
+		if (speedParam) {		
+	
+			width = canvas.width;
+			height = canvas.height;
+			width05 = width / 2; 
+			height05 = height / 2;				
+			
+			innnerChangeInterval(speedParam);
+		}
+	};	
+		
+	return {
+		start: function() {					
+			init();						
+		},		
+	};
+
+})();
+
+$.gfx.start();</script>
