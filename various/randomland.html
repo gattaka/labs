@@ -32,11 +32,13 @@ $.gfx = (function() {
 	let interval;
 	let innerIntervalCallback;
 		
+	let dragged = false;
+	let xDraggedStart;
+	let yDraggedStart;
+	let xPxOffset = 0;
+	let yPxOffset = 0;
+		
 	let pSize;
-	let pWidth;
-	let pHeight;
-	let pWidth05;
-	let pHeight05;
 	
 	let isoSize;
 	let isoSize05;
@@ -143,19 +145,38 @@ $.gfx = (function() {
 				let fromY = posY - isoSize;
 				let toY = posY + isoSize;
 				for (let y = fromY; y < toY; y++) {
-					if (y >= height) 
+					let screenBaseY = y * pSize + yPxOffset;
+					if (screenBaseY >= height)
 						break;
 					let fromX = posX - isoSize;
 					let toX = posX + isoSize;
 					for (let x = fromX; x < toX; x++) {
-						if (x >= width)
+						let screenBaseX = x * pSize + xPxOffset;
+						if (screenBaseX >= width)
 							break;
 						let d = Math.abs(posX - x) + Math.abs(posY - y) * 2;
-						let index = y * width + x;
-						if (d < isoSize) 
-							dat32[index] = val | 0xff000000;	
-						if (d == isoSize)
-							dat32[index] = 0xff000000;
+						let index =  + x;
+						let drawVal;
+						if (d < isoSize) {
+							drawVal = val | 0xff000000;	
+						} else if (d == isoSize) {
+							drawVal = 0xff000000;
+						} else {
+							continue;
+						}
+							
+						for (let sy = 0; sy < pSize; sy++) {
+							let screenY = screenBaseY + sy;
+							if (screenY >= height)
+								break;
+							for (let sx = 0; sx < pSize; sx++) {
+								let screenX = screenBaseX + sx;
+								if (screenX >= width)
+									break;
+								dat32[screenY * width + screenX] = drawVal;
+							}
+						}
+						
 					}		
 				}
 			}
@@ -229,12 +250,41 @@ $.gfx = (function() {
 			width05 = Math.floor(width / 2);
 			height05 = Math.floor(height / 2);
 
-			pSize = 10;
+			pSize = 2;
 
 			canvas.addEventListener("wheel", (event) => {
 				pSize -= Math.sign(event.deltaY);
 				if (pSize < 1) pSize = 1;
 			}, { passive: true });
+			
+			canvas.addEventListener("mousedown", function (e) {
+				dragged = true;
+				xDraggedStart = e.clientX;
+				yDraggedStart = e.clientY;
+			}, false);
+		 
+			canvas.addEventListener("mouseup", function (e) {
+				dragged = false;
+			}, false);
+			
+			canvas.addEventListener("mouseleave", function (e) {
+				dragged = false;
+			}, false);
+			
+			canvas.addEventListener("mousemove", function (e) {
+				if (!dragged) 
+					return;
+				xPxOffset -= (xDraggedStart - e.clientX);
+				yPxOffset -= (yDraggedStart - e.clientY);
+				xDraggedStart = e.clientX;
+				yDraggedStart = e.clientY;					
+			}, false);
+			
+			canvas.addEventListener("dblclick", function (e) {
+				e.preventDefault();
+				xPxOffset = 0;
+				yPxOffset = 0;
+			}, false);
 
 			isoSize05 = 8;
 			isoSize = isoSize05 * 2;
