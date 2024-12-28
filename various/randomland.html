@@ -173,41 +173,46 @@ $.gfx = (function() {
 		}
 	};
 	
-	let drawIsometric = function(data, dat32) {						
-		let mCenterX = Math.floor(data.getWidth() / 2);
-		let mCenterY = Math.floor(data.getHeight() / 2);
+	let drawIsometric = function(data, dat32) {	
+		// posuv je nutné rozdělit 
+		// na celočíselnou část (v cell jednotkách, které půjdou přepočítat na souřadnice mapy)
+		// a na zbytkovou část (která bude přímo v px použita jako zbytek posunu)
+		let pxOffsetRest = pxOffset % pwCell;
+		let pyOffsetRest = pyOffset % phCell;
+		let mOffset = toMap(pxOffset - pxOffsetRest, pyOffset - pyOffsetRest);	
+		let mCenterX = Math.floor(data.getWidth() / 2 - mOffset.mx);
+		let mCenterY = Math.floor(data.getHeight() / 2 - mOffset.my);
 		let vCenter = toIso(mCenterX, mCenterY);
+
 		// pohled bude kosočtverec, jehož kolmice mezi středem a stranou je rovna výšce obrazovky
 		let pCellHeight = phCell;	
 		let pCellWidth = pwCell;
 		let maxVertCellCount = Math.floor(height / pCellHeight);
-						
-		// by nebyly přesahující části vynechané, protože souřadnicově jsou už mimo záběr
-		let borderTolerance = 2 * pwCell;
-			
+								
 		// isometrika se vykresluje řádkově odzadu kvůli překrývání		
 		let mFromY = Math.max(mCenterY - maxVertCellCount, 0);
 		let mToY = Math.min(mCenterY + maxVertCellCount, data.getHeight());
 		let mFromX = Math.min(mCenterX + maxVertCellCount, data.getWidth()) - 1;
 		let mToX = Math.max(mCenterX - maxVertCellCount, 0);
-		let iterations = 0;
+		let cellsDrawn = 0;
 		for (let my = mFromY; my < mToY; my++) {
 			for (let mx = mFromX; mx >= mToX; mx--) {
 				if ((Math.abs(mCenterX - mx) + Math.abs(mCenterY - my)) > maxVertCellCount)
 					continue;
-				iterations++;
+				
 				
 				let val = data.get(mx, my);
 				let vPos = toIso(mx, my);	
 				
-				let px = vPos.ix - vCenter.ix + width05 + pxOffset;
-				let py = vPos.iy - vCenter.iy + height05 + pyOffset;
+				let px = vPos.ix - vCenter.ix + width05 + pxOffsetRest;
+				let py = vPos.iy - vCenter.iy + height05 + pyOffsetRest;// - val * zoom;
 
+				cellsDrawn++;
 				drawIsometricCell(px, py, val, dat32); 
 			}
 		}
 		
-		console.log("iterations: " + iterations);
+		console.log("cellsDrawn: " + cellsDrawn);
 	};	
 				
 	let drawCross = function(dat32) {
