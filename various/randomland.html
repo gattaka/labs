@@ -15,7 +15,7 @@
 		</tr>
 	</tbody>
 </table><div style="margin: 10px 0; border: 1px solid black; display: inline-block;">
-	<canvas id="canvas" width="800" height="800"></canvas>
+	<canvas id="canvas" width="800" height="600"></canvas>
 </div>[/HTML]
 <script>var $ = $ || {};
 $.gfx = (function() {
@@ -205,7 +205,7 @@ $.gfx = (function() {
 				let vPos = toIso(mx, my);	
 				
 				let px = vPos.ix - vCenter.ix + width05 + pxOffsetRest;
-				let py = vPos.iy - vCenter.iy + height05 + pyOffsetRest;// - val * zoom;
+				let py = vPos.iy - vCenter.iy + height05 + pyOffsetRest - val * zoom;
 
 				cellsDrawn++;
 				drawIsometricCell(px, py, val, dat32); 
@@ -329,7 +329,7 @@ $.gfx = (function() {
 			}, false);
 
 			//data = new Map(100, 100);
-			data = new Map(101, 101);
+			data = new Map(51, 51);
 
 			let max = 255;
 			let min = 0;
