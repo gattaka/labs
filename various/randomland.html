@@ -32,6 +32,8 @@ $.gfx = (function() {
 	let interval;
 	let innerIntervalCallback;
 		
+	let outline;
+		
 	let dragged = false;
 	let xDraggedStart;
 	let yDraggedStart;
@@ -46,6 +48,7 @@ $.gfx = (function() {
 	let pwCell05;
 	let phCell05;
 	
+	let limitOffset;
 	let data;
 		
 	class Map {
@@ -124,8 +127,7 @@ $.gfx = (function() {
 					break;
 					
 				// opacity-blue-green-red = 8 x 4b = 32
-				let val = 0xff000000 | data.get(x, y);
-				//dat32[y * data.getWidth() + x] = val;									
+				let val = data.get(x, y).rgb;
 		
 				for (let sy = 0; sy < zoom; sy++) {
 					let screenY = screenBaseY + sy;
@@ -146,7 +148,7 @@ $.gfx = (function() {
 	let drawIsometricCell = function(pxCenter, pyCenter, val, dat32) {
 		let range = pwCell05;
 		let pyStart = Math.max(pyCenter - phCell05, 0);
-		let phColumn = phCell * 2; // kvůli "sloupku" pod buňkou
+		let phColumn = phCell * 4; // kvůli "sloupku" pod buňkou
 		let pyEnd = Math.min(pyCenter + phColumn, height);
 		let pxStart = Math.max(pxCenter - pwCell05, 0);
 		let pxEnd = Math.min(pxCenter + pwCell05, width);
@@ -156,14 +158,14 @@ $.gfx = (function() {
 				let d = Math.abs(pxCenter - px) + Math.abs(pyCenter - py) * 2;
 				let drawVal;
 				if (d < range) {
-					drawVal = val | 0xff000000;
+					drawVal = val;
 				} else if (d == range) {
 					drawVal = 0xff000000;
 				} else if (py > pyCenter) {
 					if (px == pxStart || px == pxEnd - 1) {
 						drawVal = 0xff000000;
 					} else {
-						drawVal = val | 0xff000000;
+						drawVal = val;
 					}
 				} else {
 					continue;
@@ -201,18 +203,18 @@ $.gfx = (function() {
 					continue;
 				
 				
-				let val = data.get(mx, my);
+				let cell = data.get(mx, my);
 				let vPos = toIso(mx, my);	
 				
 				let px = vPos.ix - vCenter.ix + width05 + pxOffsetRest;
-				let py = vPos.iy - vCenter.iy + height05 + pyOffsetRest - val * zoom;
+				let py = vPos.iy - vCenter.iy + height05 + pyOffsetRest - cell.val * zoom;
 
 				cellsDrawn++;
-				drawIsometricCell(px, py, val, dat32); 
+				drawIsometricCell(px, py, cell.rgb, dat32); 
 			}
 		}
 		
-		console.log("cellsDrawn: " + cellsDrawn);
+		//console.log("cellsDrawn: " + cellsDrawn);
 	};	
 				
 	let drawCross = function(dat32) {
@@ -279,6 +281,26 @@ $.gfx = (function() {
 		pwCell = phCell * 2;
 	};
 	
+	// https://www.rapidtables.com/convert/color/hsl-to-rgb.html
+	// https://www.baeldung.com/cs/convert-color-hsl-rgb
+	let hslToRgb = function(h, s, l) {
+		let c = (1 - Math.abs(2 * l - 1)) * s;
+		let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+		let	m = l - c / 2;
+		let rr, gg, bb;
+		if (h >= 0 && h < 60) 		{rr = c; gg = x; bb = 0;}
+		if (h >= 60 && h < 120) 	{rr = x; gg = c; bb = 0;}
+		if (h >= 120 && h < 180) 	{rr = 0; gg = c; bb = x;}
+		if (h >= 180 && h < 240) 	{rr = 0; gg = x; bb = c;}
+		if (h >= 240 && h < 300) 	{rr = x; gg = 0; bb = c;}
+		if (h >= 300 && h < 360) 	{rr = c; gg = 0; bb = x;}
+		return {
+			r: (rr + m) * 255,
+			g: (gg + m) * 255,
+			b:(bb + m) * 255
+		};
+	};
+	
 	let init = function() {			
 		let speedParam = validate("Invalid speed", "speedInput", 1, 50);			
 		if (speedParam) {		
@@ -289,6 +311,8 @@ $.gfx = (function() {
 			height05 = Math.floor(height / 2);
 
 			isoCellBaseOrig = 4;
+
+			outline = false;
 
 			zoom = 1;
 			updateZoom();
@@ -329,13 +353,14 @@ $.gfx = (function() {
 			}, false);
 
 			//data = new Map(100, 100);
-			data = new Map(51, 51);
+			data = new Map(101, 101);
 
-			let max = 255;
+			let maxLimit = 359;
+			let max = maxLimit;
 			let min = 0;
 			for (let y = 0; y < data.getHeight(); y++) {
 				for (let x = 0; x < data.getWidth(); x++) {										
-					data.set(x, y, 255);
+					data.set(x, y, {val: maxLimit});
 				}
 			}
 			
@@ -356,10 +381,10 @@ $.gfx = (function() {
 						let distFromCenter = Math.sqrt(dx * dx + dy * dy);
 						if (distFromCenter < r) {					
 							let depth = Math.sqrt(r * r - distFromCenter * distFromCenter);
-							let val = data.get(x, y) - depth;
+							let val = data.get(x, y).val - depth;
 							max = Math.max(val, max);
 							min = Math.min(val, min);
-							data.set(x, y, val);
+							data.get(x, y).val = val;
 						} else {				
 							// mimo kruh
 						}
@@ -369,17 +394,13 @@ $.gfx = (function() {
 			
 			// normalizace
 			let scale = max - min;
-			let nKoef = 255 / scale;
-			for (let i = 0; i < data.getLength(); i++) {					
-				data.setByIndex(i, Math.floor((data.getByIndex(i) - min) * nKoef));
-				//data[i] = Math.floor(data[i]);
+			let nKoef = maxLimit / scale;
+			for (let i = 0; i < data.getLength(); i++) {
+				let cell = data.getByIndex(i);
+				cell.val = Math.floor((data.getByIndex(i).val - min) * nKoef / 2);
+				let rgb = hslToRgb(cell.val, .5, .5);
+				cell.rgb = 0xff000000 | rgb.b << 16 | rgb.g << 8 | rgb.r; 
 			}
-			
-			// Debug kotvy
-			data.set(0, 0, 0xff00ff00);
-			data.set(0, data.getHeight() - 1, 0xffff0000);
-			data.set(data.getWidth() - 1, 0, 0xffffff00);
-			data.set(data.getWidth() - 1, data.getHeight() - 1, 0xffffffff);
 			
 			innnerChangeInterval(speedParam);
 		}
