@@ -37,8 +37,12 @@ $.gfx = (function() {
 	let dragged = false;
 	let xDraggedStart;
 	let yDraggedStart;
-	let pxOffset = 0;
-	let pyOffset = 0;
+	
+	let view = {
+		pxOffset: 0,
+		pyOffset: 0,
+		
+	};
 		
 	let isoCellBaseOrig;
 		
@@ -114,7 +118,7 @@ $.gfx = (function() {
 		};
 	};	
 	
-	let drawPixels = function(data) {
+	let drawPixels = function() {
 		let pixelData = ctx.createImageData(width, height);
 		let dat32 = new Uint32Array(pixelData.data.buffer);
 		for (let y = 0; y < data.getHeight(); y++) {
@@ -162,7 +166,7 @@ $.gfx = (function() {
 				} else if (d == range) {
 					drawVal = 0xff000000;
 				} else if (py > pyCenter) {
-					if (px == pxStart || px == pxEnd - 1) {
+					if (px == pxStart || px == pxCenter || px == pxEnd - 1) {
 						drawVal = 0xff000000;
 					} else {
 						drawVal = val;
@@ -175,39 +179,18 @@ $.gfx = (function() {
 		}
 	};
 	
-	let drawIsometric = function(data, dat32) {	
-		// posuv je nutné rozdělit 
-		// na celočíselnou část (v cell jednotkách, které půjdou přepočítat na souřadnice mapy)
-		// a na zbytkovou část (která bude přímo v px použita jako zbytek posunu)
-		let pxOffsetRest = pxOffset % pwCell;
-		let pyOffsetRest = pyOffset % phCell;
-		let mOffset = toMap(pxOffset - pxOffsetRest, pyOffset - pyOffsetRest);	
-		let mCenterX = Math.floor(data.getWidth() / 2 - mOffset.mx);
-		let mCenterY = Math.floor(data.getHeight() / 2 - mOffset.my);
-		let vCenter = toIso(mCenterX, mCenterY);
-
-		// pohled bude kosočtverec, jehož kolmice mezi středem a stranou je rovna výšce obrazovky
-		let pCellHeight = phCell;	
-		let pCellWidth = pwCell;
-		let maxVertCellCount = Math.floor(height / pCellHeight);
-								
-		// isometrika se vykresluje řádkově odzadu kvůli překrývání		
-		let mFromY = Math.max(mCenterY - maxVertCellCount, 0);
-		let mToY = Math.min(mCenterY + maxVertCellCount, data.getHeight());
-		let mFromX = Math.min(mCenterX + maxVertCellCount, data.getWidth()) - 1;
-		let mToX = Math.max(mCenterX - maxVertCellCount, 0);
+	let drawIsometric = function(dat32) {		
 		let cellsDrawn = 0;
-		for (let my = mFromY; my < mToY; my++) {
-			for (let mx = mFromX; mx >= mToX; mx--) {
-				if ((Math.abs(mCenterX - mx) + Math.abs(mCenterY - my)) > maxVertCellCount)
+		for (let my = view.mFromY; my < view.mToY; my++) {
+			for (let mx = view.mFromX; mx >= view.mToX; mx--) {
+				if ((Math.abs(view.mCenterX - mx) + Math.abs(view.mCenterY - my)) > view.maxVertCellCount)
 					continue;
-				
-				
+								
 				let cell = data.get(mx, my);
 				let vPos = toIso(mx, my);	
 				
-				let px = vPos.ix - vCenter.ix + width05 + pxOffsetRest;
-				let py = vPos.iy - vCenter.iy + height05 + pyOffsetRest - cell.val * zoom;
+				let px = vPos.ix - view.vCenter.ix + width05 + view.pxOffsetRest;
+				let py = vPos.iy - view.vCenter.iy + height05 + view.pyOffsetRest - cell.val * zoom;
 
 				cellsDrawn++;
 				drawIsometricCell(px, py, cell.rgb, dat32); 
@@ -235,8 +218,8 @@ $.gfx = (function() {
 		drawIsometricCell(pos2.ix + width05, pos2.iy + height05, 0xff00ffff, dat32);
 		*/
 		
-		drawIsometric(data, dat32);
-		//drawPixels(data);
+		drawIsometric(dat32);
+		//drawPixels();
 		
 		drawCross(dat32);
 		
@@ -279,6 +262,7 @@ $.gfx = (function() {
 		phCell = phCell05 * 2;
 		pwCell05 = phCell;
 		pwCell = phCell * 2;
+		processView();
 	};
 	
 	// https://www.rapidtables.com/convert/color/hsl-to-rgb.html
@@ -301,6 +285,29 @@ $.gfx = (function() {
 		};
 	};
 	
+	let processView = function() {
+		// posuv je nutné rozdělit 
+		// na celočíselnou část (v cell jednotkách, které půjdou přepočítat na souřadnice mapy)
+		// a na zbytkovou část (která bude přímo v px použita jako zbytek posunu)
+		view.pxOffsetRest = view.pxOffset % pwCell;
+		view.pyOffsetRest = view.pyOffset % phCell;
+		let mOffset = toMap(view.pxOffset - view.pxOffsetRest, view.pyOffset - view.pyOffsetRest);	
+		view.mCenterX = Math.floor(data.getWidth() / 2 - mOffset.mx);
+		view.mCenterY = Math.floor(data.getHeight() / 2 - mOffset.my);
+		view.vCenter = toIso(view.mCenterX, view.mCenterY);
+
+		// pohled bude kosočtverec, jehož kolmice mezi středem a stranou je rovna výšce obrazovky
+		let pCellHeight = phCell;	
+		let pCellWidth = pwCell;
+		view.maxVertCellCount = Math.floor(height / pCellHeight);
+								
+		// isometrika se vykresluje řádkově odzadu kvůli překrývání		
+		view.mFromY = Math.max(view.mCenterY - view.maxVertCellCount, 0);
+		view.mToY = Math.min(view.mCenterY + view.maxVertCellCount, data.getHeight());
+		view.mFromX = Math.min(view.mCenterX + view.maxVertCellCount, data.getWidth()) - 1;
+		view.mToX = Math.max(view.mCenterX - view.maxVertCellCount, 0);
+	};
+	
 	let init = function() {			
 		let speedParam = validate("Invalid speed", "speedInput", 1, 50);			
 		if (speedParam) {		
@@ -311,46 +318,6 @@ $.gfx = (function() {
 			height05 = Math.floor(height / 2);
 
 			isoCellBaseOrig = 4;
-
-			outline = false;
-
-			zoom = 1;
-			updateZoom();
-
-			canvas.addEventListener("wheel", (event) => {
-				zoom -= Math.sign(event.deltaY);
-				if (zoom < 1) zoom = 1;
-				updateZoom();
-			}, { passive: true });
-			
-			canvas.addEventListener("mousedown", function (e) {
-				dragged = true;
-				xDraggedStart = e.clientX;
-				yDraggedStart = e.clientY;
-			}, false);
-		 
-			canvas.addEventListener("mouseup", function (e) {
-				dragged = false;
-			}, false);
-			
-			canvas.addEventListener("mouseleave", function (e) {
-				dragged = false;
-			}, false);
-			
-			canvas.addEventListener("mousemove", function (e) {
-				if (!dragged) 
-					return;
-				pxOffset -= (xDraggedStart - e.clientX);
-				pyOffset -= (yDraggedStart - e.clientY);
-				xDraggedStart = e.clientX;
-				yDraggedStart = e.clientY;					
-			}, false);
-			
-			canvas.addEventListener("dblclick", function (e) {
-				e.preventDefault();
-				pxOffset = 0;
-				pyOffset = 0;
-			}, false);
 
 			//data = new Map(100, 100);
 			data = new Map(101, 101);
@@ -401,6 +368,51 @@ $.gfx = (function() {
 				let rgb = hslToRgb(cell.val, .5, .5);
 				cell.rgb = 0xff000000 | rgb.b << 16 | rgb.g << 8 | rgb.r; 
 			}
+			
+			outline = false;
+
+			zoom = 1;
+			updateZoom();
+
+			canvas.addEventListener("wheel", (e) => {
+				zoom -= Math.sign(e.deltaY);
+				if (zoom < 1) zoom = 1;
+				updateZoom();
+				e.preventDefault();
+				e.stopPropagation();
+				return false;
+			}, { passive: true, capture: false });
+			
+			canvas.addEventListener("mousedown", function (e) {
+				dragged = true;
+				xDraggedStart = e.clientX;
+				yDraggedStart = e.clientY;
+			}, false);
+		 
+			canvas.addEventListener("mouseup", function (e) {
+				dragged = false;
+			}, false);
+			
+			canvas.addEventListener("mouseleave", function (e) {
+				dragged = false;
+			}, false);
+			
+			canvas.addEventListener("mousemove", function (e) {
+				if (!dragged) 
+					return;
+				view.pxOffset -= (xDraggedStart - e.clientX);
+				view.pyOffset -= (yDraggedStart - e.clientY);
+				xDraggedStart = e.clientX;
+				yDraggedStart = e.clientY;	
+				processView();
+			}, false);
+			
+			canvas.addEventListener("dblclick", function (e) {
+				e.preventDefault();
+				view.pxOffset = 0;
+				view.pyOffset = 0;
+				processView();
+			}, false);
 			
 			innnerChangeInterval(speedParam);
 		}
