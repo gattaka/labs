@@ -6,16 +6,14 @@
 				<td>Gravity (m/s)<1-50></td>
 				<td>Fragments max count <1-50></td>
 				<td>Missiles max count <1-20></td>
-				<td>Blast max power <1-100></td>
-				<td></td>
+				<td>Blast max power <100-300></td>
 				<td></td>
 			</tr>
 			<tr>
 				<td><input id="gravityInput" style="width: 80px;" value="9.8"></td>
 				<td><input id="fragmentsInput" style="width: 80px;" value="40"></td>
-				<td><input id="missilesInput" style="width: 80px;" value="10"></td>
-				<td><input id="blastInput" style="width: 80px;" value="15"></td>
-				<td><input id="drawInput" type="checkbox" onclick="$.gravity.draw(this.checked)" >Draw?</input></td>				
+				<td><input id="missilesInput" style="width: 80px;" value="5"></td>
+				<td><input id="blastInput" style="width: 80px;" value="200"></td>				
 				<td><button type="button" onclick="$.fireworks.start()">Run!</button></td>
 			</tr>
 		</tbody>
@@ -55,7 +53,6 @@ $.fireworks = (function() {
 	let missileSize = 1;
 	let fragmentSize = 2;
 			
-	// https://www.softschools.com/formulas/physics/air_resistance_formula/85/	
 	let processMissile = function(mis) {									
 		let dt = intervalSec; 
 	
@@ -69,8 +66,9 @@ $.fireworks = (function() {
 	let processFragment = function(frag) {
 		let dt = intervalSec; 	
 		
-		frag.velocity.x *= 0.98;
-		frag.velocity.y *= 0.98;		
+		let koef = 0.98;
+		frag.velocity.x *= koef;
+		frag.velocity.y *= koef;	
 		
 		frag.x += frag.velocity.x * intervalSec;			
 		
@@ -89,6 +87,13 @@ $.fireworks = (function() {
 			let bx = Math.floor(scrX);
 			let by = Math.floor(scrY);
 			let size = thing.size;
+			
+			for (let i = 0; i < thing.history.length; i++) {
+				let hist = thing.history[i];
+				data[hist.index] = hist.color;
+				hist.color = hist.color & 0x00ffffff | (i * 10) << 24;
+			}
+			
 			for (let py = -size; py < size; py++) {
 				let ry = by + py;
 				if (ry < 0 || ry > height) 
@@ -97,7 +102,17 @@ $.fireworks = (function() {
 					let rx = bx + px;
 					if (rx < 0 || rx > width)
 						continue;
-					data[ry * width + rx] = color;
+					index = ry * width + rx;
+					data[index] = color;
+					
+					if (py == 0 && px == 0) {
+						if (thing.history.length == thing.historyCount)
+							thing.history = thing.history.slice(1);
+						thing.history.push({
+							index: index,
+							color: color
+						});
+					}
 				}
 			}
 		}		
@@ -167,6 +182,7 @@ $.fireworks = (function() {
 					}
 				} else {
 					blowMissile(mis);
+					addMissile();
 				}				
 			}
 		}
@@ -195,10 +211,10 @@ $.fireworks = (function() {
 	
 	let addMissile = function() {		
 		let rgb = hslToRgb(Math.floor(Math.random() * 360), 0.5, 0.5);	
-		let alphaStep = Math.ceil(Math.random() * 2);
+		let alphaStep = 1;
 		let fade = Math.ceil(0xff / alphaStep) * interval;		
 		missiles.push({						
-			blinking: Math.random() * 1 > 0.5,
+			blinking: false, //Math.random() * 1 > 0.5,
 			color: 0xff000000 | rgb.b << 16 | rgb.g << 8 | rgb.r, // alpha blue green red						
 			fade: fade, // ms
 			alphaStep: alphaStep,
@@ -209,20 +225,22 @@ $.fireworks = (function() {
 			y: 0,
 			size: missileSize,
 			blown: false,
-			oscMax: 1,
-			oscAngleStep: 0.45,
+			oscMax: 2,
+			oscAngleStep: 0.7,
 			oscAngle: 0,
 			fragments: [],
 			velocity: {  // m/s
 				x: 0,
 				y: 300
-			}
+			},
+			historyCount: 10,
+			history: []
 		});
 	};
 	
 	let blowMissile = function(mis) {		
 		let angleStep = Math.PI * 2 / mis.fragmentsCount;		
-		let speed = 200; // m/s
+		let speed = Math.floor(Math.random() * blastMaxPower) + 50; // m/s
 		mis.blown = true;
 		for (let i = 0, angle = 0; i < mis.fragmentsCount; i++, angle += angleStep) {
 			mis.fragments.push({			
@@ -233,7 +251,9 @@ $.fireworks = (function() {
 				velocity: {  // m/s
 					x: Math.cos(angle) * speed,
 					y: Math.sin(angle) * speed
-				}
+				},
+				historyCount: 20,
+				history: []
 			});			
 		}
 	};
@@ -299,7 +319,7 @@ $.fireworks = (function() {
 			let gravityParam = validate("Invalid gravity", "gravityInput", 1, 50);
 			let missilesParam = validate("Invalid missiles count", "missilesInput", 1, 20);
 			let fragmentsParam = validate("Invalid fragments count", "fragmentsInput", 1, 50);
-			let blastParam = validate("Invalid blast power", "blastInput", 1, 100);
+			let blastParam = validate("Invalid blast power", "blastInput", 100, 300);
 
 			if (gravityParam && fragmentsParam && blastParam) {	
 				gravity = gravityParam;
@@ -308,10 +328,6 @@ $.fireworks = (function() {
 				blastMaxPower = blastParam;
 				init();	
 			}
-		},
-		
-		draw: function(value) {
-			draw = value;
 		},
 		
 		outline: function(value) {
