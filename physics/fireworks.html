@@ -13,7 +13,7 @@
 			<tr>
 				<td><input id="gravityInput" style="width: 80px;" value="9.8"></td>
 				<td><input id="fragmentsInput" style="width: 80px;" value="40"></td>
-				<td><input id="missilesInput" style="width: 80px;" value="1"></td>
+				<td><input id="missilesInput" style="width: 80px;" value="10"></td>
 				<td><input id="blastInput" style="width: 80px;" value="15"></td>
 				<td><input id="drawInput" type="checkbox" onclick="$.gravity.draw(this.checked)" >Draw?</input></td>				
 				<td><button type="button" onclick="$.fireworks.start()">Run!</button></td>
@@ -146,11 +146,18 @@ $.fireworks = (function() {
 							
 							processFragment(frag);
 											
-							writeForDraw(data, frag, mis.color, () => {
-								mis.fragments.splice(f, 1);
-								// posuň index, protože se vyhodila položka pole
-								f--;
-							});	
+							if (mis.blinking) {
+								if (f % 2 == 0 && mis.fade % 40 == 0 || f % 2 == 1 && mis.fade % 40 != 0)
+									frag.shown = !frag.shown;																			
+							}
+							
+							if (frag.shown) {
+								writeForDraw(data, frag, mis.color, () => {
+									mis.fragments.splice(f, 1);
+									// posuň index, protože se vyhodila položka pole
+									f--;
+								});	
+							}
 						}
 					} else {
 						missiles.splice(m, 1);
@@ -188,9 +195,10 @@ $.fireworks = (function() {
 	
 	let addMissile = function() {		
 		let rgb = hslToRgb(Math.floor(Math.random() * 360), 0.5, 0.5);	
-		let alphaStep = Math.floor(Math.random() * 3);
-		let fade = Math.ceil(0xff / alphaStep) * interval;
+		let alphaStep = Math.ceil(Math.random() * 2);
+		let fade = Math.ceil(0xff / alphaStep) * interval;		
 		missiles.push({						
+			blinking: Math.random() * 1 > 0.5,
 			color: 0xff000000 | rgb.b << 16 | rgb.g << 8 | rgb.r, // alpha blue green red						
 			fade: fade, // ms
 			alphaStep: alphaStep,
@@ -220,7 +228,8 @@ $.fireworks = (function() {
 			mis.fragments.push({			
 				x: mis.x,
 				y: mis.y,
-				size: fragmentSize,				
+				size: fragmentSize,		
+				shown: true,
 				velocity: {  // m/s
 					x: Math.cos(angle) * speed,
 					y: Math.sin(angle) * speed
