@@ -1,0 +1,316 @@
+[N1]Demo[/N1]
+[HTML]<div>
+	<table>
+		<tbody>
+			<tr>
+				<td>Gravity (m/s)<1-50></td>
+				<td>Fragments max count <1-50></td>
+				<td>Missiles max count <1-20></td>
+				<td>Blast max power <1-100></td>
+				<td></td>
+				<td></td>
+			</tr>
+			<tr>
+				<td><input id="gravityInput" style="width: 80px;" value="9.8"></td>
+				<td><input id="fragmentsInput" style="width: 80px;" value="40"></td>
+				<td><input id="missilesInput" style="width: 80px;" value="1"></td>
+				<td><input id="blastInput" style="width: 80px;" value="15"></td>
+				<td><input id="drawInput" type="checkbox" onclick="$.gravity.draw(this.checked)" >Draw?</input></td>				
+				<td><button type="button" onclick="$.fireworks.start()">Run!</button></td>
+			</tr>
+		</tbody>
+	</table>
+</div>
+<div style="margin: 10px 0;display: inline-block; background: black">
+	<canvas id="myCanvas" width="700" height="700"></canvas>
+</div>
+[/HTML]
+<script>
+var $ = $ || {};
+$.fireworks = (function() {
+
+	let canvas = document.getElementById("myCanvas");
+	let ctx = canvas.getContext("2d");
+	let width = canvas.width;
+	let height = canvas.height;
+	let halfWidth = width / 2;
+	let halfHeight = height / 2;
+
+	let interval = 10; // ms
+	let intervalSec = interval / 1000;
+	let innerIntervalCallback;
+
+	let timeStep = 1;
+	let gravity = 9.8; // m/s2
+	let airResistance = 10; // m/s
+		
+	let draw = false;
+
+	let fragmentsMaxCount = 100;
+	let missilesMaxCount = 10;
+	let blastMaxPower = 15;
+	
+	let missiles = [];
+	
+	let missileSize = 1;
+	let fragmentSize = 2;
+			
+	// https://www.softschools.com/formulas/physics/air_resistance_formula/85/	
+	let processMissile = function(mis) {									
+		let dt = intervalSec; 
+	
+		// má pohon, takže jeho rychlost je udržována jako zrychlení
+		mis.y += (mis.velocity.y - gravity) * dt;
+	
+		mis.x += Math.sin(mis.oscAngle) * mis.oscMax;
+		mis.oscAngle = (mis.oscAngle + mis.oscAngleStep) % (Math.PI * 2);
+	};
+	
+	let processFragment = function(frag) {
+		let dt = intervalSec; 	
+		
+		frag.velocity.x *= 0.98;
+		frag.velocity.y *= 0.98;		
+		
+		frag.x += frag.velocity.x * intervalSec;			
+		
+		// s_t = v_0 . dt + 1/2 a . dt^2
+		frag.y += frag.velocity.y * dt - 0.5 * gravity * dt * dt;
+		// v_0new = v_0 + a . dt
+		frag.velocity.y += -gravity * dt;			
+	};
+	
+	let writeForDraw = function(data, thing, color, onOverflow) {
+		let scrY = height - thing.y;
+		let scrX = thing.x + halfWidth;
+		if (scrY < 0 || scrY > height || scrX < 0 || scrX > width) {
+			onOverflow();
+		} else {
+			let bx = Math.floor(scrX);
+			let by = Math.floor(scrY);
+			let size = thing.size;
+			for (let py = -size; py < size; py++) {
+				let ry = by + py;
+				if (ry < 0 || ry > height) 
+					continue;
+				for (let px = -size; px < size; px++) {
+					let rx = bx + px;
+					if (rx < 0 || rx > width)
+						continue;
+					data[ry * width + rx] = color;
+				}
+			}
+		}		
+	};
+			
+	let step = function() {
+		if (!draw) {
+			ctx.clearRect(0, 0, width, height);			
+			ctx.strokeStyle = "grey";
+			ctx.fillStyle = "grey";
+			ctx.strokeRect(0, 0, width, height);
+			ctx.strokeStyle = "black";
+		}
+		
+		let pixelData = ctx.createImageData(width, height);
+		let dat32 = new Uint32Array(pixelData.data.buffer);
+				
+		let data = [];
+				
+		// vytváření nových rachejtlí
+		if (missiles.length < missilesMaxCount) 
+			addMissile();
+			
+		// odpočet rozbušky a výbuchu rachejtle
+		// pole se upravuje v rámci cyklu, takže je potřeba počet iterací vypočítat jednou dopředu
+		for (let m = 0; m < missiles.length; m++) {
+			let mis = missiles[m];
+			
+			mis.fuse -= interval;
+			if (mis.fuse > 0) {				
+				processMissile(mis);
+				writeForDraw(data, mis, 0xffffffff, () => {				
+					missiles.splice(m, 1);
+					// posuň index, protože se vyhodila položka pole
+					m--;
+				});			
+			} else {
+				if (mis.blown) {	
+					mis.fade -= interval;
+					if (mis.fade > 0) {
+						mis.alpha -= mis.alphaStep;
+						// pozadí canvasu musí být černé, jinak prosvítá bílá
+						mis.color = (mis.color & 0x00ffffff) | (mis.alpha << 24);
+						for (let f = 0; f < mis.fragments.length; f++) {
+							let frag = mis.fragments[f];
+							
+							processFragment(frag);
+											
+							writeForDraw(data, frag, mis.color, () => {
+								mis.fragments.splice(f, 1);
+								// posuň index, protože se vyhodila položka pole
+								f--;
+							});	
+						}
+					} else {
+						missiles.splice(m, 1);
+						// posuň index, protože se vyhodila položka pole
+						m--;
+						continue;
+					}
+				} else {
+					blowMissile(mis);
+				}				
+			}
+		}
+								
+		let index = 0;
+		for (let y = 0; y < height; y++) {
+			for (let x = 0; x < width; x++) {				
+				if (x == 0 || y == 0 || x == width - 1 || y == height - 1) {
+					// okraje
+					dat32[index++] = 0xff000000;
+				} else {
+					let color = data[index];
+					
+					// data nebo pozadí
+					if (color) {
+						dat32[index++] = color;
+					} else {
+						dat32[index++] = 0xff000000;
+					}					
+				} 
+			}
+		}				
+
+		ctx.putImageData(pixelData, 0, 0);
+	};
+	
+	let addMissile = function() {		
+		let rgb = hslToRgb(Math.floor(Math.random() * 360), 0.5, 0.5);	
+		let alphaStep = Math.floor(Math.random() * 3);
+		let fade = Math.ceil(0xff / alphaStep) * interval;
+		missiles.push({						
+			color: 0xff000000 | rgb.b << 16 | rgb.g << 8 | rgb.r, // alpha blue green red						
+			fade: fade, // ms
+			alphaStep: alphaStep,
+			alpha: 0xff,
+			fuse: Math.floor(1000 + Math.random() * 500), // ms
+			fragmentsCount: 10 + Math.floor(Math.random() * (fragmentsMaxCount - 10)),			
+			x: Math.random() * halfWidth - halfWidth / 2,
+			y: 0,
+			size: missileSize,
+			blown: false,
+			oscMax: 1,
+			oscAngleStep: 0.45,
+			oscAngle: 0,
+			fragments: [],
+			velocity: {  // m/s
+				x: 0,
+				y: 300
+			}
+		});
+	};
+	
+	let blowMissile = function(mis) {		
+		let angleStep = Math.PI * 2 / mis.fragmentsCount;		
+		let speed = 200; // m/s
+		mis.blown = true;
+		for (let i = 0, angle = 0; i < mis.fragmentsCount; i++, angle += angleStep) {
+			mis.fragments.push({			
+				x: mis.x,
+				y: mis.y,
+				size: fragmentSize,				
+				velocity: {  // m/s
+					x: Math.cos(angle) * speed,
+					y: Math.sin(angle) * speed
+				}
+			});			
+		}
+	};
+	
+	// https://www.rapidtables.com/convert/color/hsl-to-rgb.html
+	// https://www.baeldung.com/cs/convert-color-hsl-rgb
+	let hslToRgb = function(h, s, l) {
+		let c = (1 - Math.abs(2 * l - 1)) * s;
+		let x = c * (1 - Math.abs((h / 60) % 2 - 1));
+		let	m = l - c / 2;
+		let rr, gg, bb;
+		if (h >= 0 && h < 60) 		{rr = c; gg = x; bb = 0;}
+		if (h >= 60 && h < 120) 	{rr = x; gg = c; bb = 0;}
+		if (h >= 120 && h < 180) 	{rr = 0; gg = c; bb = x;}
+		if (h >= 180 && h < 240) 	{rr = 0; gg = x; bb = c;}
+		if (h >= 240 && h < 300) 	{rr = x; gg = 0; bb = c;}
+		if (h >= 300 && h < 360) 	{rr = c; gg = 0; bb = x;}
+		return {
+			r: (rr + m) * 255,
+			g: (gg + m) * 255,
+			b:(bb + m) * 255
+		};
+	};
+
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			step();
+		}, interval);
+	};
+
+	let init = function() {	
+		innnerChangeInterval(interval);	
+	};
+
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+
+	return {
+	
+		start: function() {	
+			let gravityParam = validate("Invalid gravity", "gravityInput", 1, 50);
+			let missilesParam = validate("Invalid missiles count", "missilesInput", 1, 20);
+			let fragmentsParam = validate("Invalid fragments count", "fragmentsInput", 1, 50);
+			let blastParam = validate("Invalid blast power", "blastInput", 1, 100);
+
+			if (gravityParam && fragmentsParam && blastParam) {	
+				gravity = gravityParam;
+				missilesMaxCount = missilesParam;
+				fragmentsMaxCount = fragmentsParam;				
+				blastMaxPower = blastParam;
+				init();	
+			}
+		},
+		
+		draw: function(value) {
+			draw = value;
+		},
+		
+		outline: function(value) {
+			outline = value;
+		},
+	};
+
+})();
+
+$.fireworks.start();
+</script>
