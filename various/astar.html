@@ -121,13 +121,13 @@ $.astar = (function() {
 			let openItemMy = Math.floor(cIndex / mapW);
 			if (openItemMx > 0) {
 				neighbors.push(cIndex - 1) // left				
-				if (openItemMy > 0) neighbors.push(cIndex - mapW - 1); // top left
-				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW - 1); // bottom left
+				//if (openItemMy > 0) neighbors.push(cIndex - mapW - 1); // top left
+				//if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW - 1); // bottom left
 			}
 			if (openItemMx < mapW - 1) {
 				neighbors.push(cIndex + 1) // right
-				if (openItemMy > 0) neighbors.push(cIndex - mapW + 1); // top right
-				if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW + 1); // bottom right
+				//if (openItemMy > 0) neighbors.push(cIndex - mapW + 1); // top right
+				//if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW + 1); // bottom right
 			}
 			if (openItemMy > 0) neighbors.push(cIndex - mapW); // top
 			if (openItemMy < mapH - 1) neighbors.push(cIndex + mapW); // bottom
@@ -178,11 +178,13 @@ $.astar = (function() {
 		let my = coords.my;
 		
 		// nelze navigovat do zdi
-		if (pixels[mx + my * mapW] == 1)
-			return;
-		
-		hLightMapX = mx;
-		hLightMapY = my;
+		if (pixels[mx + my * mapW] == 1) {
+			hLightMapX = -1;
+			hLightMapY = -1;
+		} else {
+			hLightMapX = mx;
+			hLightMapY = my;
+		}
 	}, false);
 	
 	canvas.addEventListener("click", function (e) {		

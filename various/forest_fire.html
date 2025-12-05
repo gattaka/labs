@@ -1,0 +1,196 @@
+[N1]Demo[/N1]
+[HTML]<table>
+	<tbody>
+		<tr>
+			<td>Speed (ms) <1-50></td>
+			<td>Tree prob. <0-1></td>	
+			<td>Fire prob. <0-1></td>
+			<td></td>
+			<td></td>
+			<td></td>
+		</tr>
+		<tr>				
+			<td><input id="speedInput" style="width: 100px;" value="20"></td>				
+			<td><input id="treeProbInput" style="width: 100px;" value="0.001"></td>				
+			<td><input id="fireProbInput" style="width: 100px;" value="0.000005"></td>				
+			<td><button type="button" onclick="$.gfx.start()">Run!</button></td>			
+			<td></td>	
+			<td></td>
+		</tr>
+	</tbody>
+</table><div style="margin: 10px 0;">
+	<canvas id="canvas" width="700" height="600"></canvas>
+</div>[/HTML]
+<script>var $ = $ || {};
+$.gfx = (function() {
+
+	let canvas = document.getElementById("canvas");	
+	let ctx = canvas.getContext("2d");
+	ctx.imageSmoothingEnabled = false;
+	
+	let width;
+	let height;
+	let width05;
+	let height05;
+	
+	let interval;
+	let innerIntervalCallback;
+		
+	let treeProb = 0.001;
+	let fireProb = 0.000005;
+		
+	class Pixel {
+	  constructor(x, y, color) {
+		this.x = x;
+		this.y = y;
+		this.color = color; // např. 0xff000000
+	  }
+	};
+	
+	let drawPixels = function(pixels) {
+		let pixelData = ctx.createImageData(width, height);
+		let i = 0;
+		let dat32 = new Uint32Array(pixelData.data.buffer);
+		for (let i = 0; i < pixels.length; i++) {						
+			let pixel = pixels[i];
+			dat32[pixel.y * width + pixel.x] = pixel.color;
+		}
+		ctx.putImageData(pixelData, 0, 0);
+	};
+
+	let pixels = [];
+	let firePixels = [];
+					
+	let draw = function() {
+			
+		for (let y = 0; y < height; y++) {
+			for (let x = 0; x < width; x++) {
+				// strom může růst pouze na prázdném místě
+				if (Math.random() < treeProb && pixels[y * width + x].color == 0xff000000)
+					pixels[y * width + x].color = 0xff00ff00;
+				// blesk může udeřit pouze do stromu
+				if (Math.random() < fireProb && pixels[y * width + x].color == 0xff00ff00) {
+					let firePixel = pixels[y * width + x];
+					firePixel.color = 0xff00ffff;
+					firePixels.push(firePixel);
+				}
+			}
+		}
+		
+		let newFirePixels = [];
+		for (let i = 0; i < firePixels.length; i++) {
+			let firePixel = firePixels[i];
+			
+			let leftIndex = firePixel.y * width + firePixel.x - 1;
+			let rightIndex = firePixel.y * width + firePixel.x + 1;
+			let topIndex = (firePixel.y - 1) * width + firePixel.x;
+			let bottomIndex = (firePixel.y + 1) * width + firePixel.x;
+			
+			if (firePixel.x != 0) 
+				tryPutFireOnPixel(pixels, newFirePixels, leftIndex);
+				
+			if (firePixel.x != width - 1)
+				tryPutFireOnPixel(pixels, newFirePixels, rightIndex);
+			
+			if (firePixel.y != 0)
+				tryPutFireOnPixel(pixels, newFirePixels, topIndex);
+			
+			if (firePixel.y != height - 1)
+				tryPutFireOnPixel(pixels, newFirePixels, bottomIndex);
+			
+			let leftTopIndex = (firePixel.y - 1) * width + firePixel.x - 1;
+			let leftBottomIndex = (firePixel.y + 1) * width + firePixel.x - 1;
+			let rightTopIndex = (firePixel.y - 1) * width + firePixel.x + 1;
+			let rightBottomIndex = (firePixel.y + 1) * width + firePixel.x + 1;
+			
+			if (firePixel.x != 0 && firePixel.y != 0) 
+				tryPutFireOnPixel(pixels, newFirePixels, leftTopIndex);				
+				
+			if (firePixel.x != 0 && firePixel.y != height - 1) 
+				tryPutFireOnPixel(pixels, newFirePixels, leftBottomIndex);
+				
+			if (firePixel.x != width - 1 && firePixel.y != 0)
+				tryPutFireOnPixel(pixels, newFirePixels, rightTopIndex);
+				
+			if (firePixel.x != width - 1 && firePixel.y != height - 1)
+				tryPutFireOnPixel(pixels, newFirePixels, rightBottomIndex);		
+			
+			// vyhasl
+			firePixel.color = 0xff000000;			
+		}
+		firePixels = newFirePixels;
+		
+		drawPixels(pixels);
+	};
+	
+	let tryPutFireOnPixel = function(pixels, newFirePixels, index) {
+		if (pixels[index].color == 0xff00ff00) {
+			pixels[index].color = 0xff00ffff;
+			newFirePixels.push(pixels[index]);
+		}		
+	};
+		
+	let innnerChangeInterval = function(value) {
+		if (isNaN(value))
+			return;
+		let newValue = Number(value);
+		if (newValue < 1)
+			return;
+		console.log("interval changed from '" + interval + "' to '" + newValue + "'");
+		interval = newValue;
+		
+		if (innerIntervalCallback) 
+			clearInterval(innerIntervalCallback);
+		
+		innerIntervalCallback = setInterval(function() {
+			draw();
+		}, interval);
+	};
+	
+	let validate = function(msg, field, min, max) {
+		let value = document.getElementById(field).value;
+		if (isNaN(value)) {
+			alert(msg);
+			return false;
+		}
+		value = Number(value);
+		if (value < min || value > max) {
+			alert(msg);
+			return false;
+		}
+		return value;
+	};
+	
+	let init = function() {			
+		let speedParam = validate("Invalid speed", "speedInput", 1, 50);			
+		let treeProbParam = validate("Invalid treeProb", "treeProbInput", 0, 1);			
+		let fireProbParam = validate("Invalid fireProb", "fireProbInput", 0, 1);			
+		if (speedParam && treeProbParam && fireProbParam) {		
+	
+			width = canvas.width;
+			height = canvas.height;
+			width05 = width / 2; 
+			height05 = height / 2;				
+			
+			treeProb = treeProbParam;
+			fireProb = fireProbParam;
+			
+			pixels = [];
+			firePixels = [];
+			for (let y = 0; y < height; y++)
+				for (let x = 0; x < width; x++)
+					pixels.push(new Pixel(x, y, 0xff000000));
+			
+			innnerChangeInterval(speedParam);
+		}
+	};	
+		
+	return {
+		start: function() {					
+			init();						
+		},		
+	};
+
+})();
+
+$.gfx.start();</script>
